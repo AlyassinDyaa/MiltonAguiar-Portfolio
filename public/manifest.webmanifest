@@ -4,8 +4,8 @@
   "description": "Comic book art by Milton Aguiar.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0e0c0d",
-  "theme_color": "#0e0c0d",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
   "icons": [
     {
       "src": "/icon-192.png",

@@ -350,6 +350,14 @@ collections:
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: about, label: About, widget: boolean, default: true }
               - { name: contact, label: Contact, widget: boolean, default: true }
+          - name: themes
+            label: Dark and light
+            widget: object
+            collapsed: false
+            hint: 'Visitors switch between the two with the sun and moon button in the top bar; the site opens dark. Switch one off and the site is always the other, and the button goes. (With both off, both stay on.)'
+            fields:
+              - { name: dark, label: Dark mode, widget: boolean, default: true, required: false }
+              - { name: light, label: Light mode, widget: boolean, default: true, required: false }
           - name: home
             label: Parts of the home page
             widget: object

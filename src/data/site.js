@@ -50,6 +50,9 @@ export let previewing = false
    (anything not listed there is shown), and every entry has its own "Hide from the site" switch. */
 let visibility = {}
 export const shows = (group, key) => visibility[group]?.[key] !== false
+/* The one theme the site is held to, when the admin has switched the other off ("dark" or "light");
+   empty when visitors may choose. With both switched off, both stay on. */
+export const themeOnly = () => (shows('themes', 'dark') === shows('themes', 'light') ? '' : shows('themes', 'dark') ? 'dark' : 'light')
 
 let newPictures = {} // pictures saved after this build: "/uploads/x.webp" -> the picture itself
 

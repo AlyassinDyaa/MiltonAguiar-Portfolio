@@ -63,7 +63,7 @@
     'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
-    'site/visibility': { groups: {}, half: [], inner: ['work', 'gallery', 'commissions', 'about', 'contact', 'ticker', 'project', 'latest', 'redraws', 'events'] },
+    'site/visibility': { groups: {}, half: [], inner: ['work', 'gallery', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
@@ -83,7 +83,7 @@
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
-    'site/visibility': 'Switch whole pages, or parts of the home page, on and off.',
+    'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -412,7 +412,7 @@
     if (!section) return
     let bar = section.querySelector(':scope > .ia-views')
     if (!bar) {
-      bar = el('div', { className: 'ia-views', role: 'group', ariaLabel: 'How to show this list' }, VIEWS.map((v, i) => {
+      bar = el('div', { className: 'ia-views', role: 'group', ariaLabel: 'How to show this list' }, VIEWS.map((v) => {
         const b = el('button', { type: 'button', title: v.label, ariaLabel: v.label }, [icon(`view_${v.id}`)])
         b.dataset.view = v.id
         b.addEventListener('click', () => {

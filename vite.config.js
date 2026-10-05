@@ -70,6 +70,22 @@ const thumbs = () => {
   return index
 }
 
+/* The page applies its theme before anything is drawn (the small script in index.html). When the
+   admin has switched one theme off (Show or hide), that script has to know which one is left,
+   so the build writes it into the page. */
+const themeOnly = () => ({
+  name: 'theme-only',
+  transformIndexHtml(html) {
+    let only = ''
+    try {
+      const { themes = {} } = JSON.parse(readFileSync(resolve('content/site/visibility.json'), 'utf8'))
+      const dark = themes.dark !== false, light = themes.light !== false
+      if (dark !== light) only = dark ? 'dark' : 'light'
+    } catch { /* no file yet: visitors choose */ }
+    return html.replace('__THEME_ONLY__', only)
+  },
+})
+
 const adminBundle = () => ({
   name: 'admin-bundle',
   configureServer(server) {
@@ -107,7 +123,7 @@ const adminBundle = () => ({
 export default defineConfig({
   // Set VITE_BASE=/repo-name/ when deploying under a sub-path (GitHub project pages).
   base: process.env.VITE_BASE || '/',
-  plugins: [react(), spaFallback(), adminBundle()],
+  plugins: [react(), themeOnly(), spaFallback(), adminBundle()],
   // PORT lets a preview tool pick a free port; 5175 keeps clear of other sites' dev servers.
   server: { port: Number(process.env.PORT) || 5175 },
 })

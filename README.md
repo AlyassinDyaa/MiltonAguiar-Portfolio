@@ -43,7 +43,7 @@ step open as picture cards; the other lists as rows. Each list remembers the vie
 | Conventions | Events, with dates and where to find the table |
 | Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name and the current project (title, cover, where to read it, and a second button, for example to the publisher); the About form holds the story, one panel at a time, each with its words and picture; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
-| Show or hide | Switch whole pages, or parts of the home page, on and off |
+| Show or hide | Switch whole pages, dark or light mode, or parts of the home page, on and off |
 
 Pictures upload straight from the panel into `public/uploads/`. A piece without a picture gets a
 blank art board with its title, so the site never shows a hole.

@@ -160,7 +160,9 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
 /* The hero is allowed a wider column than the rest of the site. */
 .hero-in { width: min(100% - 2 * var(--gutter), 1640px); padding-block: calc(var(--nav) + 8px) clamp(26px, 3.6vw, 56px); }
 /* --tilt is how far the slanted gutter between the two small panels drops across their width */
-.hero-page { --tilt: 34px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 1fr 1fr 0.8fr; gap: var(--gap); height: clamp(540px, calc(100svh - var(--nav) - 86px), 860px); }
+/* The page is as tall as the screen allows, and taller if the words in the title panel need it
+   (a short, wide window): nothing in that panel is ever cut off. */
+.hero-page { --tilt: 34px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 1fr 1fr 0.8fr; gap: var(--gap); min-height: clamp(540px, calc(100svh - var(--nav) - 86px), 860px); }
 /* The first page keeps its panel borders at night: white ink, a little finer than the black
    ink of the paper theme, so the page still reads as drawn panels on a black sheet. */
 :root:not([data-theme='light']) .hero-page { --frame: #fff; --rule: 2px; }
@@ -217,6 +219,11 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
 .hero-figure.is-sheet { right: 5%; top: 50%; height: calc(80% * var(--fig-size, 1)); translate: calc(var(--fig-x, 0) * 0.4%) calc(-50% + var(--fig-y, 0) * -0.4%); rotate: 2.5deg; background: #fff; box-shadow: 12px 12px 0 var(--accent); }
 /* on white board a drawing on white needs no sheet: it is laid straight on the board, the way ink is */
 [data-theme='light'] .hero-figure.is-sheet { right: -3.5%; top: auto; bottom: 0; height: calc(100% * var(--fig-size, 1)); translate: calc(var(--fig-x, 0) * 0.4%) calc(var(--fig-y, 0) * -0.4%); rotate: none; background: none; box-shadow: none; mix-blend-mode: multiply; }
+/* a small laptop or a tablet on its side: the figure stands a little smaller and further right, clear of the words */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .hero-figure.is-cutout { right: -7%; height: calc(90% * var(--fig-size, 1)); }
+  .has-figure .hero-actions { max-width: 44%; }
+}
 @media (max-width: 899px) {
   .hero-in { padding-top: calc(var(--nav) + 6px); }
   .hero-page { grid-template-columns: 1fr 1fr; grid-template-rows: none; height: auto; }
@@ -641,9 +648,9 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .ft-brand { grid-column: span 4; }
 .ft-pages { grid-column: span 3; }
 .ft-follow { grid-column: span 5; }
-.ft-mark { display: flex; align-items: center; gap: 14px; }
+.ft-mark { display: flex; align-items: center; gap: 14px; max-width: 100%; }
 .ft-mark img { width: 54px; height: 54px; border-radius: 50%; }
-.ft-mark .wordmark.lg { font-size: clamp(2rem, 3.2vw, 2.9rem); }
+.ft-mark .wordmark.lg { font-size: clamp(1.8rem, 2.7vw, 2.9rem); }
 .ft-brand p { max-width: 40ch; margin: 18px 0 14px; }
 .ft-list { width: 100%; }
 .ft-list a { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-family: var(--display); font-size: 1.3rem; font-weight: 800; font-style: italic; letter-spacing: 0.03em; line-height: 1.1; text-transform: uppercase; color: var(--fg-dim); transition: color 0.2s, padding 0.3s var(--ease-out); }
@@ -656,9 +663,11 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .ft-follow .social li + li { margin-top: 0; }
 .ft-follow .social a { padding-block: 8px; }
 .footer-fine { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding-block: 18px 26px; font-size: 0.82rem; color: var(--fg-mute); }
-@media (max-width: 899px) {
+/* narrower than a laptop: the name takes a row to itself */
+@media (max-width: 1100px) {
   .ft-brand { grid-column: 1 / -1; }
-  .ft-pages, .ft-follow { grid-column: span 6; }
+  .ft-pages { grid-column: span 5; }
+  .ft-follow { grid-column: span 7; }
 }
 @media (max-width: 559px) { .ft-pages, .ft-follow { grid-column: 1 / -1; } }
 

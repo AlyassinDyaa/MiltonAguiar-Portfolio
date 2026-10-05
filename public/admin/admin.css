@@ -193,7 +193,10 @@ html[data-ia-home] body:has([class*='AppHeader'], [class*='ToolbarContainer']) .
   body:has([class*='AppHeader'], [class*='ToolbarContainer']) { padding-left: var(--side); }
   [class*='SidebarContainer'] { display: none !important; }
   [class*='CollectionMain'] { padding-left: 0 !important; }
-  [class*='EditorContainer'] { left: var(--side) !important; width: calc(100% - var(--side)) !important; }
+  /* Decap lays its editor out at least 800px wide, which beside the navigation pushes the form
+     off the side of a small laptop or a tablet held sideways */
+  [class*='EditorContainer'] { left: var(--side) !important; width: calc(100% - var(--side)) !important; min-width: 0 !important; }
+  [class*='ToolbarContainer'] { min-width: 0 !important; }
 }
 /* Phones and small tablets: a bar across the top with a menu button; the navigation slides in
    over the page as a drawer. */
@@ -397,7 +400,7 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 @media (max-width: 1100px) { [class*='ControlPaneContainer']:not([class*='PreviewPaneContainer']) > [data-ia-half] { grid-column: 1 / -1; } }
 
 /* short fields inside a group of fields share rows (shell.js marks them) */
-[data-ia-grid] { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); column-gap: 16px; row-gap: 18px; align-items: start; }
+[data-ia-grid] { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); column-gap: 16px; row-gap: 18px; align-items: start; }
 [data-ia-grid] > * { grid-column: 1 / -1; min-width: 0; margin-top: 0 !important; }
 [data-ia-grid] > [data-ia-inner] { grid-column: auto; }
 
@@ -519,7 +522,7 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 /* on/off: one box. The name, with its explanation under it, on the left; the switch on the right,
    level with the middle of the box however many lines the explanation runs to. */
 [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) {
-  display: grid !important; grid-template-columns: 1fr auto; align-items: center; column-gap: 20px; row-gap: 3px; min-height: 54px;
+  display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 20px; row-gap: 3px; min-height: 54px;
   padding: 12px 16px; border: 1px solid var(--line-strong); border-radius: var(--r-field); background: var(--field);
 }
 /* (the string of :not()s is there to outrank "the box of every field" above, which would draw a second box round the switch) */
@@ -528,7 +531,7 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
   background: transparent !important; border: 0 !important; outline: 0 !important; border-radius: 0 !important; padding: 0 !important; box-shadow: none !important;
 }
 [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) > [class*='ControlTopbar'] { grid-column: 1; grid-row: 1; }
-[class*='ControlContainer']:has(> div > [class*='ToggleContainer']) [class*='FieldLabel'] { padding: 0 !important; color: var(--fg) !important; }
+[class*='ControlContainer']:has(> div > [class*='ToggleContainer']) [class*='FieldLabel'] { padding: 0 !important; color: var(--fg) !important; white-space: normal !important; }
 [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) > [class*='ControlHint'] { grid-column: 1; grid-row: 2; margin: 0 !important; padding: 0 !important; }
 [class*='ToggleBackground'] { background: rgba(243, 243, 241, 0.2) !important; }
 [class*='ToggleContainer'][aria-checked='true'] [class*='ToggleBackground'] { background: var(--accent) !important; }

@@ -152,7 +152,8 @@ body::after {
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.55em;
   min-height: 54px; padding: 0 28px;
-  font-family: var(--display); font-size: 1.24rem; font-weight: 800; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+  max-width: 100%; padding-block: 8px;
+  font-family: var(--display); font-size: 1.24rem; font-weight: 800; font-style: italic; line-height: 1.05; letter-spacing: 0.04em; text-align: center; text-transform: uppercase;
   background: var(--accent); color: var(--on-accent);
   transition: background 0.2s, color 0.2s;
 }
@@ -162,7 +163,9 @@ body::after {
 .btn.ghost { background: var(--panel-2); color: var(--fg); }
 .btn.ghost:hover, .btn.ghost:focus-visible { background: var(--loud); color: var(--on-loud); }
 .btn.sm { min-height: 42px; padding: 0 18px; font-size: 1.05rem; }
-.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; max-width: 100%; }
+/* a button never runs out of its panel: on a narrow screen a long one goes onto two lines */
+.magnetic { max-width: 100%; }
 
 /* chips: filters and stage pickers */
 .chip {

@@ -88,7 +88,8 @@ has the same effect as using the panel.
 - There are three colours (black, white, and one red set by a hue, `--h`, from **Name, colour and contact → Brand colour**; 25 is the red of the logo) and one family of type (Barlow Condensed for display and labels, Barlow for reading).
 - Tokens for both themes are at the top of `src/styles/global.css`.
 - Pictures arrive in pencil grey and are coloured in behind a line as they scroll into view (`components/Inked.jsx`).
-- The panel of art beside the title of the Work, Commissions and Contact pages goes through every piece in Work, in a random order on each visit (`components/Slides.jsx`). Whatever is added to Work joins in.
+- In front of the title panel of the Work, Commissions and Contact pages stands a deck of the finished pieces in Work, dealt one at a time in a random order on each visit (`components/Slides.jsx`). Each is shown whole, at its own shape, like a printed page. Whatever is added to Work joins in; a piece ticked **Pencils or work in progress** is left out.
+- Buttons that ask for a commission ("Commission a piece", "Commission one like it") open the artist's Instagram, where quotes are given (`components/QuoteLink.jsx`).
 - The page is never a flat colour: two glows of the red and a field of its print dots drift slowly behind everything (`body::before` and `::after` in `global.css`).
 - On the Gallery page visitors can switch between four layouts: wall, grid, strip and spotlight.
 - The browser icon, the icon a phone uses when the site is added to its home screen (`public/manifest.webmanifest`) and the mark in the top bar are all the logo.

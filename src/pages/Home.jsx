@@ -10,6 +10,7 @@ import Compare from '../components/Compare'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
 import Runner from '../components/Runner'
+import QuoteLink from '../components/QuoteLink'
 import { useFinePointer, useReducedMotion } from '../hooks/useMedia'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -80,7 +81,7 @@ function Hero({ onOpen }) {
                 <motion.p className="lead" {...rise(1.45)}>{hero.text}</motion.p>
                 <motion.div className="hero-actions" {...rise(1.55)}>
                   {shows('pages', 'work') && <Magnetic><Link className="btn" to="/work">{hero.primaryLabel} <span className="arrow">→</span></Link></Magnetic>}
-                  {shows('pages', 'commissions') && <Magnetic><Link className="btn ghost" to="/commissions">{hero.secondaryLabel}</Link></Magnetic>}
+                  {hero.secondaryLabel && <Magnetic><QuoteLink className="btn ghost">{hero.secondaryLabel}</QuoteLink></Magnetic>}
                 </motion.div>
               </div>
             </div>

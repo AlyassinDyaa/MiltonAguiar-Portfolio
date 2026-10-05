@@ -4,6 +4,7 @@ import { asset, brand, commissions, footer, nav, shows, social } from '../data/s
 import SocialIcon from './SocialIcon'
 import Wordmark from './Wordmark'
 import Runner from './Runner'
+import QuoteLink from './QuoteLink'
 
 /* The last page of the comic. It ends the way an issue does, on one wide red panel with the
    closing line and what to do next; under it, who this is, the pages, and where else to find him. */
@@ -20,8 +21,8 @@ export default function Footer() {
               <div className="words">
                 {footer.line && <p className="ft-line">{footer.line}</p>}
                 <div className="actions">
-                  {hire && <Link className="btn" to="/commissions">{commissions.open ? 'Commission a piece' : 'Commissions'} <span className="arrow">→</span></Link>}
-                  {brand.instagram && <a className="btn ghost" href={brand.instagram} target="_blank" rel="noreferrer">Follow on Instagram <span className="arrow">↗</span></a>}
+                  {hire && <QuoteLink>{commissions.open ? 'Commission a piece' : 'Ask about commissions'}</QuoteLink>}
+                  {hire && <Link className="btn ghost" to="/commissions">How it works <span className="arrow">→</span></Link>}
                 </div>
               </div>
             </div>

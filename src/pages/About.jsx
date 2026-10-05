@@ -9,6 +9,7 @@ import Lightbox from '../components/Lightbox'
 import SocialIcon from '../components/SocialIcon'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
+import QuoteLink from '../components/QuoteLink'
 
 /* The colour of each story panel's words, in turn, so the page reads as a sequence. */
 const TONES = ['is-loud', 'is-red', '']
@@ -25,7 +26,7 @@ export default function About() {
     <Page title="About">
       <PageTitle tone="red" label={brand.artist || brand.name} title={about.title} lead={about.intro} art={about.image} slides={work}>
         <div className="actions">
-          {shows('pages', 'commissions') && <Link className="btn" to="/commissions">Commission a piece <span className="arrow">→</span></Link>}
+          <QuoteLink>Commission a piece</QuoteLink>
           {shows('pages', 'work') && <Link className="btn ghost" to="/work">See the work</Link>}
         </div>
       </PageTitle>
@@ -48,6 +49,7 @@ export default function About() {
                         <span className="story-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
                         {s.title && <h2 className="display h-lg">{s.title}</h2>}
                         <p className="lead">{s.text}</p>
+                        {s.url && <a className="btn" href={s.url} target="_blank" rel="noreferrer">{s.button || 'See more'} <span className="arrow">↗</span></a>}
                       </div>
                     </div>
                   </div>

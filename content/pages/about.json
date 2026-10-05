@@ -16,12 +16,16 @@
     {
       "title": "Raptor",
       "text": "That hero is Raptor, my own vigilante, and the book I am drawing now. The Preamble was funded by its readers on Indiegogo and is out on GlobalComix; the Prelude is next.",
-      "image": "/uploads/raptor.webp"
+      "image": "/uploads/raptor.webp",
+      "button": "Read it on GlobalComix",
+      "url": "https://globalcomix.com/c/raptor"
     },
     {
       "title": "ImaginAction",
       "text": "I co-founded ImaginAction Comics to publish creator-owned books, Raptor first. I also draw covers and colours for other people's comics, and animate a little on the side.",
-      "image": "/uploads/raptor-the-preamble.webp"
+      "image": "/uploads/raptor-the-preamble.webp",
+      "button": "ImaginAction Comics",
+      "url": "https://imaginaction-comics.vercel.app/"
     }
   ],
   "facts": [

@@ -46,7 +46,7 @@
      single pages is looked up as "collection/page". A heading never goes on an on/off switch:
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
-    work: { groups: { title: 'The piece', src: 'Picture, and where it shows' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'hidden'] },
+    work: { groups: { title: 'The piece', src: 'Picture, and where it shows' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },

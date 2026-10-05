@@ -1,18 +1,18 @@
 import Runner from './Runner'
-import Inked from './Inked'
 import Slides from './Slides'
 
-/* The first page of every part of the site but the home page, built the way the home page's is:
-   a title panel, and beside it, across a slanted gutter, a panel of art. Whatever is passed
-   inside (filters, a status) goes into the title panel under the words. `tone` makes the title
-   panel white ("loud") or red. The art is one picture (`art`), or, given a list of pieces
-   (`slides`), a panel that goes through them at random. */
+/* The first page of every part of the site but the home page: a title panel the full width of
+   the page, and standing in front of it at the right, whole and at a slight angle, a piece of
+   art, the way the cover stands in front of the project panel on the home page. Whatever is
+   passed inside (filters, a status) goes into the title panel under the words. `tone` makes the
+   title panel white ("loud") or red. The art is one picture (`art`), or, given a list of pieces
+   (`slides`), a deck that deals through the finished ones at random. */
 export default function PageTitle({ label, title, lead, art, slides, tone = '', children }) {
-  const many = !art && slides?.some((p) => p.src)
+  const deck = art ? [{ src: art }] : (slides || []).filter((p) => p.src)
   return (
     <header className="container title-page">
       <Runner label={label} page={1} />
-      <div className={`tp ${art || many ? 'has-art' : ''}`}>
+      <div className={`tp ${deck.length ? 'has-art' : ''}`}>
         <div className={`hp tp-text ${tone ? `is-${tone}` : ''}`}>
           <div className="hp-in">
             <div className="words">
@@ -22,11 +22,7 @@ export default function PageTitle({ label, title, lead, art, slides, tone = '', 
             </div>
           </div>
         </div>
-        {(art || many) && (
-          <div className="hp tp-art" aria-hidden="true">
-            <div className="hp-in">{art ? <Inked src={art} eager /> : <Slides items={slides} />}</div>
-          </div>
-        )}
+        {deck.length > 0 && <div className="tp-deck" aria-hidden="true"><Slides items={deck} /></div>}
       </div>
     </header>
   )

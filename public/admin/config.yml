@@ -58,6 +58,7 @@ collections:
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4 (for example 1500×2000px). Other shapes are cropped on the Work page and shown whole in the gallery.' }
       - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
       - { name: featured, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'The first four ticked pieces are the panels beside your name; the next five are the panels of "Latest". With none ticked, the newest are used.' }
+      - { name: rough, label: Pencils or work in progress, widget: boolean, default: false, required: false, hint: 'Tick this for sketches and pencilled pages. They stay on the Work page but are left out of the changing pictures beside the page titles, which show finished pieces only.' }
       - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 5 to 9 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
@@ -167,7 +168,7 @@ collections:
           - { name: kicker, label: Small red tab above the name, widget: string, required: false }
           - { name: text, label: Sentence under the tagline, widget: text, required: false }
           - { name: primaryLabel, label: First button, widget: string, hint: 'Goes to the Work page.' }
-          - { name: secondaryLabel, label: Second button, widget: string, hint: 'Goes to the Commissions page.' }
+          - { name: secondaryLabel, label: Second button, widget: string, required: false, hint: 'Asks for a commission: it opens your Instagram (or wherever the quote button on the Commissions page is set to go).' }
           - name: figure
             label: Drawing
             widget: object
@@ -283,6 +284,8 @@ collections:
               - { name: title, label: Heading, widget: string, required: false }
               - { name: text, label: Words, widget: text }
               - { name: image, label: Picture, widget: image, choose_url: false, required: false, hint: 'Without one the words take the full width.' }
+              - { name: button, label: Button, widget: string, required: false, hint: 'Optional: a button under the words. It needs the address below.' }
+              - { name: url, label: Where the button goes, widget: string, required: false }
           - name: facts
             label: Facts
             label_singular: Fact

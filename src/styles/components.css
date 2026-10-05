@@ -121,10 +121,6 @@ button.hp:hover .inked img, button.hp:focus-visible .inked img, a.hp:hover .inke
 .is-loud .btn.ghost { background: var(--panel-2); color: var(--fg); }
 .is-loud .btn:hover, .is-loud .btn:focus-visible, .is-loud .btn.ghost:hover, .is-loud .btn.ghost:focus-visible { background: var(--on-loud); color: var(--loud); }
 
-/* a panel of art that keeps changing (components/Slides.jsx): each picture is wiped in over the last */
-.slides { position: absolute; inset: 0; display: block; }
-.slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 16%; }
-.tp-art .caption { left: calc(var(--s) + 10px); max-width: calc(100% - var(--s) - 20px); }
 /* a caption box in the corner of a panel of art */
 .caption { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); padding: 6px 10px 5px; background: #fff; color: #0b0b0c; border: 2px solid var(--frame); font-family: var(--display); font-size: 0.98rem; font-weight: 800; font-style: italic; line-height: 1.05; letter-spacing: 0.03em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
 .caption strong { display: block; font-weight: 800; }
@@ -378,24 +374,29 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
   .event .arrow { grid-column: 2; grid-row: 1 / 4; align-self: center; }
 }
 
-/* ---------- the first page of every other part of the site: its title, and a panel of art ---------- */
-.title-page { padding-top: calc(var(--nav) + 8px); }
-.tp { --s: clamp(24px, 3.4vw, 54px); display: grid; grid-template-columns: 1fr; gap: var(--gap); min-height: clamp(300px, 46vh, 470px); }
-.tp.has-art { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
-/* the gutter between the two leans, as it does on the first page of the site */
-.tp.has-art .tp-text { --clip: polygon(0 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
-.tp.has-art .tp-art { margin-left: calc(var(--s) * -1); --clip: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%); }
+/* ---------- the first page of every other part of the site: its title, and a piece of art standing in front of it ---------- */
+.title-page { padding-top: calc(var(--nav) + 8px); padding-bottom: clamp(10px, 2vw, 30px); }
+.tp { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); min-height: clamp(300px, 46vh, 470px); }
 .tp-text .words { justify-content: flex-end; }
-.tp.has-art .tp-text .words { padding-right: calc(var(--pad) + var(--s)); }
+/* the words keep to the left of the art */
+.tp.has-art .tp-text .words { padding-right: calc(40% + var(--pad)); }
 .tp-text .lead { margin-top: 18px; }
-.tp-text .filters, .tp-text .filters-row, .tp-text .status { margin-top: 24px; }
+.tp-text .filters, .tp-text .filters-row, .tp-text .actions { margin-top: 24px; }
 .tp-text .status { order: -1; margin: 0 0 18px; }
+/* The art: a deck of pieces dealt one at a time (components/Slides.jsx). Each is shown whole, at
+   its own shape, as a printed page with an edge round it, lying at a slight angle. The deck is a
+   little taller than the title panel, so the page breaks out of the foot of it. */
+.tp-deck { position: absolute; z-index: 2; top: 9%; bottom: -9%; right: clamp(14px, 4%, 70px); width: 34%; container-type: size; pointer-events: none; }
+.deck { position: absolute; inset: 0; display: grid; place-items: center; }
+.deck-card { grid-area: 1 / 1; position: relative; display: block; }
+.deck-card img { display: block; width: auto; height: auto; max-width: 100cqw; max-height: 100cqh; background: #fff; border: 5px solid var(--loud); box-shadow: 12px 14px 0 rgba(0, 0, 0, 0.5); }
+.deck-card .caption { left: -14px; bottom: 18px; max-width: calc(100% + 14px); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5); }
 @media (max-width: 799px) {
-  .tp, .tp.has-art { grid-template-columns: 1fr; min-height: 0; }
-  .tp.has-art .tp-text, .tp.has-art .tp-art { --clip: none; margin: 0; }
-  .tp.has-art .tp-text .words { padding-right: var(--pad); }
-  .tp-art { order: -1; aspect-ratio: 16 / 10; }
-  .tp-art .caption { left: 10px; max-width: calc(100% - 20px); }
+  .tp { min-height: 0; }
+  .tp.has-art .tp-text .words { padding-right: var(--pad); padding-top: calc(var(--pad) + 46px); }
+  /* on a phone the piece lies across the top edge of the title panel */
+  .tp-deck { position: relative; order: -1; top: auto; bottom: auto; right: auto; width: 100%; height: clamp(250px, 76vw, 400px); margin-bottom: -46px; }
+  .deck-card .caption { left: -8px; }
 }
 
 /* ---------- work page ---------- */
@@ -564,6 +565,7 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 .story-text .display { margin: 8px 0 0; }
 .is-red .story-text .display, .story-text.is-red .display { text-shadow: 0.04em 0.04em 0 var(--k); }
 .story-text .lead { margin: 18px 0 0; max-width: 50ch; }
+.story-text .btn { margin-top: 24px; }
 @media (max-width: 799px) {
   .story-row, .story-row.has-art, .story-row.has-art.is-flipped { grid-template-columns: 1fr; min-height: 0; }
   .story-row .story-art, .story-row.is-flipped .story-art { order: 0; margin: 0; --clip: none; aspect-ratio: 4 / 3; }

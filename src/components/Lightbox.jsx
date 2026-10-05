@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, commissions, day, shows } from '../data/site'
+import { asset, commissions, day } from '../data/site'
 import { useFinePointer } from '../hooks/useMedia'
 import Poster from './Poster'
+import QuoteLink from './QuoteLink'
 
 /* One piece, large and uncropped, with its details beside it. Browse with a sideways swipe, the arrow buttons or the arrow keys; a tap outside the
    picture, the × or Escape closes it. `sel` is the index of the open piece in `items`, or null. */
@@ -87,7 +87,7 @@ export default function Lightbox({ items, sel, setSel }) {
               {piece.note && <p className="dim">{piece.note}</p>}
               <div className="lightbox-actions">
                 {piece.link && <a className="btn ghost sm" href={piece.link} target="_blank" rel="noreferrer">See the post <span className="arrow">↗</span></a>}
-                {shows('pages', 'commissions') && commissions.open && <Link className="btn sm" to="/commissions" onClick={() => setSel(null)}>Commission one like it</Link>}
+                {commissions.open && <QuoteLink className="btn sm">Commission one like it</QuoteLink>}
               </div>
               <p className="lightbox-hint">{many ? `${sel + 1} / ${count} · ${mouse ? '← → to browse · Esc to close' : 'Swipe to browse'}` : mouse ? 'Esc to close' : ''}</p>
             </div>

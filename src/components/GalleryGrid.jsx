@@ -45,7 +45,7 @@ function Spotlight({ items, open }) {
   const i = items.indexOf(cur)
   return (
     <div className="spot">
-      <button type="button" className="shot spot-main dots" onClick={() => open(i)} aria-label={`Open ${cur.title || 'picture'}`}>
+      <button type="button" className="shot spot-main" onClick={() => open(i)} aria-label={`Open ${cur.title || 'picture'}`}>
         <Shot key={cur.src} g={cur} eager />
       </button>
       <div className="spot-side">
@@ -69,14 +69,14 @@ function Spotlight({ items, open }) {
 /* A set of pictures in one of four layouts (hooks/useGalleryView.js): wall (columns, each
    picture at its own proportions), grid (even tiles), strip (one sideways row) or spotlight.
    In every layout a click opens the picture large, and from there the whole set can be browsed. */
-export default function GalleryGrid({ items, view = 'wall' }) {
+export default function GalleryGrid({ items, view = 'wall', max = 4 }) {
   const [sel, setSel] = useState(null)
   const tiles = view === 'grid'
   // The wall: four columns on a wide screen, three on a middling one, two on a phone. The
   // pictures are dealt out across the columns in turn, so they read left to right in the order
   // the artist put them in and no column is left empty when there are only a few.
   const wide = useMedia('(min-width: 1200px)'), mid = useMedia('(min-width: 700px)')
-  const count = wide ? 4 : mid ? 3 : 2
+  const count = Math.min(max, wide ? 4 : mid ? 3 : 2)
   const columns = Array.from({ length: count }, (_, c) => items.map((g, i) => ({ g, i })).filter((x) => x.i % count === c))
   const shot = (g, i) => (
     <Reveal as="li" key={`${g.src}-${i}`} delay={Math.min(i, 8) * 0.05} y={20}>

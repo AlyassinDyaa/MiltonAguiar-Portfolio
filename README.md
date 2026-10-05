@@ -18,7 +18,7 @@ npm run preview    # serve the production build
 
 | Route | Page |
 |---|---|
-| `/` | Home: the name and a drawing in the title panel of a comic page, the current project, latest pieces as the slanted panels of a page, a wall of pinned-up pictures, step-by-step comparisons, a commissions splash with price tags, conventions |
+| `/` | Home, page by page: the name and a drawing in the title panel with four pieces beside it, the current project and its cover, the latest pieces as slanted panels, a wall from the gallery, step-by-step comparisons, commissions with each offer as a panel, conventions |
 | `/work` | Every piece, with category filters; a piece opens large with its details |
 | `/gallery` | Pictures in sections, shown uncropped: finished pieces, pencilled pages, whatever is added |
 | `/commissions` | What is on offer, how it works (a strip that takes one picture from blank page to colours), and where to ask |
@@ -37,7 +37,7 @@ The site rebuilds itself about a minute later. No code involved.
 | Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
 | Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
 | Conventions | Events, with dates and where to find the table |
-| Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name, the current project (title, cover, where to read it) and which layout the gallery opens in; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
+| Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name, the current project (title, cover, where to read it) and which layout the Gallery page opens in; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
 | Show or hide | Switch whole pages, or parts of the home page, on and off |
 
@@ -57,7 +57,7 @@ replaced by a button to Instagram as well.
 ### The panels on the home page
 
 Pieces ticked **Show on the home page** fill the panels. **Place on the home page** orders them:
-1 is the tall panel beside the name, 2 and 3 the two small ones, 4 the wide one; 1 to 6 are the
+1 is the tall panel beside the name, 2 and 3 the two small ones, 4 the wide one; 5 to 9 are the
 panels of "Latest".
 
 ### The drawing beside the name
@@ -82,13 +82,13 @@ has the same effect as using the panel.
 
 ## Design
 
-- The site is drawn as a comic page: panels ruled in ink, lettered caption boxes, speech balloons, print dots.
-- It opens **dark** (a black page ruled in white ink). The switch in the top bar changes to the light theme (black ink on art-board paper); the visitor's choice is remembered in their browser.
-- Tokens (colours, type, spacing) for both themes are at the top of `src/styles/global.css`.
-- The one colour on the site is set by a hue, `--h`, from **Name, colour and contact → Brand colour**. 25 is the red of the logo.
-- In dark mode hard shadows are a deep red and red things carry no outline; on paper both are ink (`--shade`, `--edge`).
+- The whole site is one comic. Every part of it is a page of panels: panels of art, and panels of solid colour (quiet, white or red) that carry the words, with a running head and a page number above each page. The first page of the home page sets the pattern and every other page follows it.
+- A panel is one thing in the code: `.hp` (the frame) with `.hp-in` (what is inside), in `src/styles/components.css`. `is-loud` and `is-red` make a panel of words white or red.
+- It opens **dark**: a black page whose gutters are the black itself, so nothing is outlined. The switch in the top bar changes to the light theme, where every panel is ruled in ink on white board; the visitor's choice is remembered in their browser.
+- There are three colours (black, white, and one red set by a hue, `--h`, from **Name, colour and contact → Brand colour**; 25 is the red of the logo) and one family of type (Barlow Condensed for display and labels, Barlow for reading).
+- Tokens for both themes are at the top of `src/styles/global.css`.
 - Pictures arrive in pencil grey and are coloured in behind a line as they scroll into view (`components/Inked.jsx`).
-- Wherever a set of pictures is shown (the home page gallery, the Gallery page) visitors can switch between four layouts: wall, grid, strip and spotlight.
+- On the Gallery page visitors can switch between four layouts: wall, grid, strip and spotlight.
 - The browser icon, the icon a phone uses when the site is added to its home screen (`public/manifest.webmanifest`) and the mark in the top bar are all the logo.
 - Everything respects `prefers-reduced-motion`: smooth scroll, the opening sheet and the moving band switch off.
 

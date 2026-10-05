@@ -5,6 +5,7 @@
   "src": "/uploads/superman.webp",
   "link": "https://www.instagram.com/p/DMOIR38upim/",
   "note": "Drawn the day after seeing the film.",
-  "featured": false,
+  "featured": true,
+  "homeOrder": 8,
   "hidden": false
 }

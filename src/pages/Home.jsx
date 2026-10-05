@@ -1,27 +1,25 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { asset, brand, commissions, day, events, galleryHome, hero, home, latest, marquee, nameParts, project, quote, redraws, shows, work } from '../data/site'
+import { asset, brand, commissions, day, events, fresh, galleryHome, hero, heroPanels, home, marquee, nameParts, pages, project, quote, redraws, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Marquee from '../components/Marquee'
 import Compare from '../components/Compare'
 import GalleryGrid from '../components/GalleryGrid'
-import ViewSwitch from '../components/ViewSwitch'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
-import Tilt from '../components/Tilt'
-import Ghost from '../components/Ghost'
+import Runner from '../components/Runner'
 import { useFinePointer, useReducedMotion } from '../hooks/useMedia'
-import { useGalleryView } from '../hooks/useGalleryView'
 
 const EASE = [0.16, 1, 0.3, 1]
 
-/* The top of the home page is laid out as a comic page. The first panel is the title panel: the
-   name, set like a masthead, with a drawing beside it (the admin picks the drawing: a cut-out
-   stands in the panel, any other picture is laid in it as a sheet of art board). The panels beside it are the
-   pieces ticked "Show on the home page", and each one opens when it is clicked.
+/* The whole home page is a comic, one page of panels after another, and this is page one. Its
+   first panel is the title panel: the name, set like a masthead, with a drawing beside it (the
+   admin picks the drawing: a cut-out stands in the panel, any other picture is laid in it as a
+   sheet of art board). The panels beside it are the first four pieces ticked "Show on the home
+   page", and each one opens when it is clicked.
    With a mouse, the drawing and the pictures inside their frames drift a little against each
    other as the pointer moves, the way near and far things do. Without one, or with reduced
    motion, everything holds still. */
@@ -55,19 +53,14 @@ function Hero({ onOpen }) {
   }
   const num = (v, fallback) => (v === '' || v == null || Number.isNaN(Number(v)) ? fallback : Number(v))
   const rise = (delay) => ({ initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.8, ease: EASE } })
-  // the side panels: the pieces picked for the home page, then the rest, leaving out the drawing already standing in the title panel
-  const panels = [...latest, ...work.filter((p) => !latest.includes(p))].filter((p) => p.src && p.src !== figure?.src).slice(0, 4)
   const [year] = useState(() => new Date().getFullYear())
   return (
     <section ref={ref} className="hero" onMouseMove={move} onMouseLeave={rest}>
       <div className="container hero-in">
-        {/* the line of boxes printed across the top of a comic art board */}
-        <motion.div className="board-head" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.8 }}>
-          <span><b>Book</b>{brand.artist || brand.name}</span>
-          <span><b>Issue</b>Portfolio {year}</span>
-          <span><b>Page</b>01</span>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.8 }}>
+          <Runner label={`${brand.artist || brand.name} · Portfolio ${year}`} page={1} />
         </motion.div>
-        <div className="hero-page" data-panels={panels.length}>
+        <div className="hero-page" data-panels={heroPanels.length}>
           <motion.div className="hp hp-title" {...rise(1.0)}>
             <div className={`hp-in ${figure ? 'has-figure' : ''} ${figure && cutout ? 'has-cutout' : ''}`}>
               {figure && cutout && <span className="hero-rays" aria-hidden="true" />}
@@ -93,7 +86,7 @@ function Hero({ onOpen }) {
               </div>
             </div>
           </motion.div>
-          {panels.map((p, i) => (
+          {heroPanels.map((p, i) => (
             <motion.button
               key={p.slug} type="button" className={`hp hp-${i + 1}`} aria-label={`Open ${p.title}`} onClick={() => onOpen(work.indexOf(p))}
               initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 + i * 0.09, duration: 0.8, ease: EASE }}
@@ -110,52 +103,75 @@ function Hero({ onOpen }) {
   )
 }
 
-/* What is on the drawing board now: the comic or series in progress. Its cover stands in front of
-   itself: the same picture, blown up, drained and washed in the brand colour, fills the block
-   behind it, with the title in giant outline sliding across as the page scrolls. The cover leans
-   toward the pointer. */
-function Project() {
+/* The comic or series on the drawing board now: its cover as one panel, a red panel that says
+   what it is and where to read it, and under that any other pieces that carry its name. */
+function Project({ page, onOpen }) {
   const { label, title, subtitle, text, image, url, buttonLabel } = project
-  const cover = image && <img src={asset(image)} alt={`${title}${subtitle ? `: ${subtitle}` : ''}`} loading="lazy" draggable="false" />
+  const more = work.filter((p) => p.src && p.src !== image && p.title.toLowerCase().includes(title.toLowerCase())).slice(0, 2)
+  const name = `${title}${subtitle ? `: ${subtitle}` : ''}`
   return (
-    <section className="project">
-      {image && <div className="project-bg" style={{ backgroundImage: `url("${asset(image)}")` }} aria-hidden="true" />}
-      <Ghost className="project-ghost">{title}</Ghost>
-      <div className="container project-in">
-        {cover && (
-          <Reveal className="project-art">
-            <Tilt>
-              {url ? <a className="dots" href={url} target="_blank" rel="noreferrer">{cover}</a> : <span className="dots">{cover}</span>}
-            </Tilt>
-          </Reveal>
-        )}
-        <Reveal className="project-copy" delay={0.1}>
-          {label && <div className="label accent">{label}</div>}
-          <h2 className="display h-xl">{title}{subtitle && <small>{subtitle}</small>}</h2>
-          {text && <p className="lead">{text}</p>}
-          {url && <Magnetic><a className="btn" href={url} target="_blank" rel="noreferrer">{buttonLabel} <span className="arrow">↗</span></a></Magnetic>}
-        </Reveal>
+    <section className="spread">
+      <div className="container">
+        <Runner label={label} page={page} />
+        <div className={`pj ${image ? '' : 'no-cover'}`}>
+          {image && (
+            <Reveal className="pj-cover">
+              {url
+                ? <a className="hp" href={url} target="_blank" rel="noreferrer" aria-label={`${name}: ${buttonLabel}`}><span className="hp-in"><Inked src={image} alt={name} /></span></a>
+                : <div className="hp"><div className="hp-in"><Inked src={image} alt={name} /></div></div>}
+            </Reveal>
+          )}
+          <div className="pj-side">
+            <Reveal className="hp is-red pj-text" delay={0.08}>
+              <div className="hp-in">
+                <div className="words">
+                  <h2 className="display h-xl">{title}{subtitle && <small>{subtitle}</small>}</h2>
+                  {text && <p className="lead">{text}</p>}
+                  {url && <Magnetic><a className="btn" href={url} target="_blank" rel="noreferrer">{buttonLabel} <span className="arrow">↗</span></a></Magnetic>}
+                </div>
+              </div>
+            </Reveal>
+            {more.length > 0 && (
+              <div className="pj-strip">
+                {more.map((p, i) => (
+                  <Reveal className="cell" key={p.slug} delay={0.14 + i * 0.08}>
+                    <button type="button" className="hp" onClick={() => onOpen(work.indexOf(p))} aria-label={`Open ${p.title}`}>
+                      <span className="hp-in"><Inked src={p.src} /><span className="caption">{p.title}</span></span>
+                    </button>
+                  </Reveal>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   )
 }
 
-/* The newest pieces, set out as the panels of a comic page: two tiers, cut by slanted gutters,
-   numbered, each with its title in a caption box. Each panel arrives in pencil grey and is
-   coloured as it scrolls into view. A panel opens the piece. */
-function Latest({ onOpen }) {
+/* The newest pieces that are not already up beside the name, as a page of panels cut by slanted
+   gutters. The first panel is the page's title. Each piece arrives in pencil grey and is
+   coloured as it scrolls into view; a panel opens the piece. */
+function Latest({ page, onOpen }) {
   return (
-    <section className="section">
+    <section className="spread">
       <div className="container">
-        <div className="section-head">
-          <div><div className="label accent">{home.latestLabel}</div><h2 className="display h-lg">{home.latestTitle}</h2></div>
-          {shows('pages', 'work') && <Link className="btn ghost sm" to="/work">All {work.length} pieces <span className="arrow">→</span></Link>}
-        </div>
+        <Runner label={home.latestLabel} page={page} />
         <ol className="pg">
-          {latest.map((p, i) => (
-            <Reveal as="li" key={p.slug} delay={(i % 3) * 0.08} y={24}>
-              <button type="button" className="pg-panel" onClick={() => onOpen(work.indexOf(p))} aria-label={`Open ${p.title}`}>
-                <span className="pg-in">
+          <Reveal as="li" className="pg-title" y={24}>
+            <div className="hp is-loud">
+              <div className="hp-in">
+                <div className="words">
+                  <h2 className="display h-lg">{home.latestTitle}</h2>
+                  {shows('pages', 'work') && <Link className="btn" to="/work">All {work.length} pieces <span className="arrow">→</span></Link>}
+                </div>
+              </div>
+            </div>
+          </Reveal>
+          {fresh.map((p, i) => (
+            <Reveal as="li" key={p.slug} delay={((i + 1) % 3) * 0.08} y={24}>
+              <button type="button" className="hp" onClick={() => onOpen(work.indexOf(p))} aria-label={`Open ${p.title}`}>
+                <span className="hp-in">
                   {p.src
                     ? <Inked src={p.src} />
                     : <span className="poster-gen"><span className="poster-title">{p.title}</span></span>}
@@ -171,41 +187,68 @@ function Latest({ onOpen }) {
   )
 }
 
-/* Commissions, shouted the way the artist announces them: a red splash panel with the offers
-   hanging beside it as price tags. A tag goes to his Instagram, where quotes are given. */
-function Hire() {
-  const { open, intro, tiers } = commissions
+/* A handful of pictures from the gallery, whole and uncropped, beside the panel that names it. */
+function GalleryPage({ page }) {
   return (
-    <section className="section">
+    <section className="spread">
       <div className="container">
-        <Reveal className="hire dots">
-          <div className="hire-in">
-            <div className="hire-copy">
-              <h2 className="hire-shout">
-                <span>{home.commissionsTitle}</span>
-                <b className={open ? 'is-open' : ''}>{open ? 'Open!' : 'Closed'}</b>
-              </h2>
-              <p className="lead">{intro}</p>
-              <div className="hero-actions">
-                <Magnetic><Link className="btn" to="/commissions">{home.commissionsButton} <span className="arrow">→</span></Link></Magnetic>
-                {quote.url && <Magnetic><a className="btn ghost" href={quote.url} target="_blank" rel="noreferrer">{quote.label} <span className="arrow">↗</span></a></Magnetic>}
+        <Runner label={home.galleryLabel} page={page} />
+        <div className="gl">
+          <Reveal className="hp gl-text">
+            <div className="hp-in">
+              <div className="words">
+                <h2 className="display h-lg">{home.galleryTitle}</h2>
+                {pages.gallery.intro && <p className="lead">{pages.gallery.intro}</p>}
+                {shows('pages', 'gallery') && <Link className="btn ghost" to="/gallery">Full gallery <span className="arrow">→</span></Link>}
               </div>
             </div>
-            {tiers.length > 0 && (
-              <ul className="tags">
-                {tiers.map((t) => (
-                  <li key={t.name}>
-                    <a className="tag" href={quote.url || undefined} target="_blank" rel="noreferrer">
-                      <strong>{t.name}</strong>
-                      <span>{t.text}</span>
-                      <em>{t.price || quote.label} <i aria-hidden="true">↗</i></em>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Reveal>
+          </Reveal>
+          <GalleryGrid items={galleryHome} view="wall" max={3} />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* Commissions, shouted the way the artist announces them, in a red panel. Each offer is a panel
+   of its own beside it, and a link to where quotes are given (his Instagram). */
+function Hire({ page }) {
+  const { open, intro, tiers } = commissions
+  return (
+    <section className="spread">
+      <div className="container">
+        <Runner label="Commissions" page={page} />
+        <div className="cm">
+          <Reveal className="hp is-red cm-text">
+            <div className="hp-in">
+              <div className="words">
+                <h2 className="shout">
+                  <span>{home.commissionsTitle}</span>
+                  <b className={open ? 'is-open' : ''}>{open ? 'Open!' : 'Closed'}</b>
+                </h2>
+                <p className="lead">{intro}</p>
+                <div className="actions">
+                  <Magnetic><Link className="btn" to="/commissions">{home.commissionsButton} <span className="arrow">→</span></Link></Magnetic>
+                  {quote.url && <Magnetic><a className="btn ghost" href={quote.url} target="_blank" rel="noreferrer">{quote.label} <span className="arrow">↗</span></a></Magnetic>}
+                </div>
+              </div>
+            </div>
+          </Reveal>
+          {tiers.length > 0 && (
+            <ul className="offers">
+              {tiers.map((t, i) => {
+                const inside = <span className="hp-in"><strong>{t.name}</strong><span>{t.text}</span><em>{t.price || quote.label} <i aria-hidden="true">↗</i></em></span>
+                return (
+                  <Reveal as="li" className="cell" key={t.name} delay={0.06 + i * 0.06} y={20}>
+                    {quote.url
+                      ? <a className="hp is-loud offer" href={quote.url} target="_blank" rel="noreferrer">{inside}</a>
+                      : <Link className="hp is-loud offer" to="/commissions">{inside}</Link>}
+                  </Reveal>
+                )
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -213,39 +256,27 @@ function Hire() {
 
 export default function Home() {
   const [sel, setSel] = useState(null)
-  const [view, setView] = useGalleryView()
+  // the pages after the first are numbered as they come, so a part that is switched off leaves no gap
+  let n = 1
   return (
     <Page>
       <Hero onOpen={setSel} />
       {shows('home', 'ticker') && <Marquee items={marquee} />}
 
-      {shows('home', 'project') && project.title && <Project />}
+      {shows('home', 'project') && project.title && <Project page={++n} onOpen={setSel} />}
 
-      {shows('home', 'latest') && latest.length > 0 && <Latest onOpen={setSel} />}
+      {shows('home', 'latest') && fresh.length > 0 && <Latest page={++n} onOpen={setSel} />}
 
-      {/* Gallery */}
-      {shows('home', 'gallery') && galleryHome.length > 0 && (
-        <section className="section">
-          <div className="container">
-            <div className="section-head">
-              <div><div className="label accent">{home.galleryLabel}</div><h2 className="display h-lg">{home.galleryTitle}</h2></div>
-              <div className="section-tools">
-                <ViewSwitch view={view} onChange={setView} />
-                {shows('pages', 'gallery') && <Link className="btn ghost sm" to="/gallery">Full gallery <span className="arrow">→</span></Link>}
-              </div>
-            </div>
-            <GalleryGrid items={galleryHome} view={view} />
-          </div>
-        </section>
-      )}
+      {shows('home', 'gallery') && galleryHome.length > 0 && <GalleryPage page={++n} />}
 
       {/* Step by step */}
       {shows('home', 'redraws') && redraws.length > 0 && (
-        <section className="section">
+        <section className="spread">
           <div className="container">
-            <div className="section-head">
-              <div><div className="label accent">{home.redrawLabel}</div><h2 className="display h-lg">{home.redrawTitle}</h2></div>
-              {home.redrawText && <p className="dim section-note">{home.redrawText}</p>}
+            <Runner label={home.redrawLabel} page={++n} />
+            <div className="spread-head">
+              <h2 className="display h-lg">{home.redrawTitle}</h2>
+              {home.redrawText && <p className="dim">{home.redrawText}</p>}
             </div>
             <div className="compare-grid">
               {redraws.map((r, i) => <Reveal key={r.slug} delay={i * 0.1}><Compare set={r} /></Reveal>)}
@@ -254,27 +285,32 @@ export default function Home() {
         </section>
       )}
 
-      {shows('home', 'commissions') && shows('pages', 'commissions') && <Hire />}
+      {shows('home', 'commissions') && shows('pages', 'commissions') && <Hire page={++n} />}
 
       {/* Conventions */}
       {shows('home', 'events') && events.length > 0 && (
-        <section className="section tight">
+        <section className="spread">
           <div className="container">
-            <div className="section-head">
-              <div><div className="label accent">{home.eventsLabel}</div><h2 className="display h-lg">{home.eventsTitle}</h2></div>
-            </div>
-            <ul className="events">
-              {events.map((e, i) => (
-                <Reveal as="li" key={e.slug} delay={i * 0.06} y={20}>
-                  <a className="event" href={e.url || undefined} target={e.url ? '_blank' : undefined} rel="noreferrer">
-                    <span className="event-when">{e.when}</span>
-                    <span className="event-name">{e.name}</span>
-                    <span className="event-where">{[e.role, e.place].filter(Boolean).join(' · ')}</span>
-                    {e.url && <span className="arrow" aria-hidden="true">↗</span>}
-                  </a>
-                </Reveal>
-              ))}
-            </ul>
+            <Runner label={home.eventsLabel} page={++n} />
+            <Reveal className="hp ev">
+              <div className="hp-in">
+                <div className="words">
+                  <h2 className="display h-lg">{home.eventsTitle}</h2>
+                  <ul className="events">
+                    {events.map((e) => (
+                      <li key={e.slug}>
+                        <a className="event" href={e.url || undefined} target={e.url ? '_blank' : undefined} rel="noreferrer">
+                          <span className="event-when">{e.when}</span>
+                          <span className="event-name">{e.name}</span>
+                          <span className="event-where">{[e.role, e.place].filter(Boolean).join(' · ')}</span>
+                          {e.url && <span className="arrow" aria-hidden="true">↗</span>}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </section>
       )}

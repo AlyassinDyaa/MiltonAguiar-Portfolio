@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, HashRouter } from 'react-router-dom'
+import '@fontsource/barlow-condensed/700.css'
 import '@fontsource/barlow-condensed/700-italic.css'
 import '@fontsource/barlow-condensed/800-italic.css'
 import '@fontsource/barlow-condensed/900-italic.css'
@@ -8,7 +9,6 @@ import '@fontsource/barlow/400.css'
 import '@fontsource/barlow/500.css'
 import '@fontsource/barlow/600.css'
 import '@fontsource/barlow/700.css'
-import '@fontsource/comic-neue/700-italic.css'
 import '@fontsource/bangers'
 
 // VITE_ROUTER=hash builds a single-URL preview (e.g. for hosts without SPA fallback).

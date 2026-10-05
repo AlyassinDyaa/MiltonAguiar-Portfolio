@@ -30,8 +30,10 @@ export let nav
 export let work
 /* The categories that have at least one piece, in the order they first appear. */
 export let categories
-/* Home shows up to six: the pieces ticked "Show on the home page", or simply the newest six. */
+/* The pieces ticked "Show on the home page", in the order given to them (or simply the newest). */
 export let latest
+/* The four panels beside the name on the home page, and the five of "Latest" under them. */
+export let heroPanels, fresh
 /* The gallery: the artist makes sections and adds pictures to each. A section can also pull in
    pieces from Work, so a finished piece only has to be uploaded once. */
 export let gallerySections, gallery
@@ -116,7 +118,13 @@ function assemble(content) {
   // the ticked pieces in the order given to them ("Place on the home page"), newest first among those with none
   const place = (p) => (p.homeOrder === '' || p.homeOrder == null ? 99 : Number(p.homeOrder))
   const picked = work.filter((p) => p.featured).sort((a, b) => place(a) - place(b))
-  latest = (picked.length ? picked : work).slice(0, 6)
+  latest = (picked.length ? picked : work).slice(0, 9)
+  // beside the name: the first four of those, leaving out the drawing that already stands in the title panel
+  const stands = hero.figure?.src
+  heroPanels = [...latest, ...work.filter((p) => !latest.includes(p))].filter((p) => p.src && p.src !== stands).slice(0, 4)
+  // "Latest": the ticked pieces that are not up there, then the newest of the rest
+  const rest = (list) => list.filter((p) => !heroPanels.includes(p))
+  fresh = [...rest(latest), ...rest(work).filter((p) => !latest.includes(p))].slice(0, 5)
 
   // a section's "also show pieces from Work" choice: none, every piece, or one category
   const fromWork = (from) => (!from || from === 'none' ? [] : work)

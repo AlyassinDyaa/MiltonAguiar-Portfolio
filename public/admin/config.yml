@@ -57,8 +57,8 @@ collections:
       - { name: link, label: Link to the post, widget: string, required: false, hint: 'The Instagram post, if there is one.' }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4 (for example 1500×2000px). Other shapes are cropped on the Work page and shown whole in the gallery.' }
       - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
-      - { name: featured, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'Up to six ticked pieces are the panels on the home page (the first four also sit beside your name at the top). With none ticked, the six newest are.' }
-      - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 1 to 6 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
+      - { name: featured, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'The first four ticked pieces are the panels beside your name; the next five are the panels of "Latest". With none ticked, the newest are used.' }
+      - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 5 to 9 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
   - name: gallery_sections
@@ -164,7 +164,7 @@ collections:
         label: Home page
         file: content/pages/home.json
         fields:
-          - { name: kicker, label: Small red box above the name, widget: string, required: false }
+          - { name: kicker, label: Small red tab above the name, widget: string, required: false }
           - { name: text, label: Sentence under the tagline, widget: text, required: false }
           - { name: primaryLabel, label: First button, widget: string, hint: 'Goes to the Work page.' }
           - { name: secondaryLabel, label: Second button, widget: string, hint: 'Goes to the Commissions page.' }
@@ -196,7 +196,7 @@ collections:
           - { name: galleryLabel, label: Small label, widget: string, required: false }
           - { name: galleryTitle, label: Heading, widget: string }
           - name: galleryView
-            label: How the pictures are laid out to start with
+            label: How the Gallery page is laid out to start with
             widget: select
             default: wall
             required: false
@@ -205,11 +205,11 @@ collections:
               - { label: 'Grid: even tiles', value: grid }
               - { label: 'Strip: one row you scroll sideways', value: strip }
               - { label: 'Spotlight: one big picture with the rest beside it', value: spotlight }
-            hint: 'Visitors can switch between these four; this is the one they see first, on the home page and the Gallery page.'
+            hint: 'Visitors can switch between these four on the Gallery page; this is the one they see first.'
           - { name: redrawLabel, label: Small label, widget: string, required: false }
           - { name: redrawTitle, label: Heading, widget: string }
           - { name: redrawText, label: Text, widget: text, required: false }
-          - { name: commissionsTitle, label: Heading, widget: string, hint: 'Set large above "Open!" or "Closed", which follows the switch on the Commissions page.' }
+          - { name: commissionsTitle, label: Heading, widget: string, hint: 'Set above "Open!" or "Closed", which follows the switch on the Commissions page.' }
           - { name: commissionsButton, label: Button, widget: string }
           - { name: eventsLabel, label: Small label, widget: string, required: false }
           - { name: eventsTitle, label: Heading, widget: string }
@@ -322,7 +322,7 @@ collections:
               - { name: label, label: Network, widget: string, hint: 'Instagram, Threads, TikTok, X, Facebook, YouTube, Discord and ArtStation get their own icon. The Instagram link is also the "More on Instagram" button on the Gallery page.' }
               - { name: handle, label: Handle, widget: string, required: false }
               - { name: url, label: Address, widget: string }
-          - { name: footerLine, label: Caption box on the footer, widget: string, required: false }
+          - { name: footerLine, label: Closing line in the red panel of the last page, widget: string, required: false }
           - { name: footerFine, label: Small print after the © line, widget: string, required: false }
 
       - name: visibility

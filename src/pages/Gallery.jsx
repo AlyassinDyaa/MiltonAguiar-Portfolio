@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { brand, gallerySections, pages } from '../data/site'
+import { brand, gallery, gallerySections, pages } from '../data/site'
 import Page from '../components/Page'
-import Reveal from '../components/Reveal'
 import GalleryGrid from '../components/GalleryGrid'
 import ViewSwitch from '../components/ViewSwitch'
+import PageTitle from '../components/PageTitle'
+import Runner from '../components/Runner'
 import { useGalleryView } from '../hooks/useGalleryView'
-import Ghost from '../components/Ghost'
 
-/* Every picture, in the sections made in the admin panel. A section with nothing in it stays hidden. */
+/* Every picture, in the sections made in the admin panel, each section a page of its own.
+   A section with nothing in it stays hidden. */
 export default function Gallery() {
   const [on, setOn] = useState('all')
   const [view, setView] = useGalleryView()
@@ -15,11 +16,7 @@ export default function Gallery() {
   const { label, title, intro } = pages.gallery
   return (
     <Page title="Gallery">
-      <header className="page-head container">
-        <Ghost>Gallery</Ghost>
-        {label && <div className="label accent">{label}</div>}
-        <h1 className="display h-xl">{title}</h1>
-        {intro && <p className="lead">{intro}</p>}
+      <PageTitle label={label} title={title} lead={intro} art={gallery[2]?.src || gallery[0]?.src}>
         <div className="filters-row">
           {gallerySections.length > 1 && (
             <div className="filters" role="group" aria-label="Show">
@@ -36,17 +33,17 @@ export default function Gallery() {
             {brand.instagram && <a className="btn ghost sm" href={brand.instagram} target="_blank" rel="noreferrer">More on Instagram <span className="arrow">↗</span></a>}
           </div>
         </div>
-      </header>
+      </PageTitle>
 
-      <section className="section tight">
+      <section className="spread">
         <div className="container">
-          {shown.map((s) => (
+          {shown.map((s, i) => (
             <div className="gallery-group" key={s.slug}>
-              <Reveal className="gallery-group-head">
+              <Runner label={`${s.items.length} ${s.items.length === 1 ? 'picture' : 'pictures'}`} page={i + 2} />
+              <div className="gallery-group-head">
                 <h2 className="display h-md">{s.title}</h2>
                 {s.description && <p className="dim">{s.description}</p>}
-                <span>{s.items.length} {s.items.length === 1 ? 'picture' : 'pictures'}</span>
-              </Reveal>
+              </div>
               <GalleryGrid items={s.items} view={view} />
             </div>
           ))}

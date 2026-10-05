@@ -157,7 +157,7 @@
     })
     media.addEventListener('click', () => openMedia())
     const side = el('aside', { className: 'ia-side' }, [
-      el('a', { className: 'ia-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('span', {}, [el('strong', { textContent: 'Milton Aguiar' }), el('small', { textContent: 'Admin' })])]),
+      el('a', { className: 'ia-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('span', {}, [el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })]), el('small', { textContent: 'Admin' })])]),
       form,
       // the list of sections scrolls by itself on a short screen; the brand above and the foot below stay put
       el('div', { className: 'ia-scroll' }, [
@@ -195,7 +195,7 @@
     ])
     // ---- phones and small tablets: the navigation is a drawer, opened from a bar across the top
     const menu = el('button', { type: 'button', className: 'ia-menu', ariaLabel: 'Menu' }, [icon('menu')])
-    const top = el('div', { className: 'ia-top' }, [menu, el('a', { className: 'ia-top-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('strong', { textContent: 'Milton Aguiar' }), el('small', { textContent: 'Admin' })])])
+    const top = el('div', { className: 'ia-top' }, [menu, el('a', { className: 'ia-top-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })]), el('small', { textContent: 'Admin' })])])
     const shade = el('div', { className: 'ia-shade' })
     const drawer = (open) => { document.documentElement.toggleAttribute('data-ia-menu', open); menu.setAttribute('aria-expanded', String(open)) }
     menu.addEventListener('click', () => drawer(!document.documentElement.hasAttribute('data-ia-menu')))
@@ -390,7 +390,8 @@
   /* ---------- list views ----------
      Decap offers rows or cards, one choice for the whole admin. Here every list gets four views
      and remembers its own (saved in this browser, per section; search results count as one
-     place). Nothing saved yet means the first view, List. Two of the views are restyled rows
+     place). Nothing saved yet means Cards for the sections that are made of pictures (so a
+     piece is found by looking, not reading) and List for the rest. Two of the views are restyled rows
      and two are restyled cards, so Decap is switched to whichever the chosen view is built on. */
   const VIEWS = [
     { id: 'list', label: 'List', cards: false },
@@ -398,11 +399,12 @@
     { id: 'cards', label: 'Cards', cards: true },
     { id: 'gallery', label: 'Big pictures', cards: true },
   ]
+  const PICTURED = new Set(['work', 'gallery_sections', 'redraws'])
   const viewPlace = () => currentSection() || (/^#\/search/.test(location.hash) ? 'search' : 'other')
   const chosenView = () => {
     let saved = null
     try { saved = localStorage.getItem(`ia.view.${viewPlace()}`) } catch { /* storage switched off: use the default */ }
-    return VIEWS.find((v) => v.id === saved) || VIEWS[0]
+    return VIEWS.find((v) => v.id === saved) || VIEWS.find((v) => v.id === (PICTURED.has(viewPlace()) ? 'cards' : 'list'))
   }
   let lastSwitch = 0
   const syncViews = () => {
@@ -411,7 +413,7 @@
     let bar = section.querySelector(':scope > .ia-views')
     if (!bar) {
       bar = el('div', { className: 'ia-views', role: 'group', ariaLabel: 'How to show this list' }, VIEWS.map((v, i) => {
-        const b = el('button', { type: 'button', title: i ? v.label : `${v.label} (the default)`, ariaLabel: v.label }, [icon(`view_${v.id}`)])
+        const b = el('button', { type: 'button', title: v.label, ariaLabel: v.label }, [icon(`view_${v.id}`)])
         b.dataset.view = v.id
         b.addEventListener('click', () => {
           try { localStorage.setItem(`ia.view.${viewPlace()}`, v.id) } catch { /* not remembered, still applied below */ }

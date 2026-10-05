@@ -237,7 +237,7 @@ collections:
             label: Offers
             label_singular: Offer
             widget: list
-            summary: '{{fields.name}} — {{fields.price}}'
+            summary: '{{fields.name}}'
             fields:
               - { name: name, label: Name, widget: string }
               - { name: text, label: Description, widget: text }

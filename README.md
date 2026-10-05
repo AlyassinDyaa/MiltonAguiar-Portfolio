@@ -31,6 +31,10 @@ The site is edited at **`/admin`** (for example `https://your-site.com/admin/`).
 It is a content manager (Decap CMS) that saves every change as a commit to this repository.
 The site rebuilds itself about a minute later. No code involved.
 
+The panel is styled as the site's own backstage (`public/admin/admin.css`): the same black page, square
+panels, red and type, with its fonts kept beside it in `public/admin/fonts/`. Work, Gallery and Step by
+step open as picture cards; the other lists as rows. Each list remembers the view you pick for it.
+
 | Section | What you control |
 |---|---|
 | Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place |

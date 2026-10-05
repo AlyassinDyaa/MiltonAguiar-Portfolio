@@ -70,6 +70,7 @@ function Hero({ onOpen }) {
         <div className="hero-page" data-panels={panels.length}>
           <motion.div className="hp hp-title" {...rise(1.0)}>
             <div className={`hp-in ${figure ? 'has-figure' : ''} ${figure && cutout ? 'has-cutout' : ''}`}>
+              {figure && cutout && <span className="hero-rays" aria-hidden="true" />}
               {figure && (
                 <motion.img
                   className={`hero-figure ${cutout ? 'is-cutout' : 'is-sheet'}`} src={asset(figure.src)} alt="" aria-hidden="true" draggable="false" onLoad={look}

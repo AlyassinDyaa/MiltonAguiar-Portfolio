@@ -604,12 +604,13 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 .mail:hover { color: var(--accent); }
 
 /* ---------- contact: an open page, not panels ---------- */
-/* The heading stands straight on the page; under it the form on the left and, on the right,
-   where else to reach him. */
-.page-head { padding-top: calc(var(--nav) + clamp(40px, 7vw, 96px)); }
-.page-head .lead { margin-top: 22px; }
-.open { padding-block: clamp(36px, 5vw, 72px) clamp(40px, 6vw, 88px); }
-.request { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(32px, 6vw, 96px); align-items: start; }
+/* Two columns from the top of the page: the heading with the form under it, and beside them,
+   starting level with the heading, where else to reach him. */
+.open { padding-block: calc(var(--nav) + clamp(32px, 5vw, 72px)) clamp(40px, 6vw, 88px); }
+.request { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: start; }
+.page-head { margin-bottom: clamp(30px, 4vw, 54px); }
+.page-head .display { font-size: clamp(3.2rem, 7.4vw, 7rem); }
+.page-head .lead { margin-top: 20px; }
 .contact-side { display: grid; gap: 36px; align-content: start; }
 .contact-side p { max-width: 36ch; }
 .contact-side .label { margin-bottom: 12px; }

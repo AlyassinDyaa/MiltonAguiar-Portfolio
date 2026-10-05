@@ -32,23 +32,26 @@ export default function Contact() {
   }
   return (
     <Page title="Contact">
-      <header className="page-head container">
-        {contact.label && <div className="label accent">{contact.label}</div>}
-        <h1 className="display h-xl">{contact.title}</h1>
-        <p className="lead">{contact.intro}</p>
-      </header>
+      {/* two columns from the top of the page: the heading and the form, and beside them where else to reach him */}
       <section className="open">
         <div className="container request">
-          <Reveal>
-            <form className="lined" onSubmit={submit} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
-              <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" /><label htmlFor="name">Your name</label><span className="bar" /></div>
-              <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
-              {contact.topics.length > 0 && <Picker label="About" name="topic" options={contact.topics} />}
-              <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} /><label htmlFor="message">Message</label><span className="bar" /></div>
-              <Magnetic><button className="btn" type="submit">{byMail || byService ? 'Send message' : 'Send on Instagram'} <span className="arrow">{byMail || byService ? '→' : '↗'}</span></button></Magnetic>
-              {sent && <p className="form-alt" role="status">{sent}</p>}
-            </form>
-          </Reveal>
+          <div>
+            <header className="page-head">
+              {contact.label && <div className="label accent">{contact.label}</div>}
+              <h1 className="display h-xl">{contact.title}</h1>
+              <p className="lead">{contact.intro}</p>
+            </header>
+            <Reveal>
+              <form className="lined" onSubmit={submit} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
+                <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" /><label htmlFor="name">Your name</label><span className="bar" /></div>
+                <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
+                {contact.topics.length > 0 && <Picker label="About" name="topic" options={contact.topics} />}
+                <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} /><label htmlFor="message">Message</label><span className="bar" /></div>
+                <Magnetic><button className="btn" type="submit">{byMail || byService ? 'Send message' : 'Send on Instagram'} <span className="arrow">{byMail || byService ? '→' : '↗'}</span></button></Magnetic>
+                {sent && <p className="form-alt" role="status">{sent}</p>}
+              </form>
+            </Reveal>
+          </div>
           <Reveal delay={0.1} className="contact-side">
             {brand.email && (
               <div>

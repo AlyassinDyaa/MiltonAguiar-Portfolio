@@ -58,6 +58,7 @@ collections:
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4 (for example 1500×2000px). Other shapes are cropped on the Work page and shown whole in the gallery.' }
       - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
       - { name: featured, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'Up to six ticked pieces are the panels on the home page (the first four also sit beside your name at the top). With none ticked, the six newest are.' }
+      - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 1 to 6 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
   - name: gallery_sections
@@ -208,7 +209,7 @@ collections:
           - { name: redrawLabel, label: Small label, widget: string, required: false }
           - { name: redrawTitle, label: Heading, widget: string }
           - { name: redrawText, label: Text, widget: text, required: false }
-          - { name: commissionsTitle, label: Heading, widget: string }
+          - { name: commissionsTitle, label: Heading, widget: string, hint: 'Set large above "Open!" or "Closed", which follows the switch on the Commissions page.' }
           - { name: commissionsButton, label: Button, widget: string }
           - { name: eventsLabel, label: Small label, widget: string, required: false }
           - { name: eventsTitle, label: Heading, widget: string }
@@ -239,10 +240,13 @@ collections:
             fields:
               - { name: name, label: Name, widget: string }
               - { name: text, label: Description, widget: text }
-              - { name: price, label: Price, widget: string, required: false, hint: 'Written the way it should read: "From €60". Empty shows "Ask for a quote".' }
+              - { name: price, label: Price, widget: string, required: false, hint: 'Written the way it should read: "From €60". Empty shows the quote button on its own. Either way the offer links to where quotes are given.' }
               - { name: includes, label: What is included, widget: list, required: false, hint: 'Separate them with commas.' }
+          - { name: quoteLabel, label: Wording of the quote button, widget: string, required: false, hint: 'On every offer and price tag. Empty reads "Get a quote".' }
+          - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
           - { name: processLabel, label: Small label, widget: string, required: false }
           - { name: processTitle, label: Heading, widget: string }
+          - { name: processImage, label: Picture for the steps, widget: image, choose_url: false, required: false, hint: 'The steps show one picture going from a blank page to pencils, inks and colours. Empty uses your newest finished piece.' }
           - name: steps
             label: Steps
             label_singular: Step
@@ -305,7 +309,7 @@ collections:
           - { name: blurb, label: One or two sentences about the site, widget: text, hint: 'Shown in the footer, and by search engines and link previews.' }
           - { name: hue, label: Brand colour, widget: slider, min: 0, max: 360, step: 1, default: 25, unit: '°', hint: 'The one colour on the site. 25 is the red of the logo. 55 orange, 145 green, 200 teal, 250 blue, 340 pink.' }
           - { name: logo, label: Logo, widget: image, choose_url: false, required: false, hint: 'Optional. A small square picture shown beside the name in the top bar.' }
-          - { name: email, label: Contact email, widget: string, hint: 'Where the commission and contact forms send to.' }
+          - { name: email, label: Contact email, widget: string, required: false, hint: 'Where the commission and contact forms send to. With no email (and no form service below) the forms are replaced by a button to your Instagram.' }
           - { name: location, label: Location, widget: string, required: false }
           - { name: contactAction, label: Form service address, widget: string, required: false, hint: 'Optional. With an address from a form service (Formspree and the like) the forms send there. Empty, they open the visitor''s mail app.' }
           - name: social

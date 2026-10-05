@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
-import { about, brand, events, shows, social, work } from '../data/site'
+import { about, asset, brand, events, shows, social, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
 import SocialIcon from '../components/SocialIcon'
+import Ghost from '../components/Ghost'
 
 export default function About() {
   // two pieces are taped up beside the text: the newest, and the newest of a different kind
@@ -12,6 +13,7 @@ export default function About() {
   return (
     <Page title="About">
       <header className="page-head container">
+        <Ghost>About</Ghost>
         <div className="label accent">{brand.artist || brand.name}</div>
         <h1 className="display h-xl">{about.title}</h1>
       </header>
@@ -21,8 +23,16 @@ export default function About() {
           <div className="about-text">
             {about.paragraphs.map((p, i) => <Reveal as="p" key={i} delay={i * 0.08} className={i === 0 ? 'lead' : 'dim'}>{p}</Reveal>)}
             {about.facts.length > 0 && (
-              <Reveal as="dl" className="facts" delay={0.15}>
-                {about.facts.map((f) => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
+              <Reveal className="file" delay={0.15}>
+                {/* set out like the file a comic keeps on one of its characters */}
+                <div className="file-head">
+                  {brand.logo && <img src={asset(brand.logo)} alt="" width="34" height="34" />}
+                  <span>Artist file</span>
+                  <b>{brand.artist || brand.name}</b>
+                </div>
+                <dl className="facts">
+                  {about.facts.map((f) => <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>)}
+                </dl>
               </Reveal>
             )}
             <Reveal className="about-actions" delay={0.2}>

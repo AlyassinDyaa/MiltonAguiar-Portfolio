@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { asset, brand, commissions, day, events, galleryHome, hero, home, latest, marquee, nameParts, project, redraws, shows, work } from '../data/site'
+import { asset, brand, commissions, day, events, galleryHome, hero, home, latest, marquee, nameParts, project, quote, redraws, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
@@ -10,6 +10,9 @@ import Compare from '../components/Compare'
 import GalleryGrid from '../components/GalleryGrid'
 import ViewSwitch from '../components/ViewSwitch'
 import Lightbox from '../components/Lightbox'
+import Inked from '../components/Inked'
+import Tilt from '../components/Tilt'
+import Ghost from '../components/Ghost'
 import { useFinePointer, useReducedMotion } from '../hooks/useMedia'
 import { useGalleryView } from '../hooks/useGalleryView'
 
@@ -106,32 +109,39 @@ function Hero({ onOpen }) {
   )
 }
 
-/* What is on the drawing board now: the comic or series in progress, with its cover and a link
-   to where it can be read. */
+/* What is on the drawing board now: the comic or series in progress. Its cover stands in front of
+   itself: the same picture, blown up, drained and washed in the brand colour, fills the block
+   behind it, with the title in giant outline sliding across as the page scrolls. The cover leans
+   toward the pointer. */
 function Project() {
   const { label, title, subtitle, text, image, url, buttonLabel } = project
   const cover = image && <img src={asset(image)} alt={`${title}${subtitle ? `: ${subtitle}` : ''}`} loading="lazy" draggable="false" />
   return (
     <section className="project">
+      {image && <div className="project-bg" style={{ backgroundImage: `url("${asset(image)}")` }} aria-hidden="true" />}
+      <Ghost className="project-ghost">{title}</Ghost>
       <div className="container project-in">
         {cover && (
           <Reveal className="project-art">
-            {url ? <a className="dots" href={url} target="_blank" rel="noreferrer">{cover}</a> : <span className="dots">{cover}</span>}
+            <Tilt>
+              {url ? <a className="dots" href={url} target="_blank" rel="noreferrer">{cover}</a> : <span className="dots">{cover}</span>}
+            </Tilt>
           </Reveal>
         )}
         <Reveal className="project-copy" delay={0.1}>
           {label && <div className="label accent">{label}</div>}
           <h2 className="display h-xl">{title}{subtitle && <small>{subtitle}</small>}</h2>
           {text && <p className="lead">{text}</p>}
-          {url && <Magnetic><a className="btn ghost" href={url} target="_blank" rel="noreferrer">{buttonLabel} <span className="arrow">↗</span></a></Magnetic>}
+          {url && <Magnetic><a className="btn" href={url} target="_blank" rel="noreferrer">{buttonLabel} <span className="arrow">↗</span></a></Magnetic>}
         </Reveal>
       </div>
     </section>
   )
 }
 
-/* The newest pieces, set out as the panels of a comic page: different sizes, numbered, each with
-   its title in a caption box. A panel opens the piece. */
+/* The newest pieces, set out as the panels of a comic page: two tiers, cut by slanted gutters,
+   numbered, each with its title in a caption box. Each panel arrives in pencil grey and is
+   coloured as it scrolls into view. A panel opens the piece. */
 function Latest({ onOpen }) {
   return (
     <section className="section">
@@ -144,15 +154,57 @@ function Latest({ onOpen }) {
           {latest.map((p, i) => (
             <Reveal as="li" key={p.slug} delay={(i % 3) * 0.08} y={24}>
               <button type="button" className="pg-panel" onClick={() => onOpen(work.indexOf(p))} aria-label={`Open ${p.title}`}>
-                {p.src
-                  ? <img src={asset(p.src)} alt="" loading="lazy" draggable="false" />
-                  : <span className="poster-gen"><span className="poster-title">{p.title}</span></span>}
-                <span className="pg-no" aria-hidden="true">{i + 1}</span>
-                <span className="caption"><strong>{p.title}</strong><small>{[p.category, day(p.date, true)].filter(Boolean).join(' · ')}</small></span>
+                <span className="pg-in">
+                  {p.src
+                    ? <Inked src={p.src} />
+                    : <span className="poster-gen"><span className="poster-title">{p.title}</span></span>}
+                  <span className="pg-no" aria-hidden="true">{i + 1}</span>
+                  <span className="caption"><strong>{p.title}</strong><small>{[p.category, day(p.date, true)].filter(Boolean).join(' · ')}</small></span>
+                </span>
               </button>
             </Reveal>
           ))}
         </ol>
+      </div>
+    </section>
+  )
+}
+
+/* Commissions, shouted the way the artist announces them: a red splash panel with the offers
+   hanging beside it as price tags. A tag goes to his Instagram, where quotes are given. */
+function Hire() {
+  const { open, intro, tiers } = commissions
+  return (
+    <section className="section">
+      <div className="container">
+        <Reveal className="hire dots">
+          <div className="hire-in">
+            <div className="hire-copy">
+              <h2 className="hire-shout">
+                <span>{home.commissionsTitle}</span>
+                <b className={open ? 'is-open' : ''}>{open ? 'Open!' : 'Closed'}</b>
+              </h2>
+              <p className="lead">{intro}</p>
+              <div className="hero-actions">
+                <Magnetic><Link className="btn" to="/commissions">{home.commissionsButton} <span className="arrow">→</span></Link></Magnetic>
+                {quote.url && <Magnetic><a className="btn ghost" href={quote.url} target="_blank" rel="noreferrer">{quote.label} <span className="arrow">↗</span></a></Magnetic>}
+              </div>
+            </div>
+            {tiers.length > 0 && (
+              <ul className="tags">
+                {tiers.map((t) => (
+                  <li key={t.name}>
+                    <a className="tag" href={quote.url || undefined} target="_blank" rel="noreferrer">
+                      <strong>{t.name}</strong>
+                      <span>{t.text}</span>
+                      <em>{t.price || quote.label} <i aria-hidden="true">↗</i></em>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Reveal>
       </div>
     </section>
   )
@@ -201,35 +253,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Commissions */}
-      {shows('home', 'commissions') && shows('pages', 'commissions') && (
-        <section className="section">
-          <div className="container">
-            <Reveal className="hire dots">
-              <div className="hire-in">
-                {commissions.open && <span className="burst" aria-hidden="true"><b>Open!</b></span>}
-                <div className="hire-copy">
-                  <div className={`status ${commissions.open ? 'on' : ''}`}><i />{commissions.open ? 'Commissions are open' : 'Commissions are closed right now'}</div>
-                  <h2 className="display h-lg">{home.commissionsTitle}</h2>
-                  <p className="lead">{commissions.intro}</p>
-                  <Magnetic><Link className="btn" to="/commissions">{home.commissionsButton} <span className="arrow">→</span></Link></Magnetic>
-                </div>
-                {commissions.tiers.length > 0 && (
-                  <ul className="hire-tiers">
-                    {commissions.tiers.map((t) => (
-                      <li key={t.name}>
-                        <strong>{t.name}</strong>
-                        <span>{t.text}</span>
-                        <em>{t.price || 'Ask for a quote'}</em>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      )}
+      {shows('home', 'commissions') && shows('pages', 'commissions') && <Hire />}
 
       {/* Conventions */}
       {shows('home', 'events') && events.length > 0 && (

@@ -19,6 +19,8 @@ const byOrder = (a, b) => (a.order ?? 99) - (b.order ?? 99)
 const live = (list) => list.filter((x) => !x.hidden) // entries ticked "Hide from the site"
 
 export let brand, hero, marquee, home, commissions, about, contact, social, footer
+/* "Get a quote": the wording, and where the price tags and quote buttons take people (the artist's Instagram, unless the admin names somewhere else). */
+export let quote
 /* The comic or series the artist is drawing now, shown in its own block on the home page. */
 export let project
 /* Headings and introductions of the Work and Gallery pages. */
@@ -74,7 +76,7 @@ function assemble(content) {
     latestLabel: 'Fresh off the board', latestTitle: 'Latest pages',
     galleryLabel: 'The gallery', galleryTitle: 'Pin-ups and pages', galleryView: 'wall',
     redrawLabel: 'The process', redrawTitle: 'Pencils to colours',
-    commissionsTitle: 'Get something drawn', commissionsButton: 'How it works',
+    commissionsTitle: 'Commissions are', commissionsButton: 'How it works',
     eventsLabel: 'In person', eventsTitle: 'Find me at',
     ...given(sections),
   }
@@ -92,7 +94,10 @@ function assemble(content) {
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },
   }
   social = links || []
-  brand.instagram = social.find((s) => /instagram/i.test(s.label || ''))?.url
+  const insta = social.find((s) => /instagram/i.test(s.label || ''))
+  brand.instagram = insta?.url
+  brand.handle = insta?.handle
+  quote = { label: commissions.quoteLabel || 'Get a quote', url: commissions.quoteUrl || brand.instagram || '' }
   footer = { fine: 'Characters shown in fan art belong to their owners.', ...given({ line: footerLine, fine: footerFine }) }
 
   nav = [
@@ -108,7 +113,9 @@ function assemble(content) {
     .filter((p) => p.title)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
   categories = [...new Set(work.map((p) => p.category).filter(Boolean))]
-  const picked = work.filter((p) => p.featured)
+  // the ticked pieces in the order given to them ("Place on the home page"), newest first among those with none
+  const place = (p) => (p.homeOrder === '' || p.homeOrder == null ? 99 : Number(p.homeOrder))
+  const picked = work.filter((p) => p.featured).sort((a, b) => place(a) - place(b))
   latest = (picked.length ? picked : work).slice(0, 6)
 
   // a section's "also show pieces from Work" choice: none, every piece, or one category

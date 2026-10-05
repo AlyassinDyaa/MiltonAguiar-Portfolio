@@ -71,5 +71,8 @@
     "Personal use unless we agree otherwise.",
     "Fan art and original characters are both welcome.",
     "Turnaround depends on the queue; ask and I will tell you where it stands."
-  ]
+  ],
+  "quoteLabel": "Get a quote",
+  "quoteUrl": "",
+  "processImage": "/uploads/batman-and-robin.webp"
 }

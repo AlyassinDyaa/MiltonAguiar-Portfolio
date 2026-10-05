@@ -5,6 +5,7 @@ import Reveal from '../components/Reveal'
 import GalleryGrid from '../components/GalleryGrid'
 import ViewSwitch from '../components/ViewSwitch'
 import { useGalleryView } from '../hooks/useGalleryView'
+import Ghost from '../components/Ghost'
 
 /* Every picture, in the sections made in the admin panel. A section with nothing in it stays hidden. */
 export default function Gallery() {
@@ -15,6 +16,7 @@ export default function Gallery() {
   return (
     <Page title="Gallery">
       <header className="page-head container">
+        <Ghost>Gallery</Ghost>
         {label && <div className="label accent">{label}</div>}
         <h1 className="display h-xl">{title}</h1>
         {intro && <p className="lead">{intro}</p>}

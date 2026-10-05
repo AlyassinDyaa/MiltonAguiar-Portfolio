@@ -46,7 +46,7 @@
      single pages is looked up as "collection/page". A heading never goes on an on/off switch:
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
-    work: { groups: { title: 'The piece', src: 'Picture, and where it shows' }, half: ['title', 'category', 'date', 'link', 'featured', 'hidden'] },
+    work: { groups: { title: 'The piece', src: 'Picture, and where it shows' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
@@ -57,8 +57,8 @@
     },
     'pages/lists': { groups: { workLabel: 'Work page', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
-      groups: { title: 'Top of the page', tiers: 'What you offer', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
-      half: ['processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
+      groups: { title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
+      half: ['quoteLabel', 'quoteUrl', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
     },
     'pages/about': { groups: { title: 'Text', facts: 'Quick facts' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
@@ -79,7 +79,7 @@
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project, and the heading of each part below it.',
     'pages/lists': 'The heading and introduction above the Work page and the Gallery page.',
-    'pages/commissions': 'Open or closed, what you offer and what it costs, how it works.',
+    'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
     'pages/about': 'Who you are: the heading, the paragraphs and the quick facts.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',

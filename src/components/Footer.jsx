@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { brand, footer, nav, social } from '../data/site'
+import { brand, footer, nameParts, nav, social } from '../data/site'
 import SocialIcon from './SocialIcon'
 import Wordmark from './Wordmark'
 
 export default function Footer() {
+  const [a, b] = nameParts(brand.name)
   const [year] = useState(() => new Date().getFullYear()) // read on every visit, so the © line rolls over by itself on 1 January
   return (
     <footer className="footer">
@@ -44,6 +45,7 @@ export default function Footer() {
           {brand.location && <span>{brand.location}</span>}
         </div>
       </div>
+      <div className="footer-name" aria-hidden="true"><span>{a}{b && <b> {b}</b>}</span></div>
     </footer>
   )
 }

@@ -6,6 +6,7 @@ import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Picker from '../components/Picker'
 import SocialIcon from '../components/SocialIcon'
+import Ghost from '../components/Ghost'
 
 export default function Contact() {
   const [sent, setSent] = useState(false)
@@ -20,6 +21,7 @@ export default function Contact() {
   return (
     <Page title="Contact">
       <header className="page-head container">
+        <Ghost>Contact</Ghost>
         {contact.label && <div className="label accent">{contact.label}</div>}
         <h1 className="display h-xl">{contact.title}</h1>
         <p className="lead">{contact.intro}</p>
@@ -27,6 +29,7 @@ export default function Contact() {
       <section className="section tight">
         <div className="container request">
           <Reveal>
+            {brand.email || brand.contactAction ? (
             <form onSubmit={submit} action={brand.contactAction || undefined} method={brand.contactAction ? 'post' : undefined}>
               <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" /><label htmlFor="name">Your name</label><span className="bar" /></div>
               <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
@@ -34,6 +37,15 @@ export default function Contact() {
               <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} /><label htmlFor="message">Message</label><span className="bar" /></div>
               <Magnetic><button className="btn" type="submit">{sent ? 'Opening your mail app…' : 'Send message'} <span className="arrow">→</span></button></Magnetic>
             </form>
+            ) : (
+              <div className="dm dots">
+                <div className="dm-in">
+                  <p className="dm-say">The quickest way to reach me is a message on Instagram.</p>
+                  {brand.instagram && <Magnetic><a className="btn" href={brand.instagram} target="_blank" rel="noreferrer">Message me on Instagram <span className="arrow">↗</span></a></Magnetic>}
+                  {brand.handle && <p className="dm-handle">{brand.handle}</p>}
+                </div>
+              </div>
+            )}
           </Reveal>
           <Reveal delay={0.1} className="contact-side">
             {brand.email && (

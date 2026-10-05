@@ -6,6 +6,7 @@ import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
 import Compare from '../components/Compare'
 import Lightbox from '../components/Lightbox'
+import Ghost from '../components/Ghost'
 
 export default function Work() {
   const [filter, setFilter] = useState('All')
@@ -16,6 +17,7 @@ export default function Work() {
   return (
     <Page title="Work">
       <header className="page-head container">
+        <Ghost>Work</Ghost>
         {pages.work.label && <div className="label accent">{pages.work.label}</div>}
         <h1 className="display h-xl">{pages.work.title}</h1>
         {pages.work.intro && <p className="lead">{pages.work.intro}</p>}
@@ -37,7 +39,11 @@ export default function Work() {
               {shown.map((p, i) => (
                 <motion.li key={p.slug} layout initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
                   <button type="button" className="tile" onClick={() => setSel(i)}>
-                    <Poster title={p.title} src={p.src} eager={i < 4} />
+                    <span className="tile-art">
+                      <Poster title={p.title} src={p.src} eager={i < 4} />
+                      {/* the corner box of a comic cover: its number, counted from the first piece made, and what it is */}
+                      <span className="tile-box" aria-hidden="true"><b>{String(work.length - work.indexOf(p)).padStart(2, '0')}</b>{p.category}</span>
+                    </span>
                     <span className="tile-cap">
                       <strong>{p.title}</strong>
                       <small>{[p.category, day(p.date)].filter(Boolean).join(' · ')}</small>

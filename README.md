@@ -23,7 +23,7 @@ npm run preview    # serve the production build
 | `/gallery` | Pictures in sections, shown uncropped. Switched off to start with, because it shows the same pieces as Work; switch it on under **Show or hide** |
 | `/commissions` | What is on offer (a card each), how it works (a strip of numbered panels), and where to ask |
 | `/about` | His origin story, a panel at a time; the artist file; where to find him; covers and collaborations |
-| `/contact` | Contact form, email and social links |
+| `/contact` | Contact form, email and social links, laid out as an open page. With no contact email set, the form copies the message and opens Instagram |
 
 ## Edit the content: the admin panel
 
@@ -88,7 +88,7 @@ has the same effect as using the panel.
 - There are three colours (black, white, and one red set by a hue, `--h`, from **Name, colour and contact → Brand colour**; 25 is the red of the logo) and one family of type (Barlow Condensed for display and labels, Barlow for reading).
 - Tokens for both themes are at the top of `src/styles/global.css`.
 - Pictures arrive in pencil grey and are coloured in behind a line as they scroll into view (`components/Inked.jsx`).
-- In front of the title panel of the Work, Commissions and Contact pages stands a deck of the finished pieces in Work, dealt one at a time in a random order on each visit (`components/Slides.jsx`). Each is shown whole, at its own shape, like a printed page. Whatever is added to Work joins in; a piece ticked **Pencils or work in progress** is left out.
+- In front of the title panel of the Work, Commissions and About pages stands a deck of the finished pieces in Work, dealt one at a time in a random order on each visit (`components/Slides.jsx`). Each is shown whole, at its own shape, like a printed page. Whatever is added to Work joins in; a piece ticked **Pencils or work in progress** is left out.
 - Buttons that ask for a commission ("Commission a piece", "Commission one like it") open the artist's Instagram, where quotes are given (`components/QuoteLink.jsx`).
 - The page is never a flat colour: two glows of the red and a field of its print dots drift slowly behind everything (`body::before` and `::after` in `global.css`).
 - On the Gallery page visitors can switch between four layouts: wall, grid, strip and spotlight.

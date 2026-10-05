@@ -603,12 +603,30 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 .mail { display: inline-block; font-weight: 600; border-bottom: 2px solid var(--accent); overflow-wrap: anywhere; }
 .mail:hover { color: var(--accent); }
 
-/* ---------- contact ---------- */
-.ct { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--gap); }
-.ct-side { display: grid; gap: var(--gap); align-content: start; }
-.ct-side .words { justify-content: flex-start; padding-block: clamp(20px, 2.2vw, 32px); }
-.ct-side p { margin: 0 0 16px; max-width: 36ch; }
-@media (max-width: 899px) { .ct { grid-template-columns: 1fr; } }
+/* ---------- contact: an open page, not panels ---------- */
+/* The heading stands straight on the page; under it the form on the left and, on the right,
+   where else to reach him. */
+.page-head { padding-top: calc(var(--nav) + clamp(40px, 7vw, 96px)); }
+.page-head .lead { margin-top: 22px; }
+.open { padding-block: clamp(36px, 5vw, 72px) clamp(40px, 6vw, 88px); }
+.request { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(32px, 6vw, 96px); align-items: start; }
+.contact-side { display: grid; gap: 36px; align-content: start; }
+.contact-side p { max-width: 36ch; }
+.contact-side .label { margin-bottom: 12px; }
+@media (max-width: 899px) { .request { grid-template-columns: 1fr; } }
+/* the form on this page is ruled, not boxed: a line under each field, its label resting on the
+   line until the field is used, and a stroke of red that runs along the line in use */
+form.lined .field { display: block; margin-bottom: 28px; }
+form.lined .field input, form.lined .field textarea { padding: 22px 0 10px; background: transparent; border: 0; border-bottom: 1px solid var(--line-strong); }
+form.lined .field textarea { min-height: 120px; }
+form.lined .field label { position: absolute; left: 0; top: 20px; margin: 0; font-family: var(--body); font-size: 1rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--fg-mute); pointer-events: none; transform-origin: left; transition: transform 0.3s var(--ease-out), color 0.3s; }
+form.lined .field input:focus + label, form.lined .field input:not(:placeholder-shown) + label,
+form.lined .field textarea:focus + label, form.lined .field textarea:not(:placeholder-shown) + label { transform: translateY(-22px) scale(0.76); color: var(--accent); }
+form.lined .field .bar { display: block; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.45s var(--ease); }
+form.lined .field input:focus ~ .bar, form.lined .field textarea:focus ~ .bar { transform: scaleX(1); }
+form.lined .pick-label { margin-bottom: 2px; font-family: var(--body); font-size: 0.78rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--accent); }
+form.lined .pick-button { padding: 8px 0 10px; background: transparent; border: 0; border-bottom: 1px solid var(--line-strong); }
+form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .bar { transform: scaleX(1); }
 
 /* ---------- footer: the last page ---------- */
 .footer { padding-block: clamp(26px, 3.6vw, 56px) 0; }

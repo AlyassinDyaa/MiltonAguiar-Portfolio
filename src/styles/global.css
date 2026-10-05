@@ -60,6 +60,7 @@
   --open: #1c9a52;
   --nav-bg: rgba(238, 237, 232, 0.93);
   --veil: rgba(238, 237, 232, 0.975);
+  --air: 0.4; /* how strongly the glow and dots behind the page show */
   color-scheme: light;
 }
 
@@ -87,6 +88,28 @@ p { margin: 0 0 1em; }
 h1, h2, h3, h4 { margin: 0; font-weight: 400; }
 ::selection { background: var(--accent); color: var(--on-accent); }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+/* The page is never a flat black. Behind everything, fixed in place: two glows of the brand
+   colour in opposite corners, breathing slowly, and a field of its print dots that drifts
+   across them. Quiet enough to read over; on the paper theme quieter still. */
+body::before {
+  content: '';
+  position: fixed; inset: -10%; z-index: 0; pointer-events: none; opacity: var(--air, 1);
+  background:
+    radial-gradient(38% 36% at 86% 12%, oklch(0.5 0.2 var(--h) / 0.3), transparent 72%),
+    radial-gradient(34% 40% at 8% 88%, oklch(0.44 0.18 var(--h) / 0.22), transparent 72%),
+    radial-gradient(30% 30% at 40% 46%, oklch(0.4 0.16 var(--h) / 0.08), transparent 72%);
+  animation: air-glow 16s ease-in-out infinite alternate;
+}
+body::after {
+  content: '';
+  position: fixed; inset: -12%; z-index: 0; pointer-events: none; opacity: calc(var(--air, 1) * 0.6);
+  background: radial-gradient(circle, oklch(0.58 0.22 var(--h) / 0.7) 0 1.6px, transparent 2.1px) 0 0 / 14px 14px;
+  -webkit-mask-image: radial-gradient(36% 34% at 80% 18%, #000, transparent 72%), radial-gradient(30% 32% at 14% 82%, #000, transparent 72%);
+  mask-image: radial-gradient(36% 34% at 80% 18%, #000, transparent 72%), radial-gradient(30% 32% at 14% 82%, #000, transparent 72%);
+  animation: air-drift 36s ease-in-out infinite alternate;
+}
+@keyframes air-glow { to { transform: translate3d(-3%, 4%, 0) scale(1.14); } }
+@keyframes air-drift { to { transform: translate3d(5%, -4%, 0); } }
 #root { position: relative; z-index: 1; }
 
 .container { width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto; }

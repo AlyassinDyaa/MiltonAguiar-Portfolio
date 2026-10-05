@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { asset, brand, commissions, quote, work } from '../data/site'
+import { brand, commissions, quote, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
@@ -7,16 +7,13 @@ import Picker from '../components/Picker'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
 
-/* The four states a page goes through on the board. The steps of "How it works" are spread
-   across them, first to last, whatever number of steps there is. */
-const STAGES = ['The idea', 'Pencils', 'Inks', 'Colours']
+/* The colour of each step's panel, in turn. */
+const TONES = ['is-loud', 'is-red']
 
 export default function Commissions() {
   const [sent, setSent] = useState(false)
-  const { open, title, intro, tiers, steps, notes, processLabel, processTitle, processImage, requestLabel, requestTitle, closedTitle, closedText } = commissions
+  const { open, title, intro, tiers, steps, notes, processLabel, processTitle, requestLabel, requestTitle, closedTitle, closedText } = commissions
   const kinds = [...tiers.map((t) => t.name), 'Something else']
-  // the one picture the process strip develops, panel by panel: the one chosen in the admin, or the newest piece that is not a sketch
-  const art = processImage || (work.find((p) => p.src && !/sketch|page/i.test(p.category || '')) || work.find((p) => p.src))?.src
   // with no email and no form service to send to, the request goes to Instagram instead of a form
   const form = Boolean(brand.email || brand.contactAction)
   const submit = (e) => {
@@ -30,7 +27,7 @@ export default function Commissions() {
   let n = 1
   return (
     <Page title="Commissions">
-      <PageTitle label="Commissions" title={title} lead={intro} art={art}>
+      <PageTitle tone="red" label="Commissions" title={title} lead={intro} slides={work}>
         <div className={`status ${open ? 'on' : ''}`}><i />{open ? 'Commissions are open' : 'Commissions are closed right now'}</div>
       </PageTitle>
 
@@ -40,18 +37,24 @@ export default function Commissions() {
             <Runner label="What I draw" page={++n} />
             <div className="tiers">
               {tiers.map((t, i) => (
-                <Reveal key={t.name} delay={i * 0.08} className="hp tier">
-                  <div className="hp-in">
-                    <div className="words">
-                      <span className="tier-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                      <h2 className="display h-md">{t.name}</h2>
-                      <p className="dim">{t.text}</p>
-                      {t.includes?.length > 0 && <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>}
+                <Reveal key={t.name} delay={i * 0.08} className="cell">
+                  <article className="hp tier">
+                    <div className="hp-in">
+                      {/* the head of the card: its number and what it is, in red */}
+                      <header className="tier-head">
+                        <span className="tier-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                        <h2 className="display">{t.name}</h2>
+                      </header>
+                      <div className="tier-body">
+                        <p>{t.text}</p>
+                        {t.includes?.length > 0 && <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>}
+                      </div>
+                      {/* the foot: the price if there is one, and the way to a quote */}
                       {quote.url
-                        ? <a className="btn sm" href={quote.url} target="_blank" rel="noreferrer">{t.price ? `${t.price} · ` : ''}{quote.label} <span className="arrow">↗</span></a>
-                        : <div className="tier-price">{t.price || 'Ask for a quote'}</div>}
+                        ? <a className="tier-go" href={quote.url} target="_blank" rel="noreferrer"><span>{t.price || quote.label}</span><i aria-hidden="true">↗</i></a>
+                        : <div className="tier-go"><span>{t.price || 'Ask for a quote'}</span></div>}
                     </div>
-                  </div>
+                  </article>
                 </Reveal>
               ))}
             </div>
@@ -64,22 +67,21 @@ export default function Commissions() {
           <div className="container">
             <Runner label={processLabel} page={++n} />
             <div className="spread-head"><h2 className="display h-lg">{processTitle}</h2></div>
-            {/* a strip of panels: the same picture in each, a stage further on every time */}
-            <ol className="process">
-              {steps.map((s, i) => {
-                const stage = steps.length === 1 ? 3 : Math.round((i / (steps.length - 1)) * 3)
-                return (
-                  <Reveal as="li" key={s.title} delay={i * 0.1} className="process-step">
-                    <div className="process-panel" data-stage={stage}>
-                      {art && stage > 0 && <span className="process-art" style={{ backgroundImage: `url("${asset(art)}")` }} aria-hidden="true" />}
-                      <span className="pg-no" aria-hidden="true">{i + 1}</span>
-                      <span className="process-stage" aria-hidden="true">{STAGES[stage]}</span>
+            {/* a strip, read left to right: one panel a step, the gutters between them leaning the way it reads */}
+            <ol className={`steps ${steps.length > 4 ? 'is-long' : ''}`} style={{ '--n': steps.length }}>
+              {steps.map((s, i) => (
+                <Reveal as="li" key={s.title} delay={i * 0.09} y={24}>
+                  <div className={`hp ${TONES[i % TONES.length]}`}>
+                    <div className="hp-in">
+                      <div className="words">
+                        <span className="step-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                        <h3 className="display h-md">{s.title}</h3>
+                        <p>{s.text}</p>
+                      </div>
                     </div>
-                    <h3 className="display h-sm">{s.title}</h3>
-                    <p className="dim">{s.text}</p>
-                  </Reveal>
-                )
-              })}
+                  </div>
+                </Reveal>
+              ))}
             </ol>
           </div>
         </section>
@@ -89,7 +91,7 @@ export default function Commissions() {
         <div className="container">
           <Runner label={requestLabel} page={++n} />
           <div className="cm">
-            <Reveal className="hp">
+            <Reveal className="hp is-loud">
               <div className="hp-in">
                 <div className="words">
                   <h2 className="display h-lg">{open ? requestTitle : closedTitle}</h2>

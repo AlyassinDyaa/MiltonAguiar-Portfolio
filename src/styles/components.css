@@ -121,6 +121,10 @@ button.hp:hover .inked img, button.hp:focus-visible .inked img, a.hp:hover .inke
 .is-loud .btn.ghost { background: var(--panel-2); color: var(--fg); }
 .is-loud .btn:hover, .is-loud .btn:focus-visible, .is-loud .btn.ghost:hover, .is-loud .btn.ghost:focus-visible { background: var(--on-loud); color: var(--loud); }
 
+/* a panel of art that keeps changing (components/Slides.jsx): each picture is wiped in over the last */
+.slides { position: absolute; inset: 0; display: block; }
+.slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 16%; }
+.tp-art .caption { left: calc(var(--s) + 10px); max-width: calc(100% - var(--s) - 20px); }
 /* a caption box in the corner of a panel of art */
 .caption { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); padding: 6px 10px 5px; background: #fff; color: #0b0b0c; border: 2px solid var(--frame); font-family: var(--display); font-size: 0.98rem; font-weight: 800; font-style: italic; line-height: 1.05; letter-spacing: 0.03em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
 .caption strong { display: block; font-weight: 800; }
@@ -161,6 +165,9 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
 .hero-in { width: min(100% - 2 * var(--gutter), 1640px); padding-block: calc(var(--nav) + 8px) clamp(26px, 3.6vw, 56px); }
 /* --tilt is how far the slanted gutter between the two small panels drops across their width */
 .hero-page { --tilt: 34px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 1fr 1fr 0.8fr; gap: var(--gap); height: clamp(540px, calc(100svh - var(--nav) - 86px), 860px); }
+/* The first page keeps its panel borders at night: white ink, a little finer than the black
+   ink of the paper theme, so the page still reads as drawn panels on a black sheet. */
+:root:not([data-theme='light']) .hero-page { --frame: #fff; --rule: 2px; }
 /* the picture is a little larger than its frame, so it has room to drift */
 .hero-page button.hp .hp-in > img { position: absolute; inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); max-width: none; object-fit: cover; object-position: 50% 16%; }
 .hp-title { grid-column: 1 / 9; grid-row: 1 / 4; }
@@ -249,21 +256,35 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
 .words .actions, .words > .magnetic, .words > .btn { margin-top: 26px; }
 .words h2 small, .words h1 small { display: block; margin-top: 0.22em; font-size: 0.36em; font-weight: 800; line-height: 1; letter-spacing: 0.02em; }
 
-/* ---------- the current project: its cover, and a red panel that says what it is ---------- */
-.pj { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); }
-.pj.no-cover { grid-template-columns: 1fr; }
-/* the cover is shown whole, at its own shape; the panels beside it are as tall as it is */
-.pj-cover { align-self: start; }
-.pj-cover .hp-in > .inked { position: relative; height: auto; }
-.pj-cover .inked img { height: auto; }
-.pj-cover .inked img.pending { aspect-ratio: 1; }
-.pj-side { display: grid; grid-template-rows: 1fr auto; gap: var(--gap); min-width: 0; }
-.pj-text .words { padding-block: clamp(30px, 4vw, 64px); }
-.pj-text h2 { text-shadow: 0.04em 0.04em 0 var(--k); }
-.pj-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--gap); height: clamp(170px, 19vw, 280px); }
+/* ---------- the current project: a splash panel, and its cover breaking out of it ---------- */
+/* The panel stays dark in both themes: it is the cover, blown up, drained and washed in red. */
+.pj { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); }
+.pj.has-cover { grid-template-columns: minmax(0, 7.2fr) minmax(0, 4.8fr); padding-block: clamp(14px, 2.2vw, 34px); }
+.pj-splash { grid-column: 1 / -1; grid-row: 1; }
+.pj-splash > .hp-in { background: #0c0708; color: #fff; isolation: isolate; --fg: #fff; --fg-dim: rgba(255, 255, 255, 0.9); --panel-2: rgba(255, 255, 255, 0.14); --loud: #fff; --on-loud: #0b0b0c; }
+.pj-bg { position: absolute; inset: -4%; z-index: -2; background-size: cover; background-position: 50% 26%; filter: grayscale(1) contrast(1.25) blur(2px); opacity: 0.6; }
+.pj-splash > .hp-in::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, oklch(0.5 0.2 var(--h) / 0.94), oklch(0.3 0.12 var(--h) / 0.9) 52%, rgba(11, 7, 8, 0.9)); }
+.pj-splash > .hp-in::after { content: ''; position: absolute; inset: 0; z-index: -1; mix-blend-mode: overlay; background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 2.2px, transparent 2.8px) 0 0 / 11px 11px; -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000); mask-image: linear-gradient(100deg, transparent 35%, #000); }
+.pj-splash .words { padding-block: clamp(40px, 6vw, 96px); }
+.pj.has-cover .pj-splash .words { max-width: 60%; }
+.pj-title { font-size: clamp(4.2rem, 12.5vw, 12rem); line-height: 0.8; text-shadow: 0.04em 0.04em 0 var(--k); }
+.pj-title small { margin-top: 0.3em !important; font-size: 0.26em !important; }
+.pj-splash .lead { margin-top: 22px; max-width: 46ch; }
+.pj-splash .btn:not(.ghost) { background: #fff; color: #0b0b0c; }
+.pj-splash .btn:not(.ghost):hover, .pj-splash .btn:not(.ghost):focus-visible { background: #0b0b0c; color: #fff; }
+.pj-splash .btn.ghost:hover, .pj-splash .btn.ghost:focus-visible { background: #fff; color: #0b0b0c; }
+/* the cover: a comic held at an angle, taller than the panel behind it */
+.pj-cover { grid-column: 2; grid-row: 1; z-index: 2; align-self: start; justify-self: center; width: min(86%, 470px); margin-block: calc(clamp(14px, 2.2vw, 34px) * -1); pointer-events: none; }
+.pj-book { display: block; rotate: 3deg; background: #0b0b0c; border: 4px solid #fff; box-shadow: 14px 16px 0 rgba(0, 0, 0, 0.55); pointer-events: auto; transition: rotate 0.5s var(--ease-out), scale 0.5s var(--ease-out); }
+a.pj-book:hover, a.pj-book:focus-visible { rotate: 0deg; scale: 1.03; outline: 0; }
+.pj-book .inked { height: auto; }
+.pj-book .inked img { height: auto; }
+.pj-book .inked img.pending { aspect-ratio: 1; }
 @media (max-width: 799px) {
-  .pj { grid-template-columns: 1fr; }
-  .pj-strip { height: clamp(150px, 44vw, 240px); }
+  .pj.has-cover { grid-template-columns: 1fr; padding-block: 0; }
+  .pj.has-cover .pj-splash .words { max-width: none; padding-top: clamp(120px, 34vw, 200px); }
+  .pj-splash { grid-row: 2; }
+  .pj-cover { grid-column: 1; grid-row: 1; width: min(78%, 360px); margin-block: 0 clamp(-150px, -30vw, -100px); }
 }
 
 /* ---------- latest pieces: a page of slanted panels ---------- */
@@ -294,16 +315,6 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
   .pg > li:last-child:nth-child(6n + 2) { grid-column: span 7; --clip: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%); --cap-r: 0px; }
   .pg > li:last-child:nth-child(6n + 5) { grid-column: span 9; --clip: polygon(0 0, 100% 0, 100% 100%, var(--s) 100%); }
   .pg-title .words { padding-right: calc(var(--pad) + var(--s)); }
-}
-
-/* ---------- the gallery on the home page: its title panel beside a wall of pictures ---------- */
-.gl { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--gap); align-items: start; }
-.gl-text { position: sticky; top: calc(var(--nav) + 14px); }
-.gl-text .words { justify-content: flex-start; min-height: clamp(260px, 30vw, 420px); }
-@media (max-width: 899px) {
-  .gl { grid-template-columns: 1fr; }
-  .gl-text { position: static; }
-  .gl-text .words { min-height: 0; }
 }
 
 /* ---------- step by step ---------- */
@@ -384,6 +395,7 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
   .tp.has-art .tp-text, .tp.has-art .tp-art { --clip: none; margin: 0; }
   .tp.has-art .tp-text .words { padding-right: var(--pad); }
   .tp-art { order: -1; aspect-ratio: 16 / 10; }
+  .tp-art .caption { left: 10px; max-width: calc(100% - 20px); }
 }
 
 /* ---------- work page ---------- */
@@ -475,73 +487,108 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 
 /* ---------- commissions page ---------- */
 .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: var(--gap); }
-.tier .words { justify-content: flex-start; gap: 0; }
-/* the offer's number, large and faint, in the corner of its panel */
-.tier-no { position: absolute; top: calc(var(--pad) - 8px); right: var(--pad); font-family: var(--display); font-size: 3.4rem; font-weight: 900; font-style: italic; line-height: 1; color: var(--line-strong); }
-.tier .display { padding-right: 1.5em; margin-bottom: 12px; }
-.tier p { margin: 0; }
-.tier ul { width: 100%; margin: 18px 0 26px; }
-.tier li { position: relative; padding: 9px 0 9px 24px; font-size: 0.97rem; border-top: 1px solid var(--line); }
-.tier li::before, .notes li::before { content: ''; position: absolute; left: 0; top: 0.95em; width: 13px; height: 13px; background: var(--accent); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
-.tier .btn, .tier .tier-price { margin-top: auto; }
-.tier-price { font-family: var(--display); font-size: 0.94rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
-/* How it works, as a strip: the same picture in every panel, a stage further on each time. The
-   panels are white board in both themes, because that is what the stages are drawn on. */
-.process { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 30px var(--gap); }
-.process-panel {
-  position: relative; aspect-ratio: 3 / 4; overflow: hidden; margin-bottom: 16px; border: var(--rule) solid var(--frame);
-  background:
-    linear-gradient(to top right, transparent calc(50% - 0.6px), #5aa9d6 calc(50% - 0.6px) calc(50% + 0.6px), transparent calc(50% + 0.6px)),
-    linear-gradient(to bottom right, transparent calc(50% - 0.6px), #5aa9d6 calc(50% - 0.6px) calc(50% + 0.6px), transparent calc(50% + 0.6px)),
-    #fdfdfb;
+/* An offer is a card in three parts: a red head with its number and name, cut on a slant; the
+   body, on the loud colour; and a foot that is the way to a quote. The card lifts when it is
+   pointed at, and its foot turns red. */
+.tier { height: 100%; transition: background 0.2s, translate 0.3s var(--ease-out); }
+.tier:hover, .tier:focus-within { translate: 0 -6px; background: var(--accent); }
+.tier > .hp-in { display: flex; flex-direction: column; background: var(--loud); color: var(--on-loud); --fg-dim: color-mix(in srgb, var(--on-loud) 76%, transparent); --line: color-mix(in srgb, var(--on-loud) 16%, transparent); }
+.tier-head { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: clamp(150px, 15vw, 200px); padding: 22px 24px 40px; overflow: hidden; background: linear-gradient(135deg, var(--accent) 30%, var(--accent-deep)); color: #fff; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 26px), 0 100%); }
+.tier-head::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(11, 11, 12, 0.34) 0 2.4px, transparent 3px) 0 0 / 11px 11px; -webkit-mask-image: linear-gradient(120deg, transparent 30%, #000); mask-image: linear-gradient(120deg, transparent 30%, #000); }
+/* the number, very large and in outline, running off the corner of the head */
+.tier-no { position: absolute; top: -0.16em; right: -0.04em; font-family: var(--display); font-size: clamp(6.4rem, 9.5vw, 9rem); font-weight: 900; font-style: italic; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, 0.55); }
+.tier-head .display { position: relative; font-size: clamp(2rem, 2.7vw, 2.7rem); line-height: 0.92; text-shadow: 0.05em 0.05em 0 var(--k); }
+.tier-body { flex: 1; padding: 4px 24px 26px; }
+.tier-body p { margin: 0; font-size: 1.04rem; line-height: 1.5; color: var(--fg-dim); }
+.tier-body ul { margin: 18px 0 0; }
+.tier-body li { position: relative; padding: 9px 0 9px 24px; font-size: 0.97rem; font-weight: 500; border-top: 1px solid var(--line); }
+.tier-body li::before, .notes li::before { content: ''; position: absolute; left: 0; top: 0.95em; width: 13px; height: 13px; background: var(--accent); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.tier-go { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px 15px; background: var(--on-loud); color: var(--loud); font-family: var(--display); font-size: 1.2rem; font-weight: 800; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
+.tier-go i { font-style: normal; transition: transform 0.3s var(--ease-out); }
+.tier:hover .tier-go, a.tier-go:focus-visible { background: var(--accent); color: var(--on-accent); outline: 0; }
+.tier:hover .tier-go i, a.tier-go:focus-visible i { transform: translate(3px, -3px); }
+/* How it works, as a strip read left to right: one panel a step, white and red in turn, the
+   gutters between them all leaning the way it reads. */
+.steps { --s: clamp(20px, 2.4vw, 38px); display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: var(--gap); }
+.steps > li { min-width: 0; --clip: polygon(var(--s) 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
+.steps > li + li { margin-left: calc(var(--s) * -1); }
+.steps > li:first-child { --clip: polygon(0 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
+.steps > li:last-child { --clip: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%); }
+.steps > li:only-child { --clip: none; }
+.steps .hp { height: 100%; }
+.steps .words { justify-content: flex-start; gap: 0; min-height: clamp(280px, 26vw, 380px); padding-inline: calc(var(--pad) * 0.7 + var(--s)); }
+.steps > li:first-child .words { padding-left: var(--pad); }
+.steps > li:last-child .words { padding-right: var(--pad); }
+/* the step's number, very large */
+.step-n { font-family: var(--display); font-size: clamp(4.6rem, 8vw, 7.4rem); font-weight: 900; font-style: italic; line-height: 0.8; letter-spacing: -0.02em; color: var(--accent); }
+.is-red .step-n { color: #fff; text-shadow: 0.05em 0.05em 0 var(--k); }
+.steps .display { margin: 20px 0 10px; }
+.steps p { margin: 0; color: var(--fg-dim); }
+/* more than four steps, or a narrow screen: the panels stack, and stand upright */
+.steps.is-long { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.steps.is-long > li, .steps.is-long > li:first-child, .steps.is-long > li:last-child { --clip: none; margin-left: 0; }
+.steps.is-long .words { padding-inline: var(--pad); }
+@media (max-width: 899px) {
+  .steps { grid-template-columns: 1fr; }
+  .steps > li, .steps > li:first-child, .steps > li:last-child { --clip: none; margin-left: 0; }
+  .steps .words, .steps > li:first-child .words, .steps > li:last-child .words { min-height: 0; padding-inline: var(--pad); }
 }
-.process-panel::before { content: ''; position: absolute; inset: 6%; border: 1px solid #5aa9d6; }
-.process-art { position: absolute; inset: 0; background-color: #fdfdfb; background-size: cover; background-position: 50% 16%; transition: filter 0.5s, opacity 0.5s; }
-.process-panel[data-stage='1'] .process-art { filter: grayscale(1) brightness(1.5) contrast(0.6); opacity: 0.8; }
-.process-panel[data-stage='2'] .process-art { filter: grayscale(1) contrast(2.6) brightness(1.2); }
-/* point at a panel to see it finished */
-.process-step:hover .process-art { filter: none; opacity: 1; }
-.process-panel .pg-no { background: #0b0b0c; color: #fff; }
-.process-stage { position: absolute; right: 10px; bottom: 10px; padding: 5px 10px 4px; background: #0b0b0c; color: #fff; font-family: var(--display); font-size: 0.9rem; font-weight: 800; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; }
-.process-panel[data-stage='3'] .process-stage { background: var(--accent); color: var(--on-accent); }
-.process-step .display { margin-bottom: 8px; }
-.process-step p { margin: 0; font-size: 0.99rem; }
+
 /* the request: what to know, and where to send it */
 .notes { width: 100%; margin-top: 22px; }
 .notes li { position: relative; padding: 12px 0 12px 26px; color: var(--fg-dim); border-top: 1px solid var(--line-strong); }
 .notes li::before { top: 1.25em; }
-.dm .words { justify-content: center; gap: 0; }
+.dm .words { justify-content: center; gap: 0; min-height: clamp(260px, 26vw, 360px); }
 .dm-say { font-family: var(--display); font-size: clamp(2rem, 3.6vw, 3.2rem); font-weight: 900; font-style: italic; line-height: 0.95; text-transform: uppercase; text-wrap: balance; margin: 0; text-shadow: 0.04em 0.04em 0 var(--k); }
 .dm-handle { margin: 18px 0 0; font-family: var(--display); font-size: 0.94rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
 .form-panel .words { justify-content: flex-start; }
 .form-panel form { width: 100%; }
 
-/* ---------- about ---------- */
-.ab { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
-.ab-text { grid-column: span 7; }
-.ab-text .words { justify-content: flex-start; }
-.ab-text p, .ab-text .lead { max-width: 58ch; margin: 0 0 1em; }
-.ab-text p:last-of-type { margin-bottom: 0; }
-.ab-facts { grid-column: span 5; }
-.ab-facts .words { justify-content: flex-start; gap: 0; }
-.ab-art { grid-column: span 4; min-height: clamp(260px, 30vw, 440px); }
-.ab-links { grid-column: span 4; }
-.ab-links .words { justify-content: flex-start; }
-.ab[data-art='1'] .ab-links, .ab[data-art='0'] .ab-links { grid-column: span 8; }
-.ab[data-art='0'] .ab-links { grid-column: 1 / -1; }
+/* ---------- about: an origin story ---------- */
+/* The story, a panel at a time: a picture and the words beside it, across a slanted gutter,
+   swapping sides on every row. */
+.story { --s: clamp(24px, 3.4vw, 54px); display: grid; gap: var(--gap); }
+.story-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); min-height: clamp(300px, 32vw, 460px); }
+.story-row.has-art { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+.story-row.has-art .story-art { --clip: polygon(0 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
+.story-row.has-art .story-text { margin-left: calc(var(--s) * -1); --clip: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%); }
+.story-row.has-art .story-text .words { padding-left: calc(var(--pad) + var(--s)); }
+/* every other row is turned round: the words on the left, the picture on the right, the gutter leaning the other way */
+.story-row.has-art.is-flipped { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.story-row.is-flipped .story-art { order: 2; margin-left: calc(var(--s) * -1); --clip: polygon(0 0, 100% 0, 100% 100%, var(--s) 100%); }
+.story-row.has-art.is-flipped .story-text { margin-left: 0; --clip: polygon(0 0, calc(100% - var(--s)) 0, 100% 100%, 0 100%); }
+.story-row.has-art.is-flipped .story-text .words { padding-left: var(--pad); padding-right: calc(var(--pad) + var(--s)); }
+.story-text .words { gap: 0; }
+.story-no { font-family: var(--display); font-size: 1.1rem; font-weight: 700; letter-spacing: 0.2em; color: var(--accent); }
+.is-red .story-no { color: rgba(255, 255, 255, 0.8); }
+.story-text .display { margin: 8px 0 0; }
+.is-red .story-text .display, .story-text.is-red .display { text-shadow: 0.04em 0.04em 0 var(--k); }
+.story-text .lead { margin: 18px 0 0; max-width: 50ch; }
+@media (max-width: 799px) {
+  .story-row, .story-row.has-art, .story-row.has-art.is-flipped { grid-template-columns: 1fr; min-height: 0; }
+  .story-row .story-art, .story-row.is-flipped .story-art { order: 0; margin: 0; --clip: none; aspect-ratio: 4 / 3; }
+  .story-row.has-art .story-text, .story-row.has-art.is-flipped .story-text { margin: 0; --clip: none; }
+  .story-row.has-art .story-text .words, .story-row.has-art.is-flipped .story-text .words { padding-inline: var(--pad); }
+}
+/* the file, and where to find him */
+.ab { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gap); }
+.ab > :only-child { grid-column: 1 / -1; }
+.ab .words { justify-content: flex-start; gap: 0; }
+.ab-links .display { margin-bottom: 18px; }
+.ab-links .social { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 6px; }
+.ab-links .social li + li { margin-top: 0; }
+.ab-links .social li { display: flex; }
+.ab-links .social a { flex: 1; }
 /* the facts, set out like the file a comic keeps on one of its characters */
 .file-head { display: flex; align-items: center; gap: 12px; width: 100%; padding-bottom: 14px; border-bottom: 3px solid var(--fg); font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
 .file-head img { width: 36px; height: 36px; border-radius: 50%; }
 .file-head b { margin-left: auto; font-size: 1.5rem; font-weight: 900; font-style: italic; letter-spacing: 0.01em; }
 .facts { width: 100%; margin: 0; }
-.facts > div { display: grid; grid-template-columns: minmax(7.5rem, 34%) 1fr; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line-strong); }
+.facts > div { display: grid; grid-template-columns: minmax(7.5rem, 38%) 1fr; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--line-strong); }
+.facts > div:last-child { border-bottom: 0; padding-bottom: 0; }
 .facts dt { font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
 .facts dd { margin: 0; font-weight: 600; }
-@media (max-width: 899px) {
-  .ab-text, .ab-facts, .ab-links, .ab[data-art='1'] .ab-links { grid-column: 1 / -1; }
-  .ab-art { grid-column: span 6; }
-  .ab[data-art='1'] .ab-art { grid-column: 1 / -1; }
-}
+@media (max-width: 899px) { .ab { grid-template-columns: 1fr; } }
 
 /* links out: social networks, as a list of rows */
 .social { width: 100%; }
@@ -563,28 +610,36 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 
 /* ---------- footer: the last page ---------- */
 .footer { padding-block: clamp(26px, 3.6vw, 56px) 0; }
-.ft { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 4fr); gap: var(--gap); }
-.ft .words { justify-content: flex-start; }
-.ft-main p { max-width: 38ch; margin: 14px 0 16px; }
-.ft-list { margin-top: 4px; }
-.ft-list li { padding: 2px 0; }
-.ft-list a { font-family: var(--display); font-size: clamp(1.5rem, 2.2vw, 2rem); font-weight: 800; font-style: italic; letter-spacing: 0.02em; line-height: 1.15; text-transform: uppercase; color: var(--fg-dim); transition: color 0.2s; }
-.ft-list a:hover { color: var(--accent); }
-/* the caption that closes an issue, as the last panel of the page */
-.ft-end .words { justify-content: flex-end; min-height: clamp(180px, 20vw, 300px); }
-.ft-end span { font-family: var(--display); font-size: clamp(2.4rem, 4.4vw, 4.2rem); font-weight: 900; font-style: italic; line-height: 0.9; text-transform: uppercase; text-wrap: balance; text-shadow: 0.04em 0.04em 0 var(--k); }
-.ft-social { grid-column: 1 / -1; }
-.ft-social .words { padding-block: clamp(16px, 1.8vw, 24px); }
-.ft-social .social { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 6px; }
-.ft-social .social li + li { margin-top: 0; }
-.ft-social .social li { display: flex; }
-.ft-social .social a { flex: 1; }
+.ft { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
+.ft .words { justify-content: flex-start; gap: 0; }
+/* the issue ends on one wide red panel: the closing line, and what to do next */
+.ft-end { grid-column: 1 / -1; }
+.ft-end .words { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 22px 40px; padding-block: clamp(30px, 4.4vw, 68px); }
+.ft-line { margin: 0; font-family: var(--display); font-size: clamp(3rem, 8.4vw, 8rem); font-weight: 900; font-style: italic; line-height: 0.84; text-transform: uppercase; text-shadow: 0.04em 0.04em 0 var(--k); }
+.ft-end .actions { margin: 0 0 6px; }
+.ft-brand { grid-column: span 4; }
+.ft-pages { grid-column: span 3; }
+.ft-follow { grid-column: span 5; }
+.ft-mark { display: flex; align-items: center; gap: 14px; }
+.ft-mark img { width: 54px; height: 54px; border-radius: 50%; }
+.ft-mark .wordmark.lg { font-size: clamp(2rem, 3.2vw, 2.9rem); }
+.ft-brand p { max-width: 40ch; margin: 18px 0 14px; }
+.ft-list { width: 100%; }
+.ft-list a { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-family: var(--display); font-size: 1.3rem; font-weight: 800; font-style: italic; letter-spacing: 0.03em; line-height: 1.1; text-transform: uppercase; color: var(--fg-dim); transition: color 0.2s, padding 0.3s var(--ease-out); }
+.ft-list li:last-child a { border-bottom: 0; }
+.ft-list a i { font-size: 0.8rem; font-weight: 700; font-style: normal; letter-spacing: 0.14em; color: var(--accent); }
+.ft-list a:hover { color: var(--fg); padding-left: 6px; }
+.ft-follow .social { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 6px; }
+.ft-follow .social li { display: flex; }
+.ft-follow .social a { flex: 1; }
+.ft-follow .social li + li { margin-top: 0; }
+.ft-follow .social a { padding-block: 8px; }
 .footer-fine { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding-block: 18px 26px; font-size: 0.82rem; color: var(--fg-mute); }
 @media (max-width: 899px) {
-  .ft { grid-template-columns: 1fr 1fr; }
-  .ft-main { grid-column: 1 / -1; }
+  .ft-brand { grid-column: 1 / -1; }
+  .ft-pages, .ft-follow { grid-column: span 6; }
 }
-@media (max-width: 559px) { .ft { grid-template-columns: 1fr; } }
+@media (max-width: 559px) { .ft-pages, .ft-follow { grid-column: 1 / -1; } }
 
 /* ---------- not found ---------- */
 .notfound .tp { min-height: clamp(360px, 60vh, 560px); }

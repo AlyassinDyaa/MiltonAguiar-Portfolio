@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { brand, contact, heroPanels, shows, social, work } from '../data/site'
+import { brand, contact, shows, social, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
@@ -23,7 +23,7 @@ export default function Contact() {
   }
   return (
     <Page title="Contact">
-      <PageTitle label={contact.label} title={contact.title} lead={contact.intro} art={(heroPanels[3] || work[0])?.src} />
+      <PageTitle label={contact.label} title={contact.title} lead={contact.intro} slides={work} />
 
       <section className="spread">
         <div className="container">

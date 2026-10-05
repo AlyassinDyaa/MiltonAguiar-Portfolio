@@ -1,9 +1,28 @@
 {
   "title": "I draw comics.",
-  "paragraphs": [
-    "I am Milton Aguiar, a comic book artist from Portugal. I pencil, ink and colour: covers, interior pages, pin-ups and commissions.",
-    "Batman is the character that made me want to draw comics, and the reason I made a hero of my own. That hero is Raptor, the book I am drawing now.",
-    "I co-founded ImaginAction Comics, where Raptor is published, and I animate a little on the side."
+  "intro": "Milton Aguiar. Portuguese comic book artist: pencils, inks and colours. Creator of Raptor, co-founder of ImaginAction Comics.",
+  "image": "/uploads/spreent-and-bullet-boy.webp",
+  "story": [
+    {
+      "title": "The artist",
+      "text": "I am a comic book artist from Portugal. I pencil, ink and colour: covers, interior pages, pin-ups and commissions. A page starts in pencil on the board and stays there until it works.",
+      "image": "/uploads/robin-page-pencils.webp"
+    },
+    {
+      "title": "Why comics",
+      "text": "Batman. He is the character that made me want to draw comics, the reason I made a hero of my own, and a reminder not to back down when I know I should not. One day I hope to draw him for real.",
+      "image": "/uploads/batman-and-robin.webp"
+    },
+    {
+      "title": "Raptor",
+      "text": "That hero is Raptor, my own vigilante, and the book I am drawing now. The Preamble was funded by its readers on Indiegogo and is out on GlobalComix; the Prelude is next.",
+      "image": "/uploads/raptor.webp"
+    },
+    {
+      "title": "ImaginAction",
+      "text": "I co-founded ImaginAction Comics to publish creator-owned books, Raptor first. I also draw covers and colours for other people's comics, and animate a little on the side.",
+      "image": "/uploads/raptor-the-preamble.webp"
+    }
   ],
   "facts": [
     {
@@ -21,6 +40,14 @@
     {
       "label": "Studio",
       "value": "Co-founder, ImaginAction Comics"
+    },
+    {
+      "label": "Also",
+      "value": "Animation"
+    },
+    {
+      "label": "Raptor is written by",
+      "value": "Ryan Haack, Bruce Berrueco"
     }
   ]
 }

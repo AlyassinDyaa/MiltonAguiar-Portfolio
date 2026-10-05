@@ -18,11 +18,11 @@ npm run preview    # serve the production build
 
 | Route | Page |
 |---|---|
-| `/` | Home, page by page: the name and a drawing in the title panel with four pieces beside it, the current project and its cover, the latest pieces as slanted panels, a wall from the gallery, step-by-step comparisons, commissions with each offer as a panel, conventions |
+| `/` | Home, page by page: the name and a drawing in the title panel with four pieces beside it, the current project as a splash panel with its cover and two buttons, the latest pieces as slanted panels, step-by-step comparisons, commissions with each offer as a panel, conventions |
 | `/work` | Every piece, with category filters; a piece opens large with its details |
-| `/gallery` | Pictures in sections, shown uncropped: finished pieces, pencilled pages, whatever is added |
-| `/commissions` | What is on offer, how it works (a strip that takes one picture from blank page to colours), and where to ask |
-| `/about` | Who Milton is, quick facts, where to find him |
+| `/gallery` | Pictures in sections, shown uncropped. Switched off to start with, because it shows the same pieces as Work; switch it on under **Show or hide** |
+| `/commissions` | What is on offer (a card each), how it works (a strip of numbered panels), and where to ask |
+| `/about` | His origin story, a panel at a time; the artist file; where to find him; covers and collaborations |
 | `/contact` | Contact form, email and social links |
 
 ## Edit the content: the admin panel
@@ -37,7 +37,7 @@ The site rebuilds itself about a minute later. No code involved.
 | Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
 | Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
 | Conventions | Events, with dates and where to find the table |
-| Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name, the current project (title, cover, where to read it) and which layout the Gallery page opens in; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
+| Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name and the current project (title, cover, where to read it, and a second button, for example to the publisher); the About form holds the story, one panel at a time, each with its words and picture; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
 | Show or hide | Switch whole pages, or parts of the home page, on and off |
 
@@ -88,6 +88,8 @@ has the same effect as using the panel.
 - There are three colours (black, white, and one red set by a hue, `--h`, from **Name, colour and contact → Brand colour**; 25 is the red of the logo) and one family of type (Barlow Condensed for display and labels, Barlow for reading).
 - Tokens for both themes are at the top of `src/styles/global.css`.
 - Pictures arrive in pencil grey and are coloured in behind a line as they scroll into view (`components/Inked.jsx`).
+- The panel of art beside the title of the Work, Commissions and Contact pages goes through every piece in Work, in a random order on each visit (`components/Slides.jsx`). Whatever is added to Work joins in.
+- The page is never a flat colour: two glows of the red and a field of its print dots drift slowly behind everything (`body::before` and `::after` in `global.css`).
 - On the Gallery page visitors can switch between four layouts: wall, grid, strip and spotlight.
 - The browser icon, the icon a phone uses when the site is added to its home screen (`public/manifest.webmanifest`) and the mark in the top bar are all the logo.
 - Everything respects `prefers-reduced-motion`: smooth scroll, the opening sheet and the moving band switch off.

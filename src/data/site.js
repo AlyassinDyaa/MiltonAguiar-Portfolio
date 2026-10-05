@@ -76,11 +76,12 @@ function assemble(content) {
   project = { label: 'Current project', buttonLabel: 'Read it', ...given(current || {}) }
   home = {
     latestLabel: 'Fresh off the board', latestTitle: 'Latest pages',
-    galleryLabel: 'The gallery', galleryTitle: 'Pin-ups and pages', galleryView: 'wall',
+    galleryView: 'wall',
     redrawLabel: 'The process', redrawTitle: 'Pencils to colours',
     commissionsTitle: 'Commissions are', commissionsButton: 'How it works',
     eventsLabel: 'In person', eventsTitle: 'Find me at',
     ...given(sections),
+    ...given({ galleryView: lists.galleryView }), // the Gallery page's opening layout is set with the rest of that page
   }
   commissions = {
     title: 'Get something drawn', processLabel: 'The process', processTitle: 'How it works',
@@ -89,7 +90,10 @@ function assemble(content) {
     tiers: [], steps: [], notes: [],
     ...given(page('commissions')),
   }
-  about = { paragraphs: [], facts: [], ...given(page('about')) }
+  about = { story: [], facts: [], ...given(page('about')) }
+  // an About page written before it was told in panels: each of its paragraphs becomes a panel without a picture
+  if (!about.story.length && about.paragraphs?.length) about.story = about.paragraphs.map((text) => ({ text }))
+  about.story = about.story.filter((s) => s && s.text)
   contact = { label: 'Say hello', title: 'Get in touch', topics: [], ...given(page('contact')) }
   pages = {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },

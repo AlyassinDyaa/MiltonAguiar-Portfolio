@@ -1,23 +1,38 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { brand, footer, nav, social } from '../data/site'
+import { asset, brand, commissions, footer, nav, shows, social } from '../data/site'
 import SocialIcon from './SocialIcon'
 import Wordmark from './Wordmark'
 import Runner from './Runner'
 
-/* The last page of the comic: the name and what the site is, the pages, where else to find the
-   artist, and the red caption that closes an issue. */
+/* The last page of the comic. It ends the way an issue does, on one wide red panel with the
+   closing line and what to do next; under it, who this is, the pages, and where else to find him. */
 export default function Footer() {
   const [year] = useState(() => new Date().getFullYear()) // read on every visit, so the © line rolls over by itself on 1 January
+  const hire = shows('pages', 'commissions')
   return (
     <footer className="footer">
       <div className="container">
         <Runner label="Last page" />
         <div className="ft">
-          <div className="hp ft-main">
+          <div className="hp is-red ft-end">
             <div className="hp-in">
               <div className="words">
-                <Wordmark className="lg" />
+                {footer.line && <p className="ft-line">{footer.line}</p>}
+                <div className="actions">
+                  {hire && <Link className="btn" to="/commissions">{commissions.open ? 'Commission a piece' : 'Commissions'} <span className="arrow">→</span></Link>}
+                  {brand.instagram && <a className="btn ghost" href={brand.instagram} target="_blank" rel="noreferrer">Follow on Instagram <span className="arrow">↗</span></a>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="hp ft-brand">
+            <div className="hp-in">
+              <div className="words">
+                <Link to="/" className="ft-mark" aria-label={`${brand.name} home`}>
+                  {brand.logo && <img src={asset(brand.logo)} alt="" width="54" height="54" />}
+                  <Wordmark className="lg" />
+                </Link>
                 <p className="dim">{brand.blurb}</p>
                 {brand.email && <a className="mail" href={`mailto:${brand.email}`}>{brand.email}</a>}
               </div>
@@ -28,20 +43,16 @@ export default function Footer() {
               <div className="words">
                 <div className="label">Pages</div>
                 <ul className="ft-list">
-                  {nav.map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
+                  {nav.map((n, i) => <li key={n.to}><Link to={n.to}><i aria-hidden="true">{String(i + 1).padStart(2, '0')}</i>{n.label}</Link></li>)}
                 </ul>
               </div>
             </div>
           </div>
-          <div className="hp is-red ft-end" aria-hidden={footer.line ? undefined : 'true'}>
-            <div className="hp-in">
-              <div className="words">{footer.line && <span>{footer.line}</span>}</div>
-            </div>
-          </div>
           {social.length > 0 && (
-            <div className="hp ft-social">
+            <div className="hp ft-follow">
               <div className="hp-in">
                 <div className="words">
+                  <div className="label">Find me</div>
                   <ul className="social">
                     {social.map((s) => (
                       <li key={s.label + s.url}>

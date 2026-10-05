@@ -51,16 +51,16 @@
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
     'pages/home': {
-      groups: { kicker: 'Top of the page', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', galleryLabel: 'Gallery', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
-      half: ['primaryLabel', 'secondaryLabel', 'latestLabel', 'latestTitle', 'galleryLabel', 'galleryTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
-      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url'],
+      groups: { kicker: 'Top of the page', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
+      half: ['primaryLabel', 'secondaryLabel', 'latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
+      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl'],
     },
     'pages/lists': { groups: { workLabel: 'Work page', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
       groups: { title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
       half: ['quoteLabel', 'quoteUrl', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
     },
-    'pages/about': { groups: { title: 'Text', facts: 'Quick facts' }, half: [] },
+    'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'gallery', 'commissions', 'about', 'contact', 'ticker', 'project', 'latest', 'redraws', 'events'] },
@@ -77,10 +77,10 @@
   const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
-    'pages/home': 'The top of the home page, the drawing in the title panel, the current project, and the heading of each part below it.',
+    'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
     'pages/lists': 'The heading and introduction above the Work page and the Gallery page.',
     'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
-    'pages/about': 'Who you are: the heading, the paragraphs and the quick facts.',
+    'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
     'site/visibility': 'Switch whole pages, or parts of the home page, on and off.',

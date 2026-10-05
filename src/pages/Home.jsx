@@ -1,13 +1,12 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { asset, brand, commissions, day, events, fresh, galleryHome, hero, heroPanels, home, marquee, nameParts, pages, project, quote, redraws, shows, work } from '../data/site'
+import { asset, brand, commissions, day, events, fresh, hero, heroPanels, home, marquee, nameParts, project, quote, redraws, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Marquee from '../components/Marquee'
 import Compare from '../components/Compare'
-import GalleryGrid from '../components/GalleryGrid'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
 import Runner from '../components/Runner'
@@ -103,46 +102,38 @@ function Hero({ onOpen }) {
   )
 }
 
-/* The comic or series on the drawing board now: its cover as one panel, a red panel that says
-   what it is and where to read it, and under that any other pieces that carry its name. */
-function Project({ page, onOpen }) {
-  const { label, title, subtitle, text, image, url, buttonLabel } = project
-  const more = work.filter((p) => p.src && p.src !== image && p.title.toLowerCase().includes(title.toLowerCase())).slice(0, 2)
+/* The comic or series on the drawing board now, as one wide splash panel: its own cover blown
+   up behind the words and washed in the brand colour, the title very large, and the cover
+   itself standing at the right, breaking out of the panel top and bottom the way a figure
+   breaks a panel border. Two buttons: where to read it, and one more (the publisher's site). */
+function Project({ page }) {
+  const { label, title, subtitle, text, image, url, buttonLabel, secondLabel, secondUrl } = project
   const name = `${title}${subtitle ? `: ${subtitle}` : ''}`
   return (
     <section className="spread">
       <div className="container">
         <Runner label={label} page={page} />
-        <div className={`pj ${image ? '' : 'no-cover'}`}>
-          {image && (
-            <Reveal className="pj-cover">
-              {url
-                ? <a className="hp" href={url} target="_blank" rel="noreferrer" aria-label={`${name}: ${buttonLabel}`}><span className="hp-in"><Inked src={image} alt={name} /></span></a>
-                : <div className="hp"><div className="hp-in"><Inked src={image} alt={name} /></div></div>}
-            </Reveal>
-          )}
-          <div className="pj-side">
-            <Reveal className="hp is-red pj-text" delay={0.08}>
-              <div className="hp-in">
-                <div className="words">
-                  <h2 className="display h-xl">{title}{subtitle && <small>{subtitle}</small>}</h2>
-                  {text && <p className="lead">{text}</p>}
+        <div className={`pj ${image ? 'has-cover' : ''}`}>
+          <Reveal className="hp pj-splash">
+            <div className="hp-in">
+              {image && <span className="pj-bg" style={{ backgroundImage: `url("${asset(image)}")` }} aria-hidden="true" />}
+              <div className="words">
+                <h2 className="display pj-title">{title}{subtitle && <small>{subtitle}</small>}</h2>
+                {text && <p className="lead">{text}</p>}
+                <div className="actions">
                   {url && <Magnetic><a className="btn" href={url} target="_blank" rel="noreferrer">{buttonLabel} <span className="arrow">↗</span></a></Magnetic>}
+                  {secondUrl && <Magnetic><a className="btn ghost" href={secondUrl} target="_blank" rel="noreferrer">{secondLabel || 'More about it'} <span className="arrow">↗</span></a></Magnetic>}
                 </div>
               </div>
+            </div>
+          </Reveal>
+          {image && (
+            <Reveal className="pj-cover" delay={0.12}>
+              {url
+                ? <a className="pj-book" href={url} target="_blank" rel="noreferrer" aria-label={`${name}: ${buttonLabel}`}><Inked src={image} alt={name} /></a>
+                : <span className="pj-book"><Inked src={image} alt={name} /></span>}
             </Reveal>
-            {more.length > 0 && (
-              <div className="pj-strip">
-                {more.map((p, i) => (
-                  <Reveal className="cell" key={p.slug} delay={0.14 + i * 0.08}>
-                    <button type="button" className="hp" onClick={() => onOpen(work.indexOf(p))} aria-label={`Open ${p.title}`}>
-                      <span className="hp-in"><Inked src={p.src} /><span className="caption">{p.title}</span></span>
-                    </button>
-                  </Reveal>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </section>
@@ -182,29 +173,6 @@ function Latest({ page, onOpen }) {
             </Reveal>
           ))}
         </ol>
-      </div>
-    </section>
-  )
-}
-
-/* A handful of pictures from the gallery, whole and uncropped, beside the panel that names it. */
-function GalleryPage({ page }) {
-  return (
-    <section className="spread">
-      <div className="container">
-        <Runner label={home.galleryLabel} page={page} />
-        <div className="gl">
-          <Reveal className="hp gl-text">
-            <div className="hp-in">
-              <div className="words">
-                <h2 className="display h-lg">{home.galleryTitle}</h2>
-                {pages.gallery.intro && <p className="lead">{pages.gallery.intro}</p>}
-                {shows('pages', 'gallery') && <Link className="btn ghost" to="/gallery">Full gallery <span className="arrow">→</span></Link>}
-              </div>
-            </div>
-          </Reveal>
-          <GalleryGrid items={galleryHome} view="wall" max={3} />
-        </div>
       </div>
     </section>
   )
@@ -263,11 +231,9 @@ export default function Home() {
       <Hero onOpen={setSel} />
       {shows('home', 'ticker') && <Marquee items={marquee} />}
 
-      {shows('home', 'project') && project.title && <Project page={++n} onOpen={setSel} />}
+      {shows('home', 'project') && project.title && <Project page={++n} />}
 
       {shows('home', 'latest') && fresh.length > 0 && <Latest page={++n} onOpen={setSel} />}
-
-      {shows('home', 'gallery') && galleryHome.length > 0 && <GalleryPage page={++n} />}
 
       {/* Step by step */}
       {shows('home', 'redraws') && redraws.length > 0 && (

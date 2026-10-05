@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { categories, day, heroPanels, home, pages, redraws, work } from '../data/site'
+import { categories, day, home, pages, redraws, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
@@ -17,7 +17,7 @@ export default function Work() {
   const choose = (c) => { setSel(null); setFilter(c) }
   return (
     <Page title="Work">
-      <PageTitle label={pages.work.label} title={pages.work.title} lead={pages.work.intro} art={(heroPanels[1] || work[0])?.src}>
+      <PageTitle label={pages.work.label} title={pages.work.title} lead={pages.work.intro} slides={work}>
         {categories.length > 1 && (
           <div className="filters" role="group" aria-label="Show">
             {['All', ...categories].map((c) => (

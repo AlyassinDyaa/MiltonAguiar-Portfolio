@@ -15,19 +15,29 @@
       "url": "https://www.instagram.com/miltonaguiarart/"
     },
     {
-      "label": "YouTube",
-      "handle": "",
-      "url": "https://www.youtube.com/channel/UCX0jQHXP2Dc-BnEkFjN2yYg"
+      "label": "ImaginAction Comics",
+      "handle": "The studio",
+      "url": "https://imaginaction-comics.vercel.app/"
     },
     {
       "label": "GlobalComix",
-      "handle": "ImaginAction Comics",
-      "url": "https://globalcomix.com/a/imaginaction-comics"
+      "handle": "Read Raptor",
+      "url": "https://globalcomix.com/c/raptor"
     },
     {
-      "label": "Discord",
+      "label": "ArtStation",
+      "handle": "miltonaguiarart",
+      "url": "https://miltonaguiarart.artstation.com/"
+    },
+    {
+      "label": "X",
+      "handle": "@miltonaguiarart",
+      "url": "https://x.com/miltonaguiarart"
+    },
+    {
+      "label": "YouTube",
       "handle": "",
-      "url": "https://discord.com/invite/HWuNGKe"
+      "url": "https://www.youtube.com/channel/UCX0jQHXP2Dc-BnEkFjN2yYg"
     }
   ],
   "footerLine": "To be continued…",

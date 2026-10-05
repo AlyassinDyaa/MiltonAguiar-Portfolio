@@ -64,7 +64,7 @@ collections:
   - name: gallery_sections
     label: Gallery
     label_singular: Gallery section
-    description: 'The gallery page, in sections you name yourself (Pencils, Covers, Convention photos...). Open a section to add pictures.'
+    description: 'The Gallery page, in sections you name yourself (Pencils, Covers, Convention photos...). The page is switched off to start with, because it shows the same pieces as Work: switch it on under Show or hide.'
     folder: content/gallery-sections
     create: true
     extension: json
@@ -104,7 +104,7 @@ collections:
           - { name: src, label: Picture, widget: image, choose_url: false, hint: 'Any shape; it is shown uncropped.' }
           - { name: title, label: Title, widget: string, required: false }
           - { name: note, label: A few words about it, widget: text, required: false }
-          - { name: home, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'The home page shows up to six gallery pictures, ticked ones first.' }
+          - { name: home, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'No longer used: the home page shows pieces from Work.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes the whole section off the site but keeps it here.' }
 
   - name: redraws
@@ -190,22 +190,11 @@ collections:
               - { name: text, label: Text, widget: text, required: false }
               - { name: image, label: Cover or key art, widget: image, choose_url: false, required: false }
               - { name: buttonLabel, label: Button, widget: string, required: false }
-              - { name: url, label: Where the button goes, widget: string, required: false, hint: 'Where people can read or buy it.' }
+              - { name: url, label: Where the button goes, widget: string, required: false, hint: 'Where people can read or buy it. The cover links there too.' }
+              - { name: secondLabel, label: Second button, widget: string, required: false, hint: 'For example the publisher. Leave both of these empty to have one button.' }
+              - { name: secondUrl, label: Where the second button goes, widget: string, required: false }
           - { name: latestLabel, label: Small label, widget: string, required: false }
           - { name: latestTitle, label: Heading, widget: string }
-          - { name: galleryLabel, label: Small label, widget: string, required: false }
-          - { name: galleryTitle, label: Heading, widget: string }
-          - name: galleryView
-            label: How the Gallery page is laid out to start with
-            widget: select
-            default: wall
-            required: false
-            options:
-              - { label: 'Wall: columns, nothing cropped', value: wall }
-              - { label: 'Grid: even tiles', value: grid }
-              - { label: 'Strip: one row you scroll sideways', value: strip }
-              - { label: 'Spotlight: one big picture with the rest beside it', value: spotlight }
-            hint: 'Visitors can switch between these four on the Gallery page; this is the one they see first.'
           - { name: redrawLabel, label: Small label, widget: string, required: false }
           - { name: redrawTitle, label: Heading, widget: string }
           - { name: redrawText, label: Text, widget: text, required: false }
@@ -224,6 +213,17 @@ collections:
           - { name: galleryLabel, label: Small label, widget: string, required: false }
           - { name: galleryTitle, label: Heading, widget: string }
           - { name: galleryIntro, label: Introduction, widget: text, required: false }
+          - name: galleryView
+            label: How the Gallery page is laid out to start with
+            widget: select
+            default: wall
+            required: false
+            options:
+              - { label: 'Wall: columns, nothing cropped', value: wall }
+              - { label: 'Grid: even tiles', value: grid }
+              - { label: 'Strip: one row you scroll sideways', value: strip }
+              - { label: 'Spotlight: one big picture with the rest beside it', value: spotlight }
+            hint: 'Visitors can switch between these four; this is the one they see first.'
 
       - name: commissions
         label: Commissions page
@@ -246,12 +246,12 @@ collections:
           - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
           - { name: processLabel, label: Small label, widget: string, required: false }
           - { name: processTitle, label: Heading, widget: string }
-          - { name: processImage, label: Picture for the steps, widget: image, choose_url: false, required: false, hint: 'The steps show one picture going from a blank page to pencils, inks and colours. Empty uses your newest finished piece.' }
           - name: steps
             label: Steps
             label_singular: Step
             widget: list
             summary: '{{fields.title}}'
+            hint: 'Shown as a strip of numbered panels. Up to four sit in one row.'
             fields:
               - { name: title, label: Step, widget: string }
               - { name: text, label: Description, widget: text }
@@ -271,11 +271,18 @@ collections:
         file: content/pages/about.json
         fields:
           - { name: title, label: Heading, widget: string }
-          - name: paragraphs
-            label: Paragraphs
-            label_singular: Paragraph
+          - { name: intro, label: Sentence under the heading, widget: text, required: false }
+          - { name: image, label: Picture beside the heading, widget: image, choose_url: false, required: false }
+          - name: story
+            label: Your story, a panel at a time
+            label_singular: Panel
             widget: list
-            field: { name: text, label: Paragraph, widget: text }
+            summary: '{{fields.title}}'
+            hint: 'Each panel is a picture with words beside it. They swap sides as the page goes down. Drag to reorder.'
+            fields:
+              - { name: title, label: Heading, widget: string, required: false }
+              - { name: text, label: Words, widget: text }
+              - { name: image, label: Picture, widget: image, choose_url: false, required: false, hint: 'Without one the words take the full width.' }
           - name: facts
             label: Facts
             label_singular: Fact
@@ -336,7 +343,7 @@ collections:
             hint: 'A page that is switched off also leaves the menu.'
             fields:
               - { name: work, label: Work, widget: boolean, default: true }
-              - { name: gallery, label: Gallery, widget: boolean, default: true }
+              - { name: gallery, label: Gallery, widget: boolean, default: false }
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: about, label: About, widget: boolean, default: true }
               - { name: contact, label: Contact, widget: boolean, default: true }
@@ -348,7 +355,6 @@ collections:
               - { name: ticker, label: Moving band of words, widget: boolean, default: true }
               - { name: project, label: Current project, widget: boolean, default: true }
               - { name: latest, label: Latest pieces, widget: boolean, default: true }
-              - { name: gallery, label: Gallery, widget: boolean, default: true }
               - { name: redraws, label: Step by step, widget: boolean, default: true }
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: events, label: Conventions, widget: boolean, default: true }

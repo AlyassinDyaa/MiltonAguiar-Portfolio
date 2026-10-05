@@ -16,6 +16,6 @@
   },
   "themes": {
     "dark": true,
-    "light": true
+    "light": false
   }
 }

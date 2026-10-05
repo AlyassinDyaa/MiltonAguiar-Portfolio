@@ -1,1 +1,108 @@
-# MiltonAguiar-Portfolio
+# Milton Aguiar — website
+
+Portfolio site for comic book artist Milton Aguiar ([@miltonaguiarart](https://www.instagram.com/miltonaguiarart/)).
+
+Built with Vite, React 19, React Router, Framer Motion and Lenis. Fonts are bundled with the site.
+Content is edited through an admin panel at `/admin` (see below).
+
+## Run it
+
+```
+npm install
+npm run dev        # http://localhost:5175
+npm run build      # production build in dist/
+npm run preview    # serve the production build
+```
+
+## Pages
+
+| Route | Page |
+|---|---|
+| `/` | Home: the name and a drawing in the title panel of a comic page, the current project, latest pieces as panels, gallery, step-by-step comparisons, commissions, conventions |
+| `/work` | Every piece, with category filters; a piece opens large with its details |
+| `/gallery` | Pictures in sections, shown uncropped: finished pieces, pencilled pages, whatever is added |
+| `/commissions` | What is on offer, how it works, and the request form |
+| `/about` | Who Milton is, quick facts, where to find him |
+| `/contact` | Contact form, email and social links |
+
+## Edit the content: the admin panel
+
+The site is edited at **`/admin`** (for example `https://your-site.com/admin/`).
+It is a content manager (Decap CMS) that saves every change as a commit to this repository.
+The site rebuilds itself about a minute later. No code involved.
+
+| Section | What you control |
+|---|---|
+| Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page |
+| Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
+| Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
+| Conventions | Events, with dates and where to find the table |
+| Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name, the current project (title, cover, where to read it) and which layout the gallery opens in; the Commissions form holds open or closed, the offers and prices |
+| Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
+| Show or hide | Switch whole pages, or parts of the home page, on and off |
+
+Pictures upload straight from the panel into `public/uploads/`. A piece without a picture gets a
+blank art board with its title, so the site never shows a hole.
+
+Every piece, gallery section, set and event also has a **Hide from the site** switch, which takes it off the site
+without deleting it.
+
+### The drawing beside the name
+
+Home page → Drawing. A cut-out (a PNG or WebP with a see-through background) stands in the title
+panel in front of a burst of the brand colour. Any other picture is laid in the panel as a sheet of
+art board. The site tells the two apart by itself.
+
+### Editing on this computer
+
+```
+npm run dev
+```
+
+Then open http://localhost:5175/admin/ and edit; changes land directly in `content/`.
+(`npm run dev` also starts the small helper the panel saves through, on port 8083.)
+
+### Editing files by hand
+
+Everything the panel edits is plain JSON under `content/`. Editing those files and pushing
+has the same effect as using the panel.
+
+## Design
+
+- The site is drawn as a comic page: panels ruled in ink, lettered caption boxes, speech balloons, print dots.
+- It opens **dark** (a black page ruled in white ink). The switch in the top bar changes to the light theme (black ink on art-board paper); the visitor's choice is remembered in their browser.
+- Tokens (colours, type, spacing) for both themes are at the top of `src/styles/global.css`.
+- The one colour on the site is set by a hue, `--h`, from **Name, colour and contact → Brand colour**. 25 is the red of the logo.
+- Wherever a set of pictures is shown (the home page gallery, the Gallery page) visitors can switch between four layouts: wall, grid, strip and spotlight.
+- The browser icon, the icon a phone uses when the site is added to its home screen (`public/manifest.webmanifest`) and the mark in the top bar are all the logo.
+- Everything respects `prefers-reduced-motion`: smooth scroll, the opening sheet and the moving band switch off.
+
+## Deploy on Vercel (site and admin)
+
+`vercel.json` holds the build settings and routing, so the site itself needs no setup:
+
+1. On vercel.com: **Add New → Project**, import this GitHub repository, press **Deploy**.
+
+The admin at `/admin/` needs two values. It logs in with **a passcode you choose**, and the site
+saves changes to GitHub with **a token of its own** (the small files in `/api`). Nobody logging
+in needs a GitHub account.
+
+2. Make the token, once, with the GitHub account that owns this repository:
+   **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new
+   token**. Repository access: **Only select repositories** → this repository.
+   Permissions → Repository permissions → **Contents: Read and write**. Generate and copy it.
+3. On Vercel: project **Settings → Environment Variables**, add
+   `ADMIN_PASSCODE` (the passcode: long and hard to guess, 12 characters or more) and
+   `GITHUB_TOKEN` (the token from step 2), then **Deployments → Redeploy**.
+
+To change the passcode later, change `ADMIN_PASSCODE` on Vercel and redeploy; everyone is
+logged out and uses the new one. A login lasts a week. Pictures uploaded through the admin on
+Vercel can be about 3 MB at most.
+
+Every **Save** in the admin is a commit to the branch the site was built from; Vercel rebuilds
+and the change is live about a minute later. In a browser that is logged in to the admin, the
+site shows anything saved since its last build straight away (`api/content.js`).
+
+Any other static host works for the site itself: build command `npm run build`, output directory
+`dist`, SPA fallback to `index.html`. On Netlify the admin can use Netlify Identity with Git
+Gateway instead of the passcode (`netlify.toml` is included).

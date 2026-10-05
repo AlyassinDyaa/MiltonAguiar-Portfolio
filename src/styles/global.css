@@ -1,0 +1,242 @@
+/* Milton Aguiar — global styles & tokens */
+
+/* The site is a comic page drawn in negative: a black page, panels ruled in white ink, one red
+   (the red of the MA logo) and the pale blue of a pencil that does not show in print.
+   --k and --w are plain black and the white of the board, whatever they are used for;
+   --paper is the page, --ink is what is drawn on it, --board is the surface of a panel or a box.
+   --h is the hue of the red, set in the admin panel (hooks/useHue.js writes it here). */
+:root {
+  --h: 25;
+  --k: #0e0c0d;
+  --w: #f4f0e6;
+  --paper: var(--k);
+  --board: #1a1718;
+  --ink: var(--w);
+  --pencil: #5aa9d6;
+  --bg: var(--paper);
+  --bg-2: #161314;
+  --fg: var(--ink);
+  --fg-dim: rgba(244, 240, 230, 0.76);
+  --fg-mute: rgba(244, 240, 230, 0.54);
+  --line: rgba(244, 240, 230, 0.14);
+  --line-strong: rgba(244, 240, 230, 0.36);
+  /* oklch keeps the red equally strong whatever hue is chosen, so white lettering always sits on it */
+  --accent: oklch(0.56 0.215 var(--h));
+  --accent-deep: oklch(0.34 0.13 var(--h));
+  --accent-soft: oklch(0.56 0.215 var(--h) / 0.2);
+  --on-accent: #fff;
+  --open: #2fbf6b;
+  --display: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
+  --body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* hand lettering: captions and speech balloons */
+  --letter: 'Comic Neue', 'Comic Sans MS', 'Chalkboard SE', cursive;
+  --sfx: 'Bangers', Impact, sans-serif;
+  --rule: 3px; /* a panel border */
+  --gap: clamp(10px, 1.2vw, 16px); /* the gutter between panels */
+  --dots: radial-gradient(circle, var(--dot, var(--accent)) 0 1.7px, transparent 2.2px) 0 0 / 8px 8px;
+  --gutter: clamp(20px, 5vw, 72px);
+  --max: 1400px;
+  --nav: 74px;
+  --ease: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* a speech balloon or caption box, the bar behind the menu, the sheet behind an opened piece, a soft shadow */
+  --box: var(--w);
+  --box-line: var(--w);
+  --nav-bg: rgba(14, 12, 13, 0.9);
+  --veil: rgba(10, 8, 9, 0.965);
+  --drop: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+/* The light theme: the same page as it is drawn, black ink on warm art-board paper. The switch in
+   the top bar sets it (components/ThemeSwitch.jsx) and the visitor's browser remembers it. */
+:root[data-theme='light'] {
+  --paper: #f4f0e6;
+  --board: #fdfbf6;
+  --ink: #141113;
+  --bg-2: #ebe5d6;
+  --fg-dim: rgba(20, 17, 19, 0.74);
+  --fg-mute: rgba(20, 17, 19, 0.54);
+  --line: rgba(20, 17, 19, 0.14);
+  --line-strong: rgba(20, 17, 19, 0.36);
+  --accent: oklch(0.54 0.205 var(--h));
+  --accent-soft: oklch(0.54 0.205 var(--h) / 0.12);
+  --open: #1c9a52;
+  --box: #fdfbf6;
+  --box-line: var(--k);
+  --nav-bg: rgba(244, 240, 230, 0.94);
+  --veil: rgba(244, 240, 230, 0.975);
+  --drop: rgba(20, 17, 19, 0.2);
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--paper);
+  transition: background 0.35s, color 0.35s;
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 17.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img, svg, video { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+p { margin: 0 0 1em; }
+h1, h2, h3, h4 { margin: 0; font-weight: 400; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* backdrop, fixed behind every page: the ruler ticks printed down both edges of an art board,
+   in pencil blue, and a fade of red print dots in the top corner */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5;
+  background:
+    repeating-linear-gradient(var(--pencil) 0 1px, transparent 1px 12px) 0 0 / 7px 100% no-repeat,
+    repeating-linear-gradient(var(--pencil) 0 1px, transparent 1px 60px) 0 0 / 15px 100% no-repeat,
+    repeating-linear-gradient(var(--pencil) 0 1px, transparent 1px 12px) 100% 0 / 7px 100% no-repeat,
+    repeating-linear-gradient(var(--pencil) 0 1px, transparent 1px 60px) 100% 0 / 15px 100% no-repeat;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.6;
+  background: var(--dots);
+  -webkit-mask-image: radial-gradient(46% 52% at 100% 0%, #000, transparent 72%);
+  mask-image: radial-gradient(46% 52% at 100% 0%, #000, transparent 72%);
+}
+#root { position: relative; z-index: 1; }
+@media (max-width: 699px) { body::before { display: none; } }
+
+.container { width: min(100% - 2 * var(--gutter), var(--max)); margin-inline: auto; }
+.section { padding-block: clamp(56px, 8vw, 120px); }
+.section.tight { padding-block: clamp(36px, 5vw, 72px); }
+.page { min-height: 70vh; }
+
+/* type: heavy condensed italic capitals, the way a comic's masthead is set */
+.display {
+  font-family: var(--display);
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  line-height: 0.92;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.h-xl { font-size: clamp(3.4rem, 10vw, 9rem); line-height: 0.86; }
+.h-lg { font-size: clamp(2.6rem, 6vw, 5.2rem); }
+.h-md { font-size: clamp(1.8rem, 3.2vw, 2.7rem); }
+.h-sm { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.01em; }
+.lead { font-size: clamp(1.1rem, 1.5vw, 1.32rem); line-height: 1.5; color: var(--fg-dim); max-width: 52ch; }
+.dim { color: var(--fg-dim); }
+
+/* a small label. The red kind is a caption box: lettered, ruled in ink, with a hard shadow */
+.label {
+  display: flex; align-items: center; gap: 10px; width: fit-content;
+  margin-bottom: 14px;
+  font-family: var(--letter); font-size: 0.82rem; font-weight: 700; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.label.accent {
+  padding: 6px 12px 5px;
+  background: var(--accent); color: var(--on-accent);
+  border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* buttons: inked boxes that press down into their own shadow */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.55em;
+  min-height: 54px; padding: 0 28px;
+  font-family: var(--display); font-size: 1.24rem; font-weight: 800; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+  background: var(--accent); color: var(--on-accent);
+  border: 2.5px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out), background 0.2s, color 0.2s;
+}
+.btn .arrow { transition: transform 0.3s var(--ease-out); }
+.btn:hover .arrow { transform: translateX(5px); }
+.btn:hover, .btn:focus-visible { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--ink); }
+.btn:active { transform: translate(5px, 5px); box-shadow: 0 0 0 var(--ink); }
+.btn.ghost { background: var(--board); color: var(--ink); }
+.btn.ghost:hover, .btn.ghost:focus-visible { background: var(--ink); color: var(--paper); }
+.btn.sm { min-height: 42px; padding: 0 18px; font-size: 1.05rem; border-width: 2px; box-shadow: 3px 3px 0 var(--ink); }
+.btn.sm:hover, .btn.sm:focus-visible { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--ink); }
+
+/* chips: filters and stage pickers */
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px; padding: 0 14px;
+  font-family: var(--letter); font-size: 0.82rem; font-weight: 700; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--board); color: var(--fg); border: 2px solid var(--ink);
+  transition: background 0.2s, color 0.2s, transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out);
+}
+.chip small { font-size: 0.9em; opacity: 0.6; }
+button.chip:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); }
+.chip.on { background: var(--ink); color: var(--paper); }
+.chip.is-fixed { border-style: dashed; background: transparent; color: var(--fg-mute); }
+
+/* open / closed, said in a speech balloon */
+.status {
+  position: relative; display: inline-flex; align-items: center; gap: 10px;
+  margin-bottom: 30px; padding: 11px 20px 10px;
+  font-family: var(--letter); font-size: 0.9rem; font-weight: 700; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--box); color: var(--k); border: 2.5px solid var(--box-line); border-radius: 999px;
+}
+.status::after { content: ''; position: absolute; left: 30px; bottom: -11px; width: 18px; height: 18px; background: var(--box); border: solid var(--box-line); border-width: 0 2.5px 2.5px 0; transform: skewX(28deg) rotate(45deg); }
+.status i, .nav-status i { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: rgba(14, 12, 13, 0.4); }
+.status.on i, .nav-status i.on { background: #1c9a52; box-shadow: 0 0 0 0 var(--open); animation: pulse 2.2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(28, 154, 82, 0.6); } 70%, 100% { box-shadow: 0 0 0 9px rgba(28, 154, 82, 0); } }
+
+/* a section's heading stands on a ruled ink line */
+.section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px 48px; flex-wrap: wrap; margin-bottom: clamp(26px, 3.6vw, 48px); padding-bottom: 18px; border-bottom: var(--rule) solid var(--fg); }
+.section-head .label { margin-bottom: 14px; }
+.section-note { max-width: 40ch; margin: 0; }
+.page-head { padding-top: calc(var(--nav) + clamp(40px, 7vw, 96px)); }
+.page-head .lead { margin-top: 22px; }
+.page-head .display em { font-style: inherit; color: var(--accent); }
+
+/* a halftone shadow: a block of print dots, set down and to the right of whatever it holds.
+   The thing inside has to be opaque. */
+.dots { position: relative; isolation: isolate; }
+.dots::after { content: ''; position: absolute; inset: var(--off, 12px) calc(var(--off, 12px) * -1) calc(var(--off, 12px) * -1) var(--off, 12px); z-index: -1; background: var(--dots); }
+
+/* forms: ruled boxes, lettered labels */
+form { max-width: 620px; }
+.field { position: relative; display: flex; flex-direction: column-reverse; margin-bottom: 20px; }
+.field input, .field textarea {
+  width: 100%; padding: 13px 14px;
+  background: var(--board); color: var(--ink); font: inherit;
+  border: 2.5px solid var(--ink); border-radius: 0; outline: 0;
+  transition: box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+}
+.field textarea { resize: vertical; min-height: 130px; }
+.field label, .pick-label { display: block; margin-bottom: 7px; font-family: var(--letter); font-size: 0.82rem; font-weight: 700; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-dim); }
+.field input:focus, .field textarea:focus, .pick-button:focus-visible, .field.pick.is-open .pick-button { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--accent); }
+.field input::placeholder, .field textarea::placeholder { color: transparent; }
+.field .bar { display: none; }
+.form-alt { margin-top: 22px; font-size: 0.92rem; color: var(--fg-mute); }
+.form-alt a { color: var(--fg); border-bottom: 2px solid var(--accent); }
+
+/* the site's own drop-down (components/Picker.jsx) */
+.field.pick { flex-direction: column; z-index: 5; }
+.pick-button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 13px 14px; text-align: left; background: var(--board); border: 2.5px solid var(--ink); outline: 0; transition: box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out); }
+.pick-button svg, .pick-list svg { flex: 0 0 auto; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pick-button svg { transition: transform 0.3s var(--ease); }
+.field.pick.is-open .pick-button svg { transform: rotate(180deg); }
+.pick-list { position: absolute; left: 0; right: 0; top: calc(100% + 8px); padding: 6px; background: var(--board); border: 2.5px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.pick-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 0 12px; color: var(--fg-dim); cursor: pointer; }
+.pick-list li.on { background: var(--accent-soft); color: var(--fg); }
+.pick-list li[aria-selected='true'] { color: var(--fg); font-weight: 700; }
+.pick-list li svg { color: var(--accent); }
+
+.fresh-note { position: fixed; z-index: 400; left: 16px; bottom: 16px; max-width: min(360px, calc(100vw - 32px)); padding: 10px 14px; background: var(--board); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--open); color: var(--fg-dim); font-size: 0.8rem; line-height: 1.45; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }
+}

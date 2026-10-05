@@ -1,0 +1,35 @@
+{
+  "name": "Milton Aguiar",
+  "artist": "Milton Aguiar",
+  "tagline": "Comic book artist. Creator of Raptor.",
+  "blurb": "Comic book art by Milton Aguiar: pencils, inks and colours. Creator of Raptor, co-founder of ImaginAction Comics.",
+  "hue": 25,
+  "logo": "/uploads/logo.webp",
+  "email": "",
+  "location": "",
+  "contactAction": "",
+  "social": [
+    {
+      "label": "Instagram",
+      "handle": "@miltonaguiarart",
+      "url": "https://www.instagram.com/miltonaguiarart/"
+    },
+    {
+      "label": "YouTube",
+      "handle": "",
+      "url": "https://www.youtube.com/channel/UCX0jQHXP2Dc-BnEkFjN2yYg"
+    },
+    {
+      "label": "GlobalComix",
+      "handle": "ImaginAction Comics",
+      "url": "https://globalcomix.com/a/imaginaction-comics"
+    },
+    {
+      "label": "Discord",
+      "handle": "",
+      "url": "https://discord.com/invite/HWuNGKe"
+    }
+  ],
+  "footerLine": "To be continued…",
+  "footerFine": "Characters shown in fan art belong to their owners."
+}

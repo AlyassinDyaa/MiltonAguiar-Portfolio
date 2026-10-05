@@ -1,0 +1,75 @@
+{
+  "open": true,
+  "title": "Get something drawn",
+  "intro": "Your favourite character, your own character, or a cover for your book, drawn in my style. Tell me what you have in mind.",
+  "tiers": [
+    {
+      "name": "Sketch",
+      "text": "A pencil drawing of one character, like the ones I post.",
+      "price": "",
+      "includes": [
+        "Pencils",
+        "High-resolution scan",
+        "One round of changes"
+      ]
+    },
+    {
+      "name": "Inked piece",
+      "text": "One character, pencilled and inked in black and white.",
+      "price": "",
+      "includes": [
+        "Pencils and inks",
+        "High-resolution file",
+        "One round of changes"
+      ]
+    },
+    {
+      "name": "Full colour",
+      "text": "Pencils, inks and colours. Room for more than one character or a background.",
+      "price": "",
+      "includes": [
+        "Pencils, inks and colours",
+        "Print-ready file",
+        "Two rounds of changes"
+      ]
+    },
+    {
+      "name": "Cover or pages",
+      "text": "A cover or sequential pages for your own comic.",
+      "price": "",
+      "includes": [
+        "Quoted for the job",
+        "Progress shots along the way"
+      ]
+    }
+  ],
+  "processLabel": "The process",
+  "processTitle": "How it works",
+  "steps": [
+    {
+      "title": "Send the idea",
+      "text": "Who or what, the mood, and any reference pictures you have."
+    },
+    {
+      "title": "Quote and pencils",
+      "text": "You get a price, then a pencil drawing to approve before any ink goes on."
+    },
+    {
+      "title": "Inks and colours",
+      "text": "The piece is inked and coloured, with progress shots along the way."
+    },
+    {
+      "title": "Delivery",
+      "text": "A high-resolution file lands in your inbox, ready to print or post."
+    }
+  ],
+  "requestLabel": "Request",
+  "requestTitle": "Tell me the idea",
+  "closedTitle": "Join the queue",
+  "closedText": "The books are closed for now. Send the idea anyway and you will hear back when a slot opens.",
+  "notes": [
+    "Personal use unless we agree otherwise.",
+    "Fan art and original characters are both welcome.",
+    "Turnaround depends on the queue; ask and I will tell you where it stands."
+  ]
+}

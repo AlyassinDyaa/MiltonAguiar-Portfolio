@@ -1,0 +1,42 @@
+{
+  "kicker": "Pencils · Inks · Colours",
+  "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",
+  "primaryLabel": "See the work",
+  "secondaryLabel": "Commission a piece",
+  "figure": {
+    "src": "/uploads/raptor-cutout.webp",
+    "size": 100,
+    "x": 0,
+    "y": 0
+  },
+  "marquee": [
+    "Pencils",
+    "Inks",
+    "Colours",
+    "Covers",
+    "Pages",
+    "Pin-ups",
+    "Commissions"
+  ],
+  "project": {
+    "label": "Current project",
+    "title": "Raptor",
+    "subtitle": "The Preamble",
+    "text": "My own vigilante, in his own book from ImaginAction Comics. The Preamble is out now: read it on GlobalComix with a subscription, or get the PDF.",
+    "image": "/uploads/raptor-the-preamble.webp",
+    "buttonLabel": "Read it on GlobalComix",
+    "url": "https://globalcomix.com/c/raptor"
+  },
+  "latestLabel": "Fresh off the board",
+  "latestTitle": "Latest pages",
+  "galleryLabel": "The gallery",
+  "galleryTitle": "Pin-ups and pages",
+  "galleryView": "wall",
+  "redrawLabel": "The process",
+  "redrawTitle": "Pencils to colours",
+  "redrawText": "The same piece at each stage. Drag the line to wipe from the pencils to the finished colours.",
+  "commissionsTitle": "Get something drawn",
+  "commissionsButton": "How it works",
+  "eventsLabel": "In person",
+  "eventsTitle": "Find me at"
+}

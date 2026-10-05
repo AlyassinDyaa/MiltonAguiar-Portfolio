@@ -1,0 +1,15 @@
+{
+  "title": "On the drawing board",
+  "description": "Pencilled pages before the ink goes on.",
+  "order": 2,
+  "from": "none",
+  "hidden": false,
+  "items": [
+    {
+      "src": "/uploads/batman-pages-pencils.webp",
+      "title": "Batman pages, pencils",
+      "note": "A stack of pencilled interior pages.",
+      "home": true
+    }
+  ]
+}

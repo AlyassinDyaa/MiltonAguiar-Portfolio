@@ -1,0 +1,48 @@
+/* The admin's login page (login.js; the small fallback page in api/auth.js uses it too).
+   The site's own look, after dark: ink, the red of the logo, the heavy italic capitals of the name. */
+@font-face { font-family: 'Barlow Condensed'; font-style: italic; font-weight: 900; font-display: swap; src: url(barlow-condensed-900-italic.woff2) format('woff2'); }
+
+.dl {
+  --red: #d92f3a;
+  position: fixed; inset: 0; z-index: 100000; overflow-y: auto;
+  display: grid; place-items: center; padding: 24px 16px;
+  color: #f4f0e6; font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #121011;
+}
+.dl *, .dl *::before, .dl *::after { box-sizing: border-box; }
+.dl-box {
+  width: min(380px, 100%); margin: 0; padding: 36px 30px 26px; text-align: center;
+  background: #1a1718; border: 3px solid #f4f0e6;
+  box-shadow: 10px 10px 0 var(--red);
+}
+.dl-logo { display: block; width: 72px; height: 72px; margin: 0 auto 16px; border-radius: 50%; }
+.dl-name { margin: 0; font-family: 'Barlow Condensed', Impact, 'Arial Narrow Bold', sans-serif; font-weight: 900; font-style: italic; font-size: 2.8rem; line-height: 1; letter-spacing: 0; text-transform: uppercase; }
+.dl-name b { font-weight: 900; color: var(--red); }
+.dl-kicker { margin: 8px 0 26px; font: 600 0.7rem/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0.32em; text-transform: uppercase; color: rgba(244, 240, 230, 0.5); }
+.dl-label { display: block; margin: 0 0 8px; text-align: left; font: 600 0.68rem/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(244, 240, 230, 0.6); }
+.dl-field { position: relative; }
+.dl-field input {
+  width: 100%; height: 50px; padding: 0 70px 0 14px; border-radius: 0; outline: 0;
+  background: #121011; color: #f4f0e6; border: 2px solid rgba(244, 240, 230, 0.4); font: inherit; font-size: 1rem; letter-spacing: 0.04em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.dl-field input:focus { border-color: var(--red); box-shadow: 4px 4px 0 var(--red); }
+.dl-show { position: absolute; top: 5px; right: 5px; height: 40px; padding: 0 12px; border: 0; background: transparent; color: rgba(244, 240, 230, 0.6); font: 600 0.68rem/1 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.dl-show:hover, .dl-show:focus-visible { color: #f4f0e6; }
+.dl-show:focus-visible, .dl-back:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.dl-note { min-height: 1.5em; margin: 10px 0 14px; text-align: left; font-size: 0.86rem; color: rgba(244, 240, 230, 0.6); }
+.dl-note.bad { color: #ff7d8f; }
+.dl-submit {
+  display: flex; align-items: center; justify-content: center; gap: 0.6em; width: 100%; height: 54px; padding: 0 24px; border: 0; cursor: pointer;
+  font-family: 'Barlow Condensed', Impact, 'Arial Narrow Bold', sans-serif; font-weight: 900; font-style: italic; font-size: 1.3rem; letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--red); color: #fff;
+  transition: background 0.2s;
+}
+.dl-submit i { font-style: normal; transition: transform 0.25s; }
+.dl-submit:hover, .dl-submit:focus-visible { background: #f4f0e6; color: #121011; outline: 0; }
+.dl-submit:hover i { transform: translateX(5px); }
+.dl-submit:disabled { opacity: 0.6; cursor: default; }
+.dl-back { display: inline-block; margin-top: 20px; font-size: 0.82rem; color: rgba(244, 240, 230, 0.55); text-decoration: none; }
+.dl-back:hover { color: #f4f0e6; }
+@media (max-width: 420px) { .dl-box { padding: 30px 20px 22px; box-shadow: 6px 6px 0 var(--red); } .dl-name { font-size: 2.2rem; } }
+@media (prefers-reduced-motion: reduce) { .dl * { transition: none !important; } }

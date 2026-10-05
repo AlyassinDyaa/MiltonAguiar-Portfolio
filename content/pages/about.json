@@ -1,0 +1,26 @@
+{
+  "title": "I draw comics.",
+  "paragraphs": [
+    "I am Milton Aguiar, a comic book artist from Portugal. I pencil, ink and colour: covers, interior pages, pin-ups and commissions.",
+    "Batman is the character that made me want to draw comics, and the reason I made a hero of my own. That hero is Raptor, the book I am drawing now.",
+    "I co-founded ImaginAction Comics, where Raptor is published, and I animate a little on the side."
+  ],
+  "facts": [
+    {
+      "label": "From",
+      "value": "Portugal"
+    },
+    {
+      "label": "Work",
+      "value": "Pencils, inks, colours"
+    },
+    {
+      "label": "Current project",
+      "value": "Raptor"
+    },
+    {
+      "label": "Studio",
+      "value": "Co-founder, ImaginAction Comics"
+    }
+  ]
+}

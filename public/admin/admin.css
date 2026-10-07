@@ -1153,3 +1153,11 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .sl-pager { grid-template-columns: 1fr auto; }
   .sl-pages { grid-column: 1 / -1; grid-row: 1; justify-content: center; flex-wrap: wrap; }
 }
+
+/* Show or hide: clearing test data, under the Sales screens switch */
+.ia-cleartest { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 14px 16px; border: 1px dashed rgba(255, 154, 98, 0.5); background: rgba(255, 154, 98, 0.05); }
+.ia-cleartest strong { display: block; font-family: var(--display); font-weight: 800; font-size: 0.86rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg); }
+.ia-cleartest p { margin: 4px 0 0; font-size: 0.84rem; line-height: 1.5; color: var(--dim); }
+.ia-cleartest .ia-btn { flex: 0 0 auto; color: var(--danger); box-shadow: inset 0 0 0 1px rgba(255, 154, 98, 0.45); }
+.ia-cleartest .ia-btn:hover { color: #fff; background: #b3202a; box-shadow: none; }
+@media (max-width: 599px) { .ia-cleartest { flex-direction: column; align-items: flex-start; } }

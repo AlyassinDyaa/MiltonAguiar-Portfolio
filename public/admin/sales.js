@@ -244,21 +244,6 @@ window.IASales = (() => {
       return ''
     },
   })
-  const testMode = () => state.mode === 'test' || dState.mode === 'test' || state.sample || dState.sample
-  const askClearTest = () => ask({
-    title: 'Clear all test data?',
-    text: `${state.orders.length} ${state.orders.length === 1 ? 'order' : 'orders'}, their customers, and ${dState.loaded ? `${dState.list.length} discount ${dState.list.length === 1 ? 'code' : 'codes'}` : 'every discount code made here'}.`,
-    more: 'Orders and customers are taken off these lists and the discount codes are deleted. This only works while Stripe is in test mode: real sales can never be cleared. To wipe Stripe’s own test records too: Stripe dashboard → Developers → Delete all test data.',
-    yes: 'Clear test data',
-    run: async () => {
-      const r = await api('POST', { action: 'clear-test' })
-      if (!r.ok) return r.json.message || 'Not cleared. Try again.'
-      state.orders = []; state.open = null; dState.list = []; dState.editing = null
-      return ''
-    },
-  })
-  const clearButton = () => (testMode() && showTest ? button('Clear test data', askClearTest, 'ia-btn ghost sl-danger-btn') : null)
-
   const confirmModal = (m) => {
     const said = el('p', { className: 'sl-said is-bad' })
     const yes = button(m.yes, async () => {
@@ -355,7 +340,6 @@ window.IASales = (() => {
       head('Orders', 'Every purchase made through the shop. Open one to see what was bought, where it goes, and to mark it packed, shipped or delivered.', [
         button(state.loading ? 'Loading…' : 'Refresh', load),
         button('Export CSV', exportCsv),
-        clearButton(),
         el('a', { className: 'ia-btn ghost', href: 'https://dashboard.stripe.com/payments', target: '_blank', rel: 'noopener', textContent: 'Stripe ↗' }),
       ]),
       notices(),
@@ -472,7 +456,6 @@ window.IASales = (() => {
     const total = all.reduce((t, c) => t + c.spent, 0)
     return [
       head('Customers', 'Everyone who has bought from the shop, worked out from the orders. Open one to see their orders.', [
-        clearButton(),
         button(state.loading ? 'Loading…' : 'Refresh', load),
         button('Export CSV', () => csv([['Name', 'Email', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, country(c.country), c.orders, c.spent, c.currency, date(c.first), date(c.last)])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
       ]),
@@ -551,7 +534,6 @@ window.IASales = (() => {
     ])
     return [
       head('Discounts', 'Codes buyers type in the cart for money off: for everyone, or only for the customers you choose, for as long as you say.', [
-        clearButton(),
         button(f.loading ? 'Loading…' : 'Refresh', loadDiscounts),
         button('+ New discount', () => { dState.editing = 'new'; dState.said = ''; draw() }, 'ia-btn'),
       ]),
@@ -730,7 +712,49 @@ window.IASales = (() => {
     if (before !== state.view) root.scrollTop = 0
   }
 
+  /* Clear test data, from the Show or hide form (shell.js puts the button there, under the Sales
+     screens switch). It counts what there is, asks in a window, and clears it: every test order
+     and customer comes off the lists and every test discount code is deleted. Only with Stripe's
+     test key: with the live key it says so and does nothing. */
+  const clearTest = async () => {
+    const box = el('div', { className: 'sl-modal-shade', style: 'z-index: 100000' })
+    const card = el('div', { className: 'sl-modal is-small', role: 'alertdialog', ariaModal: 'true' })
+    box.append(card)
+    const close = () => { box.remove(); removeEventListener('keydown', esc) }
+    const esc = (e) => { if (e.key === 'Escape') close() }
+    addEventListener('keydown', esc)
+    box.addEventListener('click', (e) => { if (e.target === box) close() })
+    const fill = (title, text, more, actions, danger = true) => card.replaceChildren(
+      el('div', { className: `sl-modal-head ${danger ? 'is-danger' : ''}` }, [el('div', { className: 'ia-kicker', textContent: 'Test data' }), el('h2', { textContent: title })]),
+      el('div', { className: 'sl-modal-body' }, [text ? el('p', { className: 'sl-modal-what', textContent: text }) : null, more ? el('p', { textContent: more }) : null]),
+      el('div', { className: 'sl-modal-foot' }, actions),
+    )
+    fill('Counting…', '', 'Looking up the test orders and discount codes.', [button('Cancel', close, 'ia-btn ghost')])
+    document.body.append(box)
+    const [o, d] = await Promise.all([api('GET'), dApi('GET')])
+    if (!o.ok && !d.ok) return fill('Could not look', '', (o.json && o.json.message) || 'The orders could not be loaded. Try again in a moment.', [button('Close', close, 'ia-btn')], false)
+    const live = o.json.mode === 'live' || d.json.mode === 'live'
+    if (live) return fill('Nothing to clear', '', 'Stripe is connected with its live key, so these are real sales: they can never be cleared here. (Test data lives only in Stripe’s test mode.)', [button('Close', close, 'ia-btn')], false)
+    const orders = (o.json.orders || []).filter((x) => x.test).length
+    const codes = (d.json.discounts || []).filter((x) => x.test).length
+    if (!orders && !codes) return fill('Nothing to clear', '', 'There are no test orders, customers or discount codes.', [button('Close', close, 'ia-btn')], false)
+    const said = el('p', { className: 'sl-said is-bad' })
+    const yes = button('Clear test data', async () => {
+      yes.disabled = true; no.disabled = true; yes.textContent = 'Clearing…'; said.textContent = ''
+      const r = await api('POST', { action: 'clear-test' })
+      if (!r.ok) { said.textContent = r.json.message || 'Not cleared. Try again.'; yes.disabled = false; no.disabled = false; yes.textContent = 'Clear test data'; return }
+      state.orders = []; state.open = null; dState.list = []; dState.editing = null; state.loaded = false; dState.loaded = false
+      fill('Cleared', `${r.json.orders} ${r.json.orders === 1 ? 'order' : 'orders'} and ${r.json.codes} discount ${r.json.codes === 1 ? 'code' : 'codes'}`, 'They are gone from Orders, Customers and Discounts. To wipe Stripe’s own test records too: Stripe dashboard → Developers → Delete all test data.', [button('Done', close, 'ia-btn')], false)
+    }, 'ia-btn sl-danger-solid')
+    const no = button('Cancel', close, 'ia-btn ghost')
+    fill('Clear all test data?', `${orders} test ${orders === 1 ? 'order' : 'orders'} (and their customers), ${codes} test discount ${codes === 1 ? 'code' : 'codes'}.`,
+      'The orders and customers are taken off the Sales lists for good and the codes are deleted. Real orders are never touched. To wipe Stripe’s own test records too: Stripe dashboard → Developers → Delete all test data.',
+      [no, yes])
+    card.querySelector('.sl-modal-body').append(said)
+  }
+
   return {
+    clearTest,
     mount,
     show,
     links: [

@@ -124,8 +124,8 @@ Each row ends in icons: **customer details** (a window with their contact, every
 have had things sent to, their orders, totals and the codes made for them) and **delete**, which
 always asks first in a window. Stripe never deletes a payment, so deleting an order or a customer
 takes it off these lists for good while Stripe keeps its record; a discount code really is
-deleted. **Clear test data** does that to every test order, customer and code at once; it only
-appears, and only works, with Stripe's test key. **Show or hide → Sales screens → Test orders and
+deleted. **Show or hide → Sales screens → Clear test data** does that to every test order, customer
+and code at once, after asking; it only works with Stripe's test key, so real sales are never touched. **Show or hide → Sales screens → Test orders and
 codes** hides test data from the three screens without deleting it (real orders always show).
 
 The three screens need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login

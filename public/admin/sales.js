@@ -43,6 +43,7 @@ window.IASales = (() => {
     o: { q: '', stage: 'all', period: 'all', sort: 'new', page: 1, per: perSaved(), customer: '' },
     c: { q: '', kind: 'all', sort: 'spent', page: 1, per: perSaved() },
     open: null, // the order whose panel is open
+    pieces: new Set(), // the orders whose pieces are shown under their row
     saved: null, // the order just saved, to say so
   }
   const done = (o) => o.payment !== 'unpaid' && o.payment !== 'expired' // a completed purchase
@@ -151,6 +152,7 @@ window.IASales = (() => {
   const ICON = {
     info: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6 M12 7.5h.01"/></svg>',
     trash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6"/></svg>',
+    pieces: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4 M15.5 9.5a1.5 1.5 0 1 0 0-.01"/></svg>',
   }
   const iconBtn = (kind, label, onClick) => {
     const b = el('button', { type: 'button', className: `sl-icon is-${kind}`, title: label, ariaLabel: label })
@@ -217,7 +219,7 @@ window.IASales = (() => {
   const askOrder = (o) => ask({
     title: `Delete order #${o.number}?`,
     text: `${o.name || o.email || 'This order'} · ${money(o.total, o.currency)} · ${date(o.created)}`,
-    more: 'It is taken off Orders and Customers for good. Stripe never deletes a payment, so Stripe keeps its own record of it (and any refund is still done there).',
+    more: 'It is erased: it leaves Orders and Customers, and the buyer\'s account too. Stripe never deletes a payment, so Stripe keeps its own record of it (and any refund is still done there).',
     yes: 'Delete order',
     run: () => hideOrders([o]),
   })
@@ -337,7 +339,7 @@ window.IASales = (() => {
       ...list.map((o) => [o.number, date(o.created, true), o.name, o.email, o.phone, country(o.country), o.shipTo.join(', '), o.items.map((i) => `${i.name} x${i.qty}`).join('; '), o.discountCode, o.discount, o.total, o.refunded, o.currency, PAYMENT[o.payment] || o.payment, stageName[o.fulfilment], o.tracking, o.note]),
     ], `orders-${new Date().toISOString().slice(0, 10)}.csv`)
     return [
-      head('Orders', 'Every purchase made through the shop. Open one to see what was bought, where it goes, and to mark it packed, shipped or delivered.', [
+      head('Orders', 'Every purchase made through the shop, paid by card (Stripe) or PayPal. Open one to see what was bought and where it goes, and mark it packed, shipped or delivered: the buyer sees each step, and the tracking number, in their account.', [
         button(state.loading ? 'Loading…' : 'Refresh', load),
         button('Export CSV', exportCsv),
         el('a', { className: 'ia-btn ghost', href: 'https://dashboard.stripe.com/payments', target: '_blank', rel: 'noopener', textContent: 'Stripe ↗' }),
@@ -365,20 +367,45 @@ window.IASales = (() => {
       el('p', { className: 'sl-count', textContent: state.loading && !state.loaded ? 'Loading the orders…' : `${list.length} ${list.length === 1 ? 'order' : 'orders'}` }),
       list.length ? el('div', { className: 'sl-table is-orders', role: 'table' }, [
         headRow(['Order', 'Customer', 'Pieces', 'Total', 'Payment', 'Status']),
-        ...pageOf(list, f).map((o) => {
-          return rowEl(state.open === o.id, [
+        ...pageOf(list, f).flatMap((o) => {
+          const showing = state.pieces.has(o.id)
+          const look = o.items.length ? iconBtn('pieces', showing ? 'Hide the pieces' : 'See the pieces bought', () => { if (showing) state.pieces.delete(o.id); else state.pieces.add(o.id); draw() }) : null
+          if (look && showing) look.classList.add('on')
+          return [rowEl(state.open === o.id, [
             el('span', { className: 'sl-c-order' }, [el('strong', { textContent: `#${o.number}` }), el('small', { textContent: date(o.created, true) })]),
             el('span', { className: 'sl-c-who' }, [el('strong', { textContent: o.name || '—' }), el('small', { textContent: [o.email, country(o.country)].filter(Boolean).join(' · ') })]),
             el('span', { className: 'sl-c-items' }, [el('strong', { textContent: o.items[0] ? `${o.items[0].name}${o.items[0].qty > 1 ? ` ×${o.items[0].qty}` : ''}` : '—' }), o.items.length > 1 ? el('small', { textContent: `+ ${o.items.length - 1} more` }) : null]),
             el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(o.total, o.currency) }), o.refunded ? el('small', { textContent: `${money(o.refunded, o.currency)} refunded` }) : null]),
-            el('span', {}, [badge(o.payment, PAYMENT[o.payment] || o.payment)]),
+            el('span', { className: 'sl-c-pay' }, [badge(o.payment, PAYMENT[o.payment] || o.payment), o.paidWith ? el('small', { textContent: o.paidWith }) : null]),
             el('span', {}, [done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : el('small', { className: 'sl-dim', textContent: '—' })]),
-          ], () => { state.open = o.id; draw() }, [iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: keyOf(o) }; draw() }), iconBtn('trash', `Delete order #${o.number}`, () => askOrder(o))])
+          ], () => { state.open = o.id; draw() }, [look, iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: keyOf(o) }; draw() }), iconBtn('trash', `Delete order #${o.number}`, () => askOrder(o))]), showing ? piecesPanel(o) : null]
         }),
       ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: state.orders.length ? 'No orders match' : 'No orders yet' }), el('p', { textContent: state.orders.length ? 'Try another chip, period or search.' : 'Purchases made through the shop show up here.' })]) : null),
       pager(list, f, ['order', 'orders']),
     ]
   }
+
+  /* What was bought, piece by piece: its picture, size, type, signed or not, how many, and a way
+     into the piece itself. The details come from the site's content, matched by the line's name. */
+  const tag = (k, v) => (v === '' || v == null ? null : el('span', { className: 'sl-tag' }, [el('small', { textContent: k }), String(v)]))
+  const piecesPanel = (o) => el('div', { className: 'sl-pieces' }, o.items.map((i) => el('div', { className: 'sl-piece' }, [
+    i.src ? el('img', { src: i.src, alt: '', loading: 'lazy' }) : el('span', { className: 'sl-piece-ph' }),
+    el('div', { className: 'sl-piece-info' }, [
+      el('strong', { textContent: i.title || i.name }),
+      el('div', { className: 'sl-tags' }, [
+        tag('Size', i.size || (i.slug ? 'Standard' : '')),
+        tag('Type', i.type),
+        tag('Signed', i.signed == null ? '' : i.signed ? 'Yes' : 'No'),
+        tag('Qty', i.qty),
+        tag('Universe', i.universe),
+        tag('Category', i.category),
+      ]),
+      el('div', { className: 'sl-piece-foot' }, [
+        i.total != null ? el('b', { textContent: money(i.total, o.currency) }) : null,
+        i.slug ? el('a', { className: 'sl-link', href: `#/collections/shop/entries/${i.slug}`, textContent: 'Open the piece' }) : el('small', { className: 'sl-dim', textContent: 'Not a piece on the site any more' }),
+      ]),
+    ]),
+  ])))
 
   // the panel of one order
   const orderPanel = (o) => {
@@ -418,6 +445,7 @@ window.IASales = (() => {
           el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: i.name }), el('small', { textContent: `× ${i.qty}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
           o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,
           el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Total' }), el('strong', { textContent: money(o.total, o.currency) })]),
+          o.paidWith ? el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'Paid with' }), el('strong', { textContent: o.paidWith })]) : null,
           o.refunded ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: 'Refunded' }), el('strong', { textContent: `− ${money(o.refunded, o.currency)}` })]) : null,
         ]),
         block('Customer', [
@@ -716,49 +744,7 @@ window.IASales = (() => {
     if (before !== state.view) root.scrollTop = 0
   }
 
-  /* Clear test data, from the Show or hide form (shell.js puts the button there, under the Sales
-     screens switch). It counts what there is, asks in a window, and clears it: every test order
-     and customer comes off the lists and every test discount code is deleted. Only with Stripe's
-     test key: with the live key it says so and does nothing. */
-  const clearTest = async () => {
-    const box = el('div', { className: 'sl-modal-shade', style: 'z-index: 100000' })
-    const card = el('div', { className: 'sl-modal is-small', role: 'alertdialog', ariaModal: 'true' })
-    box.append(card)
-    const close = () => { box.remove(); removeEventListener('keydown', esc) }
-    const esc = (e) => { if (e.key === 'Escape') close() }
-    addEventListener('keydown', esc)
-    box.addEventListener('click', (e) => { if (e.target === box) close() })
-    const fill = (title, text, more, actions, danger = true) => card.replaceChildren(
-      el('div', { className: `sl-modal-head ${danger ? 'is-danger' : ''}` }, [el('div', { className: 'ia-kicker', textContent: 'Test data' }), el('h2', { textContent: title })]),
-      el('div', { className: 'sl-modal-body' }, [text ? el('p', { className: 'sl-modal-what', textContent: text }) : null, more ? el('p', { textContent: more }) : null]),
-      el('div', { className: 'sl-modal-foot' }, actions),
-    )
-    fill('Counting…', '', 'Looking up the test orders and discount codes.', [button('Cancel', close, 'ia-btn ghost')])
-    document.body.append(box)
-    const [o, d] = await Promise.all([api('GET'), dApi('GET')])
-    if (!o.ok && !d.ok) return fill('Could not look', '', (o.json && o.json.message) || 'The orders could not be loaded. Try again in a moment.', [button('Close', close, 'ia-btn')], false)
-    const live = o.json.mode === 'live' || d.json.mode === 'live'
-    if (live) return fill('Nothing to clear', '', 'Stripe is connected with its live key, so these are real sales: they can never be cleared here. (Test data lives only in Stripe’s test mode.)', [button('Close', close, 'ia-btn')], false)
-    const orders = (o.json.orders || []).filter((x) => x.test).length
-    const codes = (d.json.discounts || []).filter((x) => x.test).length
-    if (!orders && !codes) return fill('Nothing to clear', '', 'There are no test orders, customers or discount codes.', [button('Close', close, 'ia-btn')], false)
-    const said = el('p', { className: 'sl-said is-bad' })
-    const yes = button('Clear test data', async () => {
-      yes.disabled = true; no.disabled = true; yes.textContent = 'Clearing…'; said.textContent = ''
-      const r = await api('POST', { action: 'clear-test' })
-      if (!r.ok) { said.textContent = r.json.message || 'Not cleared. Try again.'; yes.disabled = false; no.disabled = false; yes.textContent = 'Clear test data'; return }
-      state.orders = []; state.open = null; dState.list = []; dState.editing = null; state.loaded = false; dState.loaded = false
-      fill('Cleared', `${r.json.orders} ${r.json.orders === 1 ? 'order' : 'orders'} and ${r.json.codes} discount ${r.json.codes === 1 ? 'code' : 'codes'}`, 'They are gone from Orders, Customers and Discounts. To wipe Stripe’s own test records too: Stripe dashboard → Developers → Delete all test data.', [button('Done', close, 'ia-btn')], false)
-    }, 'ia-btn sl-danger-solid')
-    const no = button('Cancel', close, 'ia-btn ghost')
-    fill('Clear all test data?', `${orders} test ${orders === 1 ? 'order' : 'orders'} (and their customers), ${codes} test discount ${codes === 1 ? 'code' : 'codes'}.`,
-      'The orders and customers are taken off the Sales lists for good and the codes are deleted. Real orders are never touched. To wipe Stripe’s own test records too: Stripe dashboard → Developers → Delete all test data.',
-      [no, yes])
-    card.querySelector('.sl-modal-body').append(said)
-  }
-
   return {
-    clearTest,
     mount,
     show,
     links: [

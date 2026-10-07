@@ -1,6 +1,6 @@
 import { configured, goodPass } from './_session.js'
 import { db, dbReady } from './_db.js'
-import { ours, setTrack } from './_orders.js'
+import { describeItem, ours, paidWithOf, piecesNow, setTrack } from './_orders.js'
 
 /* The shop's orders, for the admin (Sales → Orders and Customers). There is no database: every
    purchase is a Stripe checkout, so this reads them from Stripe with STRIPE_SECRET_KEY, and keeps
@@ -9,10 +9,9 @@ import { ours, setTrack } from './_orders.js'
 
    GET  answers { orders: [...] }, newest first, every completed checkout and the unfinished ones.
    POST { paymentIntent, fulfilment, tracking, note } saves those three on the order.
-   POST { action: 'hide', orders: [{ id, paymentIntent }] } takes orders off the admin's lists.
-        Stripe never lets a payment be deleted, so the order is marked (ma_hidden) and left out.
-   POST { action: 'clear-test' } does that to every order and deletes every discount code made
-        here, but only with a test key: real sales can never be cleared this way.
+   POST { action: 'hide', orders: [{ id, paymentIntent }] } deletes orders: they are erased from the
+        database (and so from the buyer's account). Stripe never lets a payment be deleted, so there
+        the order is marked (ma_hidden) and left out.
    Both need the admin's pass, the same one the admin saves content with.
 
    With the database set up (MONGODB_URI, for customer accounts), PayPal orders are listed too
@@ -84,6 +83,7 @@ const order = (s) => {
     tracking: meta.tracking || '',
     note: meta.admin_note || '',
     paymentIntent: pi ? pi.id : '',
+    paidWith: (charge && paidWithOf(charge.payment_method_details)) || (paid ? 'Card' : ''),
     stripe: pi ? `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}payments/${pi.id}` : `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}checkout/sessions/${s.id}`,
   }
 }
@@ -115,6 +115,7 @@ const saved = (o) => {
     tracking: t.tracking || '',
     note: t.note || '',
     paymentIntent: '',
+    paidWith: 'PayPal',
     stripe: o.captureId ? `https://www.${o.test ? 'sandbox.' : ''}paypal.com/activity/payment/${o.captureId}` : '',
   }
 }
@@ -131,7 +132,7 @@ export async function orders({ method, body }) {
   const b0 = body && typeof body === 'object' ? body : {}
   // without Stripe, the database alone can still answer for PayPal orders
   if (!process.env.STRIPE_SECRET_KEY && dbReady()) {
-    if (method === 'GET') return { status: 200, json: { mode: 'test', orders: await paypalOrders() } }
+    if (method === 'GET') { const pieces = piecesNow(); return { status: 200, json: { mode: 'test', orders: (await paypalOrders()).map((o) => ({ ...o, items: o.items.map((i) => ({ ...i, ...describeItem(i.name, pieces) })) })) } } }
     if (method === 'POST' && (b0.action === 'hide' || /^pp_/.test(String(b0.id || '')))) return paypalOnly(b0)
   }
   if (!process.env.STRIPE_SECRET_KEY) return { status: 503, json: { code: 'no-stripe', message: 'Stripe is not connected yet: add STRIPE_SECRET_KEY in the Vercel project settings. Orders appear here once it is.' } }
@@ -143,6 +144,9 @@ export async function orders({ method, body }) {
       const list = all.filter((s) => ours(s) && !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
       list.push(...await paypalOrders())
       list.sort((x, y) => y.created - x.created)
+      // each line with its piece: picture, size, signed or not, type, category, universe
+      const pieces = piecesNow()
+      for (const o of list) o.items = o.items.map((i) => ({ ...i, ...describeItem(i.name, pieces) }))
       return { status: 200, json: { mode: testKey() ? 'test' : 'live', orders: list } }
     }
     if (method === 'POST') {
@@ -152,23 +156,16 @@ export async function orders({ method, body }) {
         let done = 0
         for (const o of list) {
           try {
-            if (/^pp_[A-Z0-9]+$/.test(String(o.id || ''))) { await (await db()).collection('orders').updateOne({ ref: o.id }, { $set: { hidden: true } }) } else await hide(o)
+            // erased from the database, so it leaves the buyer's account too (orders, count, pictures);
+            // Stripe never deletes a payment, so there the payment is only marked
+            if (/^pp_[A-Z0-9]+$/.test(String(o.id || ''))) { await (await db()).collection('orders').deleteOne({ ref: o.id }) } else {
+              await hide(o)
+              if (dbReady() && /^cs_[A-Za-z0-9_]+$/.test(String(o.id || ''))) { try { await (await db()).collection('orders').deleteOne({ ref: o.id }) } catch (e) { console.error('not erased from the database:', e.message) } }
+            }
             done++
           } catch (e) { console.error('hide order:', e.message) }
         }
         return { status: done || !list.length ? 200 : 502, json: { hidden: done, failed: list.length - done, message: done ? '' : 'Stripe would not take that order off the list. Try again in a moment.' } }
-      }
-      if (b.action === 'clear-test') {
-        if (!testKey()) return { status: 403, json: { message: 'Only test data can be cleared, and this is the live Stripe account.' } }
-        const sessions = (await listSessions()).filter((s) => ours(s) && !hidden(s))
-        let orders = 0
-        for (const s of sessions) { try { await hide({ id: s.id, paymentIntent: s.payment_intent && (s.payment_intent.id || s.payment_intent) }); orders++ } catch { /* left on the list */ } }
-        const coupons = await stripe('coupons?limit=100')
-        let codes = 0
-        for (const c of coupons.data.filter((x) => (x.metadata || {}).ma === '1')) { try { await stripe(`coupons/${encodeURIComponent(c.id)}`, { method: 'DELETE' }); codes++ } catch { /* left */ } }
-        // PayPal sandbox orders kept in the database go too
-        if (dbReady()) { try { orders += (await (await db()).collection('orders').updateMany({ provider: 'paypal', test: true, hidden: { $ne: true } }, { $set: { hidden: true } })).modifiedCount || 0 } catch (e) { console.error('paypal test orders:', e.message) } }
-        return { status: 200, json: { orders, codes } }
       }
       if (/^pp_[A-Z0-9]+$/.test(String(b.id || ''))) return paypalOnly(b)
       if (!/^pi_[A-Za-z0-9]+$/.test(String(b.paymentIntent || ''))) return { status: 400, json: { message: 'That order has no payment to save to.' } }
@@ -195,7 +192,7 @@ async function paypalOnly(b) {
   const orders = (await db()).collection('orders')
   if (b.action === 'hide') {
     const refs = (Array.isArray(b.orders) ? b.orders : []).map((o) => String((o && o.id) || '')).filter((r) => /^pp_[A-Z0-9]+$/.test(r))
-    if (refs.length) await orders.updateMany({ ref: { $in: refs } }, { $set: { hidden: true } })
+    if (refs.length) await orders.deleteMany({ ref: { $in: refs } })
     return { status: 200, json: { hidden: refs.length, failed: 0 } }
   }
   if (!STAGES.includes(b.fulfilment)) return { status: 400, json: { message: 'Unknown order status.' } }

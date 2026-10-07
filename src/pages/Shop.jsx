@@ -42,11 +42,12 @@ export default function Shop() {
   const account = useAccount()
   const navigate = useNavigate()
   useEffect(() => { if (thanks) settle() }, [thanks, settle])
-  useEffect(() => { if (paypal?.state === 'paid' && account.user) navigate('/account?tab=orders&thanks=1', { replace: true }) }, [paypal, account.user, navigate])
+  // the capture says whether they are logged in, so it does not depend on the page having checked yet
+  useEffect(() => { if (paypal?.state === 'paid' && (paypal.account || account.user)) navigate('/account?tab=orders&thanks=1', { replace: true }) }, [paypal, account.user, navigate])
   useEffect(() => {
     if (!paypalOrder) return
     let gone = false
-    capturePaypal(paypalOrder).then((r) => { if (!gone) setPaypal(r.ok ? { state: 'paid' } : { state: 'failed', message: r.message }) })
+    capturePaypal(paypalOrder).then((r) => { if (!gone) setPaypal(r.ok ? { state: 'paid', account: r.account } : { state: 'failed', message: r.message }) })
     return () => { gone = true }
   }, [paypalOrder])
   const [pick, setPick] = useState(NONE)

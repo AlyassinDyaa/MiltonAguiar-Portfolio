@@ -346,19 +346,6 @@
     }
     markRequired(pane)
     nameTheForm()
-    // Show or hide: the way to clear test data sits under the Sales screens switch (sales.js does the work)
-    if (window.IASales && currentSection() === 'site' && currentFile() === 'visibility') {
-      const label = [...pane.querySelectorAll(':scope > [class*="ControlContainer"] > [class*="ControlTopbar"] label')].find((l) => /^Sales screens/.test(l.textContent))
-      const field = label && label.closest('[class*="ControlContainer"]')
-      if (field && !field.querySelector('.ia-cleartest')) {
-        const go = el('button', { type: 'button', className: 'ia-btn ghost ia-cleartest-btn', textContent: 'Clear test data' })
-        go.addEventListener('click', () => window.IASales.clearTest())
-        field.append(el('div', { className: 'ia-cleartest' }, [
-          el('div', {}, [el('strong', { textContent: 'Clear test data' }), el('p', { textContent: 'Takes every test order and customer off the Sales lists and deletes every test discount code, after asking. Only with Stripe in test mode: real sales are never touched.' })]),
-          go,
-        ]))
-      }
-    }
     // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
     for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''

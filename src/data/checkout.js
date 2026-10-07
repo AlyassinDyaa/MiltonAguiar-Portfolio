@@ -41,7 +41,7 @@ export async function capturePaypal(order) {
   try {
     const answer = await fetch('/api/paypal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'capture', order }) })
     const said = await answer.json().catch(() => ({}))
-    return answer.ok && said.ok ? { ok: true } : { ok: false, message: said.message || 'PayPal could not take the payment. Nothing was charged: try again in a moment.' }
+    return answer.ok && said.ok ? { ok: true, account: Boolean(said.account) } : { ok: false, message: said.message || 'PayPal could not take the payment. Nothing was charged: try again in a moment.' }
   } catch {
     return { ok: false, message: 'Could not reach the shop. Check the connection, then reload this page.' }
   }

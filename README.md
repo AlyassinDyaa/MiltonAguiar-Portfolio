@@ -125,13 +125,15 @@ At the foot of the admin's navigation, under a line, **Sales** has three screens
   payment. Orders show the code used and what it took off.
 
 All three lists come a page at a time (10, 15, 20, 50 or 100 rows, remembered in the browser).
-Each row ends in icons: **customer details** (a window with their contact, every address they
-have had things sent to, their orders, totals and the codes made for them) and **delete**, which
-always asks first in a window. Stripe never deletes a payment, so deleting an order or a customer
-takes it off these lists for good while Stripe keeps its record; a discount code really is
-deleted. **Show or hide → Sales screens → Clear test data** does that to every test order, customer
-and code at once, after asking; it only works with Stripe's test key, so real sales are never touched. **Show or hide → Sales screens → Test orders and
-codes** hides test data from the three screens without deleting it (real orders always show).
+Each order row ends in icons: **the pieces bought** (each with its picture, size, type, signed or
+not, quantity, universe and category, and a link to the piece), **customer details** (a window
+with their contact, every address they have had things sent to, their orders, totals and the
+codes made for them) and **delete**, which always asks first in a window. Every order says how it
+was paid ("Visa •••• 4242", "Apple Pay · Visa •••• 4242", "PayPal"). Deleting an order erases it
+from the database, so it also leaves the buyer's account; Stripe never deletes a payment, so
+Stripe keeps its own record. A discount code really is deleted. **Show or hide → Sales screens →
+Show test orders, customers and codes** hides test data from the three screens, or shows it
+again: nothing is deleted, and real orders always show.
 
 The three screens need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
 before answering (`api/discounts.js` too; `api/discount.js` is the cart's check of a code). Refunds and receipts are done in the Stripe dashboard (each order links to it).

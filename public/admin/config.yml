@@ -669,9 +669,9 @@ collections:
             label: Sales screens
             widget: object
             collapsed: false
-            hint: 'Test data is what Stripe makes in test mode (and the samples shown on your own computer). Switch it off and Orders, Customers and Discounts leave it out. Real orders and codes always show.'
+            hint: 'Test data is what Stripe and PayPal make in their test modes (and the samples shown on your own computer). Switch it off to hide it from Orders, Customers and Discounts, on to show it again. Nothing is ever deleted, and real orders and codes always show.'
             fields:
-              - { name: testData, label: Test orders and codes, widget: boolean, default: true }
+              - { name: testData, label: 'Show test orders, customers and codes', widget: boolean, default: true }
           - name: home
             label: Parts of the home page
             widget: object

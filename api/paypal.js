@@ -33,7 +33,7 @@ const savePaid = async (id, said) => {
   const capture = ((unit.payments || {}).captures || [])[0] || {}
   const before = await (await db()).collection('orders').findOne({ ref: `pp_${id}` })
   await recordOrder({
-    ref: `pp_${id}`, provider: 'paypal', paypalId: id, captureId: capture.id || '', status: 'paid',
+    ref: `pp_${id}`, provider: 'paypal', paypalId: id, captureId: capture.id || '', status: 'paid', paidWith: 'PayPal',
     email: (before && before.email) || String(payer.email_address || '').toLowerCase(),
     name: (ship.name && ship.name.full_name) || (before && before.name) || [payer.name && payer.name.given_name, payer.name && payer.name.surname].filter(Boolean).join(' '),
     address: a ? shapeAddress({ line1: a.address_line_1, line2: a.address_line_2, city: a.admin_area_2, state: a.admin_area_1, postal_code: a.postal_code, country: a.country_code }, ship.name && ship.name.full_name) : null,
@@ -70,9 +70,11 @@ export default async function handler(req, res) {
     try {
       const done = await paypal(`/v2/checkout/orders/${id}/capture`)
       if (done.status === 'COMPLETED') { try { await savePaid(id, done) } catch (e) { console.error('paypal order not saved:', e.message) } }
-      return res.status(200).json({ ok: done.status === 'COMPLETED', status: done.status })
+      // logged in: the Shop sends them on to their orders (it need not have checked yet)
+      const { user } = await buyer(req)
+      return res.status(200).json({ ok: done.status === 'COMPLETED', status: done.status, account: Boolean(user) })
     } catch (e) {
-      if (e.issue === 'ORDER_ALREADY_CAPTURED') return res.status(200).json({ ok: true, status: 'COMPLETED' }) // a reload of the thank-you page
+      if (e.issue === 'ORDER_ALREADY_CAPTURED') { const { user } = await buyer(req); return res.status(200).json({ ok: true, status: 'COMPLETED', account: Boolean(user) }) } // a reload of the thank-you page
       console.error('paypal capture:', e.message)
       return res.status(502).json({ message: e.issue === 'INSTRUMENT_DECLINED' ? 'PayPal declined that payment. Try another card or account.' : 'PayPal could not take the payment. Nothing was charged: try again in a moment.' })
     }

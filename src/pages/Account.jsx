@@ -317,6 +317,11 @@ function Confirm({ open, title, text, yes, onYes, onClose }) {
 /* ---------- the account ---------- */
 // the piece an order line is about ("Born Again — A3 (signed)" → Born Again); the longest title wins
 const pieceFor = (name) => everything.filter((p) => p.title && String(name || '').startsWith(p.title)).sort((a, b) => b.title.length - a.title.length)[0] || null
+/* The pieces a customer holds: from their orders, leaving out refunded ones (orders the admin
+   deleted never reach the page). The member card, the profile line and their pictures use these. */
+const keptOrders = (orders) => (orders || []).filter((o) => o.status !== 'refunded')
+const piecesIn = (orders) => keptOrders(orders).reduce((n, o) => n + o.items.reduce((m, i) => m + (i.qty || 1), 0), 0)
+const ownedIn = (orders) => [...new Map(keptOrders(orders).flatMap((o) => o.items.map((i) => pieceFor(i.name))).filter(Boolean).map((p) => [p.slug, p])).values()]
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Up late' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : h < 22 ? 'Good evening' : 'Up late' }
 const monthYear = (d) => new Date(d).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 const initialsOf = (u) => ((u.name || u.email || '?').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join(''))
@@ -364,7 +369,7 @@ function OrderCard({ o, onRemove }) {
       <header className="acc-order-head">
         <div>
           <strong>{`Order ${o.number}`}</strong>
-          <small>{longDay(o.createdAt)}{o.provider === 'paypal' ? ' · PayPal' : ''}</small>
+          <small>{longDay(o.createdAt)}{o.paidWith ? ` · ${o.paidWith}` : ''}</small>
         </div>
         <span className="acc-order-right">
           <span className={`acc-pill is-${o.status}`}>{STATUS_TEXT[o.status] || 'Paid'}</span>
@@ -480,10 +485,45 @@ function RemoveOrder({ order, onClose, onRemoved }) {
   )
 }
 
+/* The ways to look at the orders: which ones (all, on the way, delivered, refunded) and how (in
+   full, or a short list where each opens in place). The chosen look is kept on this device. */
+const ORDER_SHOWS = [
+  ['all', 'All', () => true],
+  ['going', 'On the way', (o) => ['new', 'packed', 'shipped'].includes(o.status)],
+  ['delivered', 'Delivered', (o) => o.status === 'delivered'],
+  ['refunded', 'Refunded', (o) => o.status === 'refunded'],
+]
+const LOOK_KEY = 'ma.ordersLook'
+const readLook = () => { try { return localStorage.getItem(LOOK_KEY) === 'list' ? 'list' : 'cards' } catch { return 'cards' } }
+
+function OrderRow({ o, open, onToggle }) {
+  const pics = o.items.map((i) => pieceFor(i.name)).filter((p) => p && p.src).slice(0, 3)
+  const count = o.items.reduce((n, i) => n + (i.qty || 1), 0)
+  return (
+    <button type="button" className={`acc-orow ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={onToggle}>
+      <span className="acc-orow-pics" aria-hidden="true">
+        {pics.length ? pics.map((p, n) => <img key={n} src={asset(p.src)} alt="" />) : <i />}
+      </span>
+      <span className="acc-orow-what">
+        <strong>{`Order ${o.number}`}</strong>
+        <small>{longDay(o.createdAt)} · {count} {count === 1 ? 'piece' : 'pieces'}{o.paidWith ? ` · ${o.paidWith}` : ''}</small>
+      </span>
+      <span className={`acc-pill is-${o.status}`}>{STATUS_TEXT[o.status] || 'Paid'}</span>
+      <b className="acc-orow-total">{priced(o.amount, o.currency)}</b>
+      <svg className="acc-orow-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    </button>
+  )
+}
+
 function Orders({ orders, problem, onRemoved }) {
   const { user } = useAccount()
   const [removing, setRemoving] = useState(null)
   const close = useCallback(() => setRemoving(null), [])
+  const [show, setShow] = useState('all')
+  const [look, setLook] = useState(readLook)
+  const [opened, setOpened] = useState(() => new Set())
+  const chooseLook = (v) => { setLook(v); try { localStorage.setItem(LOOK_KEY, v) } catch { /* only for this visit */ } }
+  const toggle = (key) => setOpened((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n })
   if (problem) return <p className="acc-problem">{problem}</p>
   if (!orders) return <p className="acc-wait">Fetching your orders…</p>
   if (!orders.length) return (
@@ -493,9 +533,40 @@ function Orders({ orders, problem, onRemoved }) {
       <Link className="btn sm" to="/shop">Go to the Shop <span className="arrow">→</span></Link>
     </div>
   )
+  const counts = Object.fromEntries(ORDER_SHOWS.map(([k, , fits]) => [k, orders.filter(fits).length]))
+  const fits = (ORDER_SHOWS.find(([k]) => k === show) || ORDER_SHOWS[0])[2]
+  const shown = orders.filter(fits)
+  const keyOf = (o) => `${o.number}${o.createdAt}`
   return (
     <>
-      <div className="acc-orders">{orders.map((o) => <OrderCard key={`${o.number}${o.createdAt}`} o={o} onRemove={onRemoved ? setRemoving : undefined} />)}</div>
+      <div className="acc-otools">
+        <div className="acc-oshow" role="tablist" aria-label="Which orders">
+          {ORDER_SHOWS.filter(([k]) => k === 'all' || counts[k] > 0).map(([k, label]) => (
+            <button key={k} type="button" role="tab" aria-selected={show === k} className={show === k ? 'on' : ''} onClick={() => setShow(k)}>{label}<small>{counts[k]}</small></button>
+          ))}
+        </div>
+        <div className="acc-olook" role="radiogroup" aria-label="How to show them">
+          <button type="button" role="radio" aria-checked={look === 'cards'} className={look === 'cards' ? 'on' : ''} onClick={() => chooseLook('cards')} title="In full">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v7H4z M4 14h16v6H4z" /></svg><span>Full</span>
+          </button>
+          <button type="button" role="radio" aria-checked={look === 'list'} className={look === 'list' ? 'on' : ''} onClick={() => chooseLook('list')} title="A short list">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16 M4 12h16 M4 18h16" /></svg><span>List</span>
+          </button>
+        </div>
+      </div>
+      {!shown.length && <p className="acc-wait">None here.</p>}
+      {look === 'cards'
+        ? <div className="acc-orders">{shown.map((o) => <OrderCard key={keyOf(o)} o={o} onRemove={onRemoved ? setRemoving : undefined} />)}</div>
+        : (
+          <div className="acc-olist">
+            {shown.map((o) => (
+              <div key={keyOf(o)} className="acc-olist-item">
+                <OrderRow o={o} open={opened.has(keyOf(o))} onToggle={() => toggle(keyOf(o))} />
+                {opened.has(keyOf(o)) && <OrderCard o={o} onRemove={onRemoved ? setRemoving : undefined} />}
+              </div>
+            ))}
+          </div>
+        )}
       <RemoveOrder order={removing} onClose={close} onRemoved={(o) => { setRemoving(null); onRemoved(o) }} />
     </>
   )
@@ -622,9 +693,9 @@ function Security() {
 function Overview({ orders, go }) {
   const { user } = useAccount()
   const shopOrders = orders || []
-  const collected = shopOrders.reduce((n, o) => n + o.items.reduce((m, i) => m + (i.qty || 1), 0), 0)
+  const collected = piecesIn(orders)
   // the pieces they own, once each, newest first
-  const owned = [...new Map(shopOrders.flatMap((o) => o.items.map((i) => pieceFor(i.name))).filter(Boolean).map((p) => [p.slug, p])).values()]
+  const owned = ownedIn(orders)
   const saved = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug)).filter(Boolean)
   const latest = shopOrders[0]
   return (
@@ -730,7 +801,7 @@ function Home() {
   const { settle } = useCart()
   useEffect(() => { if (paid) settle() }, [paid, settle])
   const [leaving, setLeaving] = useState(false) // the 'log out?' window
-  const owned = [...new Map((orders || []).flatMap((o) => o.items.map((i) => pieceFor(i.name))).filter(Boolean).map((p) => [p.slug, p])).values()]
+  const owned = ownedIn(orders)
   const grid = useRef(null)
   // the browser tab's title follows the section, without the page's own scroll-to-top on a new title
   useEffect(() => { const name = TABS.find(([k]) => k === tab)[1]; document.title = `${tab === 'overview' ? 'Your account' : name} — ${brand.name}` }, [tab])
@@ -750,7 +821,7 @@ function Home() {
   }
   const shopOrders = orders || []
   const counts = { orders: shopOrders.length, saved: (user.saved || []).length }
-  const prints = shopOrders.reduce((n, o) => n + o.items.reduce((m, i) => m + (i.qty || 1), 0), 0)
+  const prints = piecesIn(orders)
   // the banner: a strip of comic panels. Their own art first (the piece they picked as their picture,
   // the pieces they own, the ones they saved), then the newest work, so it is never empty
   const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) : null

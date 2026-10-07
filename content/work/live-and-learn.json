@@ -1,0 +1,24 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/sonic-vs-shadow-trimmed.webp",
+  "universe": "Other",
+  "hidden": false,
+  "date": "2025-04-08",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "sale",
+  "title": "Live and Learn",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/sonic-frame.webp",
+  "category": "Fan art",
+  "look": "default"
+}

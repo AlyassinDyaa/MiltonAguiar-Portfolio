@@ -848,4 +848,52 @@
       },
     }))
   }
+
+  /* ---------- asking before a reward (or a free profile picture) is removed ----------
+     The × on an item of these lists removes it at once; here it asks first, in a window. Yes
+     removes it (nothing changes on the site until the form is saved); No, Escape or a click
+     outside keeps it. */
+  const ASK_BEFORE_REMOVING = {
+    rewards: { what: 'reward', text: 'Customers who earned it lose it: a picture or card design they chose goes back to the usual one, and they no longer see it under Rewards. Discount codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
+    icons: { what: 'free picture', text: 'Customers using it as their profile picture go back to their initials.' },
+  }
+  let removing = false // the confirmed click passes straight through
+  const askRemove = (kind, name, onYes) => {
+    const shade = el('div', { className: 'sl-modal-shade', style: 'z-index: 100000' })
+    const close = () => { shade.remove(); removeEventListener('keydown', esc, true) }
+    const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close() } }
+    const no = el('button', { type: 'button', className: 'ia-btn ghost', textContent: 'Keep it' })
+    const yes = el('button', { type: 'button', className: 'ia-btn sl-danger-solid', textContent: `Delete ${kind.what}` })
+    no.addEventListener('click', close)
+    yes.addEventListener('click', () => { close(); onYes() })
+    shade.addEventListener('click', (e) => { if (e.target === shade) close() })
+    shade.append(el('div', { className: 'sl-modal is-small', role: 'alertdialog', ariaModal: 'true', ariaLabel: `Delete ${kind.what}` }, [
+      el('div', { className: 'sl-modal-head is-danger' }, [el('div', { className: 'ia-kicker', textContent: 'Delete' }), el('h2', { textContent: name ? `Delete “${name}”?` : `Delete this ${kind.what}?` })]),
+      el('div', { className: 'sl-modal-body' }, [
+        el('p', { className: 'sl-modal-what', textContent: `It is taken off the list. Nothing changes on the site until you press Save.` }),
+        el('p', { textContent: kind.text }),
+      ]),
+      el('div', { className: 'sl-modal-foot' }, [no, yes]),
+    ]))
+    document.body.append(shade)
+    addEventListener('keydown', esc, true)
+    setTimeout(() => no.focus(), 30)
+  }
+  document.addEventListener('click', (e) => {
+    if (removing) return
+    const btn = e.target.closest && e.target.closest('button')
+    const bar = btn && btn.parentElement
+    if (!bar || !/ListItemTopBar/.test(String(bar.className)) || bar.lastElementChild !== btn) return // the × is the last button of an item's top bar
+    let list = null
+    for (let f = btn.closest('[class*="ControlContainer"]'); f; f = f.parentElement && f.parentElement.closest('[class*="ControlContainer"]')) {
+      const name = ((f.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || '').replace(/-field-\d+$/, '')
+      if (ASK_BEFORE_REMOVING[name]) { list = name; break }
+    }
+    if (!list) return // only the lists named above
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation()
+    const item = btn.closest('[class*="-listControlItem"]')
+    const named = item && [...item.querySelectorAll('input[type="text"], input:not([type])')].find((i) => /^name-field/.test(i.id || ''))
+    const label = (named && named.value) || (item && (item.querySelector('[class*="ListItemTopBar"]') || {}).textContent) || ''
+    askRemove(ASK_BEFORE_REMOVING[list], String(label).trim(), () => { removing = true; try { btn.click() } finally { removing = false } })
+  }, true)
 })()

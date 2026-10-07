@@ -166,7 +166,7 @@ function Login() {
   const f = useForm({ email: '', password: '' })
   if (user) return <Navigate to={next} replace />
   return (
-    <Shell title="Log in" label="Your account" lead="Your orders, their tracking, and your cart on every device.">
+    <Shell title="Log in" label="Your account" lead={params.get('confirmed') ? 'Your email is confirmed. Log in to see your account.' : 'Your orders, their tracking, and your cart on every device.'}>
       <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { await call('login', { ...f.values, cart: cart.stored }); navigate(next, { replace: true }) })} noValidate>
         <Field label="Email" type="email" autoComplete="email" value={f.values.email} onChange={f.set('email')} />
         <Field label="Password" type="password" autoComplete="current-password" value={f.values.password} onChange={f.set('password')} />
@@ -268,12 +268,21 @@ function Verify() {
   const [state, setState] = useState(token ? 'working' : 'missing')
   const [text, setText] = useState('')
   const [rewards, setRewards] = useState([]) // the pictures confirming unlocked
+  const navigate = useNavigate()
   useEffect(() => {
     if (!token) return
     let stale = false
-    call('verify', { token }).then((s) => { if (!stale) { setState('done'); setRewards(Array.isArray(s.rewards) ? s.rewards : []) } }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
+    call('verify', { token }).then((s) => {
+      if (stale) return
+      const got = Array.isArray(s.rewards) ? s.rewards : []
+      // confirmed: on to their account, which says so (logged out, on another device say: log in first)
+      const there = `/account?confirmed=${got.length ? 'reward' : '1'}`
+      if (s.user) navigate(there, { replace: true })
+      else navigate(`/account/login?next=${encodeURIComponent(there)}&confirmed=1`, { replace: true })
+      setState('done'); setRewards(got)
+    }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
     return () => { stale = true }
-  }, [token, call])
+  }, [token, call, navigate])
   const unlocked = accountPage.verifiedIcons.filter((i) => rewards.includes(i.picture))
   return (
     <Shell title={state === 'done' ? 'Email confirmed' : 'Confirm your email'} label="Your account">
@@ -838,7 +847,8 @@ function Home() {
   useEffect(() => { const name = TABS.find(([k]) => k === tab)[1]; document.title = `${tab === 'overview' ? 'Your account' : name} — ${brand.name}` }, [tab])
   if (!user) return <Navigate to="/account/login?next=/account" replace />
   const first = (user.name || '').split(' ')[0]
-  const note = paid ? `${shop.thanksTitle} ${shop.thanksText}` : params.get('welcome') ? `Welcome${first ? `, ${first}` : ''}. Your account is ready.` : params.get('reset') ? 'Your new password is saved, and you are logged in.' : ''
+  const confirmed = params.get('confirmed')
+  const note = paid ? `${shop.thanksTitle} ${shop.thanksText}` : confirmed ? `Your email is confirmed. Every order placed with it now shows here.${confirmed === 'reward' ? ' You unlocked a picture only confirmed members can use: it is under Details.' : ''}` : params.get('welcome') ? `Welcome${first ? `, ${first}` : ''}. Your account is ready.` : params.get('reset') ? 'Your new password is saved, and you are logged in.' : ''
   // another section: the page stays where it is; only if the panel and the section start above the
   // screen does it glide up to them (never back to the very top)
   const go = (k) => {

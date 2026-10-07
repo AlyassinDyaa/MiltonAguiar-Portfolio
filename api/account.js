@@ -100,11 +100,19 @@ const giveReward = async (users, user) => {
 
 const sendVerify = async (req, user) => {
   const token = await makeToken(user._id, 'verify', VERIFY_HOURS * 60)
+  // the reward, shown in the email: the first reward picture (the built-in shield as a PNG, which every
+  // email app can show)
+  const reward = rewardPictures()[0]
+  const pic = reward ? { src: reward === '/avatars/confirmed.svg' ? '/email/confirmed.png' : reward, title: 'A picture just for you', text: ' Confirm, and it is yours: a profile picture only confirmed members can use.' } : null
   return sendMail({
     to: user.email,
     subject: 'Confirm your email',
-    lines: [`Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`, 'Confirm this is your email address, and your account can show every order placed with it.', ...(rewardPictures().length ? ['As a thank-you, confirming it unlocks a profile picture only confirmed members can use.'] : []), `The link works for ${VERIFY_HOURS} hours.`],
+    kicker: 'Your account',
+    title: 'Confirm your email',
+    lines: [`Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`, 'Welcome in. Confirm this is your email address and your account can show every order placed with it, from the studio to your door.'],
+    picture: pic,
     button: { label: 'Confirm my email', url: `${siteUrl(req)}/account/verify?token=${token}` },
+    after: `The link works for ${VERIFY_HOURS} hours. Did not make an account? Ignore this email and nothing happens.`,
   })
 }
 
@@ -187,7 +195,10 @@ export default async function handler(req, res) {
         await sendMail({
           to: email,
           subject: 'Reset your password',
-          lines: ['Someone (hopefully you) asked to reset the password for this account.', `The link works for ${RESET_MINUTES} minutes, once. If it was not you, ignore this email: nothing changes.`],
+          kicker: 'Your account',
+          title: 'Choose a new password',
+          lines: ['Someone (hopefully you) asked to reset the password for this account.', 'Choose a new one with the button below, and you are logged in straight away.'],
+          after: `The link works for ${RESET_MINUTES} minutes, once. If it was not you, ignore this email: your password stays as it is.`,
           button: { label: 'Choose a new password', url: `${siteUrl(req)}/account/reset?token=${token}` },
         })
       }

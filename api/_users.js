@@ -113,13 +113,78 @@ export const tooMany = async (key, limit, minutes) => (await (await db()).collec
 export const noteTry = async (...keys) => { const d = await db(); for (const key of keys) await d.collection('attempts').insertOne({ key, at: new Date() }) }
 export const forgetTries = async (key) => (await db()).collection('attempts').deleteMany({ key })
 
+// the site's name, tagline and links, from Site → Name, colour and contact in the admin
+const brandInfo = () => { try { return JSON.parse(readFileSync(join(process.cwd(), 'content/site/brand.json'), 'utf8')) || {} } catch { return {} } }
+const siteName = () => brandInfo().name || 'Milton Aguiar'
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+/* Where the pictures in an email are fetched from: the live site (an inbox cannot reach this
+   computer), so they show once the site is deployed. */
+const LIVE = 'https://miltonaguiar.vercel.app'
+const assetHost = () => {
+  const s = String(process.env.SITE_URL || '').replace(/\/$/, '')
+  if (/^https:\/\//.test(s)) return s
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  return LIVE
+}
+const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}${path.startsWith('/') ? '' : '/'}${path}`)
+
+/* Every email in the site's comic style: a red band with the logo and the name (the second word in
+   ink), a dark panel framed in ink with a small tag, a big italic heading, the words, a picture
+   when there is one, and a red inked button with a hard shadow; under it the link written out,
+   and a quiet footer. Built from tables with the styles written on each piece, the way email
+   apps need it. */
+const DISPLAY = "'Arial Black', 'Helvetica Neue', Impact, Arial, sans-serif"
+const BODY = "Arial, 'Helvetica Neue', Helvetica, sans-serif"
+export const emailHtml = ({ subject, kicker, title, lines, button, picture, after }) => {
+  const b = brandInfo()
+  const name = String(b.name || 'Milton Aguiar').trim()
+  const cut = name.lastIndexOf(' ')
+  const [first, second] = cut > 0 ? [name.slice(0, cut), name.slice(cut + 1)] : [name, '']
+  const insta = (Array.isArray(b.social) ? b.social : []).find((x) => /instagram/i.test(x.label || ''))
+  const home = String(process.env.SITE_URL || assetHost()).replace(/\/$/, '')
+  const para = (t) => `<p style="margin:0 0 14px;font-family:${BODY};font-size:16px;line-height:1.6;color:#d9d9d6;">${esc(t)}</p>`
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:#0b0b0c;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#0b0b0c;">${esc(lines[1] || lines[0] || '')}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0b0b0c;"><tr><td align="center" style="padding:28px 12px 36px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+  <tr><td style="background:#d8232f;border:3px solid #0b0b0c;padding:16px 20px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="vertical-align:middle;"><img src="${esc(pictureUrl('/email/logo.png'))}" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border-radius:50%;border:2px solid #0b0b0c;background:#0b0b0c;"></td>
+      <td style="vertical-align:middle;padding-left:12px;font-family:${DISPLAY};font-size:22px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;">${esc(first)}${second ? ` <span style="color:#0b0b0c;">${esc(second)}</span>` : ''}</td>
+    </tr></table>
+  </td></tr>
+  <tr><td style="background:#17171a;border:3px solid #0b0b0c;border-top:0;padding:30px 26px 30px;">
+    ${kicker ? `<span style="display:inline-block;padding:5px 10px 4px;background:#0b0b0c;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">${esc(kicker)}</span>` : ''}
+    <h1 style="margin:16px 0 18px;font-family:${DISPLAY};font-size:32px;line-height:1.05;font-weight:900;font-style:italic;text-transform:uppercase;color:#f3f3f1;">${esc(title || subject)}</h1>
+    ${lines.map(para).join('\n    ')}
+    ${picture ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr>
+      <td style="vertical-align:middle;"><img src="${esc(pictureUrl(picture.src))}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:50%;border:3px solid #ffd34d;"></td>
+      <td style="vertical-align:middle;padding-left:14px;font-family:${BODY};font-size:14px;line-height:1.5;color:#d9d9d6;"><strong style="display:block;font-family:${DISPLAY};font-size:15px;font-style:italic;text-transform:uppercase;color:#ffd34d;">${esc(picture.title)}</strong>${esc(picture.text)}</td>
+    </tr></table>` : ''}
+    ${button ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 6px;"><tr><td style="background:#d8232f;border:3px solid #0b0b0c;border-right-width:7px;border-bottom-width:7px;">
+      <a href="${esc(button.url)}" style="display:inline-block;padding:14px 24px;font-family:${DISPLAY};font-size:15px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${esc(button.label)} &rarr;</a>
+    </td></tr></table>
+    <p style="margin:18px 0 0;font-family:${BODY};font-size:12px;line-height:1.6;color:#8a8a8f;">Button not working? Paste this into your browser:<br><a href="${esc(button.url)}" style="color:#ff5a52;word-break:break-all;">${esc(button.url)}</a></p>` : ''}
+    ${after ? `<p style="margin:22px 0 0;padding-top:16px;border-top:1px dashed #3a3a40;font-family:${BODY};font-size:13px;line-height:1.6;color:#8a8a8f;">${esc(after)}</p>` : ''}
+  </td></tr>
+  <tr><td align="center" style="padding:20px 10px 0;font-family:${BODY};font-size:12px;line-height:1.7;color:#6f6f75;">
+    ${b.tagline ? `${esc(b.tagline)}<br>` : ''}<a href="${esc(home)}" style="color:#9a9aa0;text-decoration:underline;">${esc(home.replace(/^https?:\/\//, ''))}</a>${insta ? ` &middot; <a href="${esc(insta.url)}" style="color:#9a9aa0;text-decoration:underline;">Instagram</a>` : ''}
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`
+}
+
 /* ---------- email: two ways to send, whichever is set up
    - an email account's own sending server (SMTP), for example Gmail with an app password:
      SMTP_HOST (smtp.gmail.com), SMTP_PORT (465), SMTP_USER (the address), SMTP_PASS (the app password).
      Emails then come from that address; handy for testing, and fine for small volumes.
    - Resend (resend.com): RESEND_API_KEY, sending from an address on a domain verified there.
    MAIL_FROM is the sender as people see it ("Milton Aguiar <hello@...>"); MAIL_REPLY_TO, if set,
-   is where replies go. With neither set, on this computer the email is printed instead. */
+   is where replies go. With neither set, on this computer the email is printed instead.
+   An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text }, after }. */
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
 const smtpReady = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 export const mailReady = () => smtpReady() || Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM)
@@ -130,23 +195,17 @@ const smtp = () => transport || (transport = nodemailer.createTransport({
   secure: (Number(process.env.SMTP_PORT) || 465) === 465,
   auth: { user: process.env.SMTP_USER, pass: String(process.env.SMTP_PASS).replace(/\s+/g, '') },
 }))
-// the site's name, from Site → Name, colour and contact in the admin
-const siteName = () => { try { return JSON.parse(readFileSync(join(process.cwd(), 'content/site/brand.json'), 'utf8')).name || 'Milton Aguiar' } catch { return 'Milton Aguiar' } }
-const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-export const sendMail = async ({ to, subject, lines, button }) => {
+export const sendMail = async (mail) => {
+  const { to, subject, lines, button, after } = mail
   const brand = process.env.MAIL_BRAND || siteName()
-  const text = [...lines, button ? `\n${button.label}: ${button.url}` : '', '', `— ${brand}`].join('\n')
+  const text = [mail.title || subject, '', ...lines, mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
   if (!mailReady()) {
     // on this computer the link is printed instead, so the whole journey can be tried without email
     if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n`)
     else console.warn('email not sent: no SMTP_* or RESEND_API_KEY / MAIL_FROM set')
     return false
   }
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#141416;border-top:6px solid #d8232f">
-    <p style="font-size:14px;font-weight:800;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#d8232f;margin:0 0 18px">${esc(brand)}</p>
-    ${lines.map((l) => `<p style="font-size:16px;line-height:1.55;margin:0 0 14px">${esc(l)}</p>`).join('')}
-    ${button ? `<p style="margin:26px 0"><a href="${esc(button.url)}" style="background:#d8232f;color:#fff;text-decoration:none;font-weight:800;font-style:italic;letter-spacing:1px;text-transform:uppercase;padding:14px 24px;display:inline-block;box-shadow:4px 4px 0 #141416">${esc(button.label)}</a></p><p style="font-size:13px;color:#6b6b72">Or paste this into your browser: ${esc(button.url)}</p>` : ''}
-  </div>`
+  const html = emailHtml(mail)
   const from = process.env.MAIL_FROM || `${brand} <${process.env.SMTP_USER}>`
   const replyTo = process.env.MAIL_REPLY_TO || undefined
   if (smtpReady()) {

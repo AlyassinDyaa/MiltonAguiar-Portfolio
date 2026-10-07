@@ -131,8 +131,8 @@ function assemble(content) {
 
   nav = [
     { label: 'Home', to: '/' },
-    { label: 'Work', to: '/work' },
     { label: 'Shop', to: '/shop', off: !shop.enabled }, // only while online purchases are switched on
+    { label: 'Work', to: '/work' },
     { label: 'Gallery', to: '/gallery' },
     { label: 'Commissions', to: '/commissions' },
     { label: 'About', to: '/about' },

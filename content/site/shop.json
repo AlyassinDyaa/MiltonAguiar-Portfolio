@@ -17,12 +17,12 @@
     {
       "name": "Original art",
       "note": "The original drawing. One of a kind.",
-      "look": "board"
+      "look": "poster"
     },
     {
       "name": "Comics",
       "note": "",
-      "look": "comic"
+      "look": "poster"
     }
   ],
   "signedChoice": false,

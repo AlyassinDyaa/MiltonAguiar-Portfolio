@@ -94,6 +94,25 @@ Prices are never trusted from the browser: `api/checkout.js` reads every price, 
 signature extra again from the content files. Nothing can be bought until `STRIPE_SECRET_KEY` is
 set on Vercel (step 4 below); until then the checkout says so and points to Instagram.
 
+### Orders and customers
+
+At the foot of the admin's navigation, under a line, **Sales** has two screens:
+
+- **Orders**: every purchase made through the shop, read from Stripe. Totals for the period at the
+  top (sales, orders, to ship, average order); chips to narrow them by where they are up to (To
+  ship, Packed, Shipped, Delivered, Cancelled, Refunded, Unfinished checkouts) with a count on each;
+  a search (order number, name, email, piece, tracking number); a period and a sort; Export CSV.
+  Opening an order shows what was bought (with sizes), the customer, where it goes and the
+  payment, and lets you set its status, a tracking number and a private note. Those three are kept
+  on the payment in Stripe (its metadata), so there is no database to look after.
+- **Customers**: everyone who has bought, worked out from the orders: orders, money spent, last
+  order, country; who came back, who is waiting for an order. Opening one shows their orders.
+
+Both need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
+before answering. Refunds and receipts are done in the Stripe dashboard (each order links to it).
+On this computer (`npm run dev`) the screens use a `STRIPE_SECRET_KEY` from `.env.local`, or with
+none, sample orders (`dev/sample-orders.js`), labelled as such.
+
 ### The panels on the home page
 
 Pieces ticked **Show on the home page** fill the panels. **Place on the home page** orders them:

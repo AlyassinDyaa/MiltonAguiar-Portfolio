@@ -168,6 +168,11 @@
       location.reload()
     })
     media.addEventListener('click', () => openMedia())
+    // Sales (sales.js): orders and customers, under a line at the foot of the navigation
+    const Sales = window.IASales
+    if (Sales) Sales.links.forEach((l) => { ICONS[`sales-${l.view}`] = l.icon })
+    const salesLinks = Sales ? Sales.links.map((l) => Object.assign(el('a', { href: l.href, title: l.label }, [icon(`sales-${l.view}`), el('span', { textContent: l.label })]), { view: l.view })) : []
+    const salesNav = Sales ? el('div', { className: 'ia-sales-nav' }, [el('div', { className: 'ia-label', textContent: 'Sales' }), el('nav', { ariaLabel: 'Sales' }, salesLinks)]) : null
     const side = el('aside', { className: 'ia-side' }, [
       el('a', { className: 'ia-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('span', {}, [el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })]), el('small', { textContent: 'Admin' })])]),
       form,
@@ -176,6 +181,7 @@
         el('nav', { ariaLabel: 'Admin' }, [home]),
         ...groups.flatMap((g, i) => [el('div', { className: 'ia-label', textContent: g.short }), el('nav', { ariaLabel: g.label }, [...g.sections.map(linkTo), ...(i === 0 ? [media] : [])])]),
       ]),
+      salesNav,
       el('div', { className: 'ia-foot' }, [
         el('a', { className: 'ia-site', href: '../', target: '_blank', rel: 'noopener' }, [icon('external'), el('span', { textContent: 'View site' })]),
         out,
@@ -215,7 +221,7 @@
     side.addEventListener('click', (e) => { if (e.target.closest('a, button')) drawer(false) })
     addEventListener('hashchange', () => drawer(false))
     addEventListener('keydown', (e) => { if (e.key === 'Escape') drawer(false) })
-    document.body.append(top, shade, side, homeScreen)
+    document.body.append(top, shade, side, homeScreen, ...(Sales ? [Sales.mount()] : []))
 
     const sync = () => {
       // an address left over from an older layout of this panel (a bookmark, a tab left open)
@@ -223,9 +229,13 @@
       const section = currentSection()
       if (section && !sections.some((s) => s.name === section)) { location.hash = HOME; return }
       const onHome = location.hash === HOME
+      const [, salesView, salesQuery = ''] = location.hash.match(/^#\/sales\/(orders|customers)\/?(?:\?(.*))?$/) || []
       document.documentElement.toggleAttribute('data-ia-home', onHome)
+      document.documentElement.toggleAttribute('data-ia-sales', Boolean(salesView && Sales))
+      if (salesView && Sales) Sales.show(salesView, new URLSearchParams(salesQuery))
       home.classList.toggle('on', onHome)
-      links.forEach((a) => a.classList.toggle('on', !onHome && a.section === currentSection() && (!a.file || a.file === currentFile())))
+      salesLinks.forEach((a) => a.classList.toggle('on', a.view === salesView))
+      links.forEach((a) => a.classList.toggle('on', !onHome && !salesView && a.section === currentSection() && (!a.file || a.file === currentFile())))
     }
     addEventListener('hashchange', sync)
     sync()

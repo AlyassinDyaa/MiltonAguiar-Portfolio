@@ -162,7 +162,7 @@ account is needed to buy). A logged-in customer gets:
   the shop, unlinked).
 
 Accounts need a MongoDB database: `MONGODB_URI` on Vercel (see `.env.example`). This site shares
-the cluster with DarkBeats but keeps to its own database, `MiltonAguiar`, with its own database
+the cluster with DarkBeats but keeps to its own database, `miltona`, with its own database
 user, so their customers and member numbers never mix. Until `MONGODB_URI` is set, accounts
 stay hidden and everyone buys as a guest, whatever the switch says. Emails (the password link,
 confirming the address) go through `SMTP_HOST`, `SMTP_USER` and `SMTP_PASS` (Gmail with an app
@@ -272,9 +272,9 @@ in needs a GitHub account.
    `sk_test_...` to try it with Stripe's test cards) and add it on Vercel as `STRIPE_SECRET_KEY`,
    then redeploy. The key stays on Vercel; the browser never sees it.
 6. Customer accounts: in MongoDB Atlas, on the cluster, **Database Access → Add new database
-   user** (`milton-app`, with **readWrite** on the `MiltonAguiar` database only), then **Connect →
+   user** (`milton-app`, with **readWrite** on the `miltona` database only), then **Connect →
    Drivers** for the address. On Vercel add `MONGODB_URI` (that address, with the user's
-   password in it), `MONGODB_DB` = `MiltonAguiar`, the email settings and `SITE_URL`, then the
+   password in it), `MONGODB_DB` = `miltona`, the email settings and `SITE_URL`, then the
    Stripe webhook (above), and redeploy. Every setting is listed in `.env.example`.
 
 To change the passcode later, change `ADMIN_PASSCODE` on Vercel and redeploy; everyone is

@@ -5,7 +5,7 @@ import { MongoClient } from 'mongodb'
    short-lived counts of login attempts. Nothing in it is ever written to the repository.
 
    MONGODB_URI   the connection string (Vercel project settings; .env.local on this computer)
-   MONGODB_DB    the database's name (optional, "MiltonAguiar" when not set). The cluster can be
+   MONGODB_DB    the database's name (optional, "miltona" when not set). The cluster can be
                  shared with another site: each site keeps to its own database.
 
    One connection is opened per warm function and reused by every request after the first, and
@@ -21,7 +21,7 @@ export const db = async () => {
     globalThis.__maMongo = (async () => {
       const client = new MongoClient(uri(), { maxPoolSize: 5, serverSelectionTimeoutMS: 8000 })
       await client.connect()
-      const d = client.db(process.env.MONGODB_DB || 'MiltonAguiar')
+      const d = client.db(process.env.MONGODB_DB || 'miltona')
       await Promise.all([
         d.collection('users').createIndex({ email: 1 }, { unique: true }),
         d.collection('sessions').createIndex({ hash: 1 }, { unique: true }),

@@ -1,5 +1,4 @@
 {
-  "inShop": true,
   "shopOnly": true,
   "src": "/uploads/batman-and-robin.webp",
   "price": 45,
@@ -12,6 +11,7 @@
   "title": "Batman and Robin",
   "type": "Original art",
   "link": "https://www.instagram.com/p/DdegDM4DkCz/",
+  "inShop": true,
   "category": "Fan art",
   "look": "default"
 }

@@ -1,11 +1,15 @@
 {
-  "title": "Batman and Robin",
-  "category": "Fan art",
-  "date": "2026-09-19",
+  "shopOnly": true,
   "src": "/uploads/batman-and-robin.webp",
-  "link": "https://www.instagram.com/p/DdegDM4DkCz/",
-  "note": "Drawn for Batman Day. Batman is the character that made me want to draw comics.",
+  "price": 45,
+  "hidden": false,
   "featured": true,
+  "date": "2026-09-19",
   "homeOrder": 4,
-  "hidden": false
+  "note": "Drawn for Batman Day. Batman is the character that made me want to draw comics.",
+  "status": "new",
+  "title": "Batman and Robin",
+  "type": "Original art",
+  "link": "https://www.instagram.com/p/DdegDM4DkCz/",
+  "category": "Fan art"
 }

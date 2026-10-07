@@ -802,6 +802,11 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .how-buy { display: flex; flex-wrap: wrap; gap: 6px; margin: 22px 0 0; padding: 0; list-style: none; }
 .how-buy li { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 1px 14px 0 11px; font-family: var(--display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: var(--panel-2); color: var(--fg); }
 .how-buy b { font-weight: 900; font-style: italic; color: var(--accent); }
+/* on the red title panel: the steps are set in black, the thank-you in black too so it stands out */
+.is-red .how-buy li { background: rgba(11, 11, 12, 0.34); color: #fff; }
+.is-red .how-buy b { color: #fff; text-shadow: 0.06em 0.06em 0 var(--k); }
+.is-red .thanks { background: var(--k); color: #fff; }
+.is-red .thanks i { background: var(--accent); color: #fff; }
 .shop-filters { position: relative; z-index: 5; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 6px 0 clamp(22px, 2.6vw, 34px); }
 .shop-filters-clear { min-height: 48px; padding: 0 6px; font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); border-bottom: 2px solid var(--accent); }
 .shop-filters-clear:hover { color: var(--fg); }

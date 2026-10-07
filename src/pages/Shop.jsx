@@ -47,7 +47,7 @@ export default function Shop() {
 
   return (
     <Page title="Shop">
-      <PageTitle label={shop.label} title={shop.title} lead={shop.intro} slides={forSale.length ? forSale : work} tone="loud">
+      <PageTitle label={shop.label} title={shop.title} lead={shop.intro} slides={forSale.length ? forSale : work} tone="red">
         {thanks ? (
           <motion.div className="thanks" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease: EASE }}>
             <i aria-hidden="true">✓</i>

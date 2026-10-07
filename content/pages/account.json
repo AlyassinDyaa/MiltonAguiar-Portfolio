@@ -39,12 +39,5 @@
       "picture": "/avatars/eye.svg",
       "name": "Eye"
     }
-  ],
-  "rewardText": "Confirm your email and unlock a profile picture only confirmed members can use.",
-  "verifiedIcons": [
-    {
-      "picture": "/avatars/confirmed.svg",
-      "name": "Confirmed"
-    }
   ]
 }

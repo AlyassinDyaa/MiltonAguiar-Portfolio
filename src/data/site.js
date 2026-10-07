@@ -127,8 +127,19 @@ function assemble(content) {
   contact = { label: 'Say hello', title: 'Get in touch', topics: [], ...given(page('contact')) }
   accountPage = { noteTitle: 'A note from the artist', note: '', signature: '', collectionTitle: 'Your collection', savedTitle: 'Saved for later', cardLabel: 'Collector', rewardText: 'Confirm your email and unlock a profile picture only confirmed members can use.', ...given(page('account')) }
   accountPage.icons = (Array.isArray(accountPage.icons) ? accountPage.icons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
-  // the reward for confirming the email: pictures only a customer with a confirmed email may use
-  accountPage.verifiedIcons = (Array.isArray(accountPage.verifiedIcons) ? accountPage.verifiedIcons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
+  // rewards (Shop → Rewards): profile pictures, membership card designs and discounts a customer
+  // earns by confirming their email, by a number of orders, or by a number of pieces collected
+  const rw = page('rewards')
+  const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+  if (rw.rewardText) accountPage.rewardText = rw.rewardText
+  accountPage.rewards = (Array.isArray(rw.rewards) ? rw.rewards : (accountPage.verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))
+    .filter((r) => r && !r.hidden && (r.kind === 'card' ? r.cardLook || r.cardArt : r.kind === 'discount' ? Number(r.percent) > 0 : typeof r.picture === 'string' && r.picture))
+    .map((r) => {
+      const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces'].includes(r.earnedBy) ? r.earnedBy : 'verify'
+      return { id: slug(r.name) || slug(r.picture), name: r.name || '', kind: ['card', 'discount'].includes(r.kind) ? r.kind : 'picture', earnedBy: by, count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)), percent: Number(r.percent) || 0, days: Number(r.days) || 60, picture: r.picture || '', face: parseFace(r.face), cardLook: r.cardLook || 'art', cardArt: r.cardArt || '' }
+    })
+  // the pictures given on confirming the email (the confirmation page and email show these)
+  accountPage.verifiedIcons = accountPage.rewards.filter((r) => r.kind === 'picture' && r.earnedBy === 'verify')
   pages = {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },

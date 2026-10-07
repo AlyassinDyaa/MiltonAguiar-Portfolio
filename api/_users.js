@@ -231,6 +231,7 @@ export const publicUser = (u) => (u ? {
   createdAt: u.createdAt,
   lastVisit: u.prevLogin || u.createdAt, // for "new since your last visit"
   avatar: typeof u.avatar === 'string' ? u.avatar : '',
+  card: typeof u.card === 'string' ? u.card : '', // the membership card design they chose (a reward)
   memberNo: Number(u.memberNo) || null, // the order they signed up in: the first customer is 1
   saved: Array.isArray(u.saved) ? u.saved : [],
   cart: Array.isArray(u.cart) ? u.cart : [],

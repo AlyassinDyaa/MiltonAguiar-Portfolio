@@ -70,20 +70,21 @@
       groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
-    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures', rewardText: 'Reward for confirming the email' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
+    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
+    'site/rewards': { groups: { rewardText: 'Before they confirm', rewards: 'The rewards' }, half: [], inner: ['kind', 'earnedBy', 'count', 'percent', 'days', 'cardLook', 'hidden'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
   const GROUPS = [
     { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
-    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' },
+    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' || s.key === 'site/rewards' },
     { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' && s.key !== 'site/account' },
+    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' && s.key !== 'site/account' && s.key !== 'site/rewards' },
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Customer accounts', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Customer accounts', 'site/rewards': 'Rewards', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
@@ -95,7 +96,8 @@
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
     'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
-    'site/account': 'Customer accounts on or off, the membership card, your note on their page, the free profile pictures, and the reward for confirming the email.',
+    'site/account': 'Customer accounts on or off, the membership card, your note on their page, and the free profile pictures.',
+    'site/rewards': 'Profile pictures, membership card designs and discounts customers earn: by confirming their email, every few orders, or the pieces they collect.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -107,6 +109,7 @@
     'site/shop': 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
     'site/categories': 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v5H4z M13 14h7v5h-7z',
     'site/account': 'M12 12.200a4.200 4.200 0 1 0 0-8.400 4.200 4.200 0 0 0 0 8.400z M4 20.500c.800-3.600 4-5.800 8-5.800s7.200 2.200 8 5.800',
+    'site/rewards': 'M8 4h8v5a4 4 0 0 1-8 0z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M8 20h8 M9.500 17h5v3h-5z',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'

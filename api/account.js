@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
 import { forCustomer } from './_orders.js'
 import { accountsMode } from './_buyer.js'
+import { packEmails, stripe } from './_discounts.js'
+import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
   makeToken, mergeCarts, newId, noteTry, passwordProblem, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken,
@@ -19,7 +21,8 @@ import {
         { action: 'verify', token }                       confirms the email address
         { action: 'resend' }                              a new confirmation email
         { action: 'password', current, password }         change it (other devices are logged out)
-        { action: 'profile', name, phone, marketing, avatar }
+        { action: 'profile', name, phone, marketing, avatar, card }
+             card: '' (the site's own design) or the id of a membership card design they have earned
              avatar: '' (initials), 'icon:<picture>' (one of the free pictures set in the admin),
              or a piece's slug (only a piece this customer has bought)
         { action: 'saved', saved }                         the pieces kept for later (slugs)
@@ -63,11 +66,58 @@ const freePictures = () => {
   const page = readJson('content/pages/account.json') || {}
   return (Array.isArray(page.icons) ? page.icons : []).map((i) => i && String(i.picture || '')).filter(Boolean)
 }
-// the reward for confirming the email address: pictures only a customer with a confirmed email may use
-const rewardPictures = () => {
-  const page = readJson('content/pages/account.json') || {}
-  return (Array.isArray(page.verifiedIcons) ? page.verifiedIcons : []).map((i) => i && String(i.picture || '')).filter(Boolean)
+/* ---------- rewards (Shop → Rewards in the admin): profile pictures, membership card designs and
+   discounts a customer earns, by confirming their email, by a number of orders (3, 6, 10...), or
+   by a number of pieces collected. Each has an id made from its name. A discount is a personal
+   code, made in Stripe the moment it is earned, that only this customer's email can use. */
+const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+const rewardsList = () => {
+  const page = readJson('content/pages/rewards.json')
+  const list = page && Array.isArray(page.rewards) ? page.rewards
+    // before the Rewards screen: the pictures for confirming the email, kept with the account page
+    : ((readJson('content/pages/account.json') || {}).verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' }))
+  const kindOf = (r) => (['card', 'discount'].includes(r.kind) ? r.kind : 'picture')
+  return list.filter((r) => r && !r.hidden && (kindOf(r) === 'card' ? r.cardLook || r.cardArt : kindOf(r) === 'discount' ? Number(r.percent) > 0 : r.picture))
+    .map((r) => {
+      const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces'].includes(r.earnedBy) ? r.earnedBy : 'verify'
+      return {
+        id: slug(r.name) || slug(r.picture), name: String(r.name || ''), kind: kindOf(r), earnedBy: by,
+        count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)),
+        picture: String(r.picture || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
+      }
+    })
 }
+// how far a customer has come: email confirmed, orders, pieces (refunded and deleted orders do not count)
+const progressOf = async (d, user) => {
+  const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
+  const orders = await d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true } }).limit(500).toArray()
+  return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0) }
+}
+const earns = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
+// a discount reward earned: its personal code, made once in Stripe (one use, only with this email, for
+// the days the admin set) and kept with the customer
+const rewardCode = async (d, user, r) => {
+  const had = user.rewardCodes && user.rewardCodes[r.id]
+  if (had) return had
+  if (!process.env.STRIPE_SECRET_KEY) return null // discounts live in Stripe: none without its key
+  // the site's initials and the percentage, then a random part: MA10-3DB3B3
+  const initials = String(((readJson('content/site/brand.json') || {}).name) || 'MA').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || 'MA'
+  const code = `${initials}${Math.round(r.percent)}-${randomBytes(3).toString('hex').toUpperCase()}`
+  const until = Date.now() + r.days * 864e5
+  const fields = { id: code, percent_off: String(r.percent), duration: 'once', name: `${r.percent}% off · ${r.name}`.slice(0, 40), redeem_by: String(Math.floor(until / 1000)), max_redemptions: '1', 'metadata[ma]': '1', 'metadata[starts]': String(Date.now()), 'metadata[reward]': r.id, 'metadata[member]': String(user.memberNo || '') }
+  for (const [k, v] of Object.entries(packEmails([user.email]))) fields[`metadata[${k}]`] = v
+  await stripe('coupons', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() })
+  const got = { code, percent: r.percent, until }
+  await d.collection('users').updateOne({ _id: user._id }, { $set: { [`rewardCodes.${r.id}`]: got } })
+  return got
+}
+const rewardPictures = () => rewardsList().filter((r) => r.kind === 'picture' && r.earnedBy === 'verify').map((r) => r.picture) // given on confirming
+const cardAllowed = async (d, user, card) => {
+  if (!card) return true
+  const r = rewardsList().find((x) => x.kind === 'card' && x.id === card)
+  return Boolean(r) && earns(r, await progressOf(d, user))
+}
+
 const pieces = () => {
   try {
     return readdirSync(join(process.cwd(), 'content/work')).filter((f) => f.endsWith('.json')).map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/work/${f}`) || {}) })).filter((p) => p.title)
@@ -84,7 +134,12 @@ const ownedSlugs = async (d, user) => {
 }
 const pictureAllowed = async (d, user, avatar) => {
   if (!avatar) return true
-  if (avatar.startsWith('icon:')) return freePictures().includes(avatar.slice(5)) || (Boolean(user.verified) && rewardPictures().includes(avatar.slice(5)))
+  if (avatar.startsWith('icon:')) {
+    const pic = avatar.slice(5)
+    if (freePictures().includes(pic)) return true
+    const r = rewardsList().find((x) => x.kind === 'picture' && x.picture === pic)
+    return Boolean(r) && earns(r, await progressOf(d, user))
+  }
   return /^[a-z0-9-]{1,80}$/.test(avatar) && (await ownedSlugs(d, user)).has(avatar)
 }
 
@@ -128,6 +183,7 @@ export default async function handler(req, res) {
       let me = await withMemberNo(d, await currentUser(req))
       // a picture that is no longer theirs to use (an old choice, or a free picture taken out) goes back to initials
       if (me && me.avatar && !(await pictureAllowed(d, me, me.avatar))) { await users.updateOne({ _id: me._id }, { $set: { avatar: '' } }); me = { ...me, avatar: '' } }
+      if (me && me.card && !(await cardAllowed(d, me, me.card))) { await users.updateOne({ _id: me._id }, { $set: { card: '' } }); me = { ...me, card: '' } }
       return say(res, 200, { enabled: true, user: publicUser(me) })
     }
     if (req.method !== 'POST') return say(res, 405, { message: 'Use GET or POST.' })
@@ -235,6 +291,19 @@ export default async function handler(req, res) {
     const user = await currentUser(req)
     if (!user) { forgetCookie(req, res); return say(res, 401, { message: 'Log in first.', user: null }) }
 
+    if (action === 'rewards') {
+      // every reward, whether it is earned, and how far they have come; discounts earned get their code
+      const p = await progressOf(d, user)
+      const list = []
+      for (const r of rewardsList()) {
+        const earned = earns(r, p)
+        let code = null
+        if (earned && r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('reward code not made:', e.message) } }
+        list.push({ id: r.id, name: r.name, kind: r.kind, earnedBy: r.earnedBy, count: r.count, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined, earned, code })
+      }
+      return say(res, 200, { progress: p, rewards: list })
+    }
+
     if (action === 'resend') {
       if (user.verified) return say(res, 200, { user: publicUser(user) })
       if (await tooMany(`verify:${user._id}`, 3, 60)) return say(res, 429, { message: 'A few have been sent already. Check your inbox (and spam), or try again in an hour.' })
@@ -255,6 +324,11 @@ export default async function handler(req, res) {
 
     if (action === 'profile') {
       const set = { name: clean(body.name, 80), phone: clean(body.phone, 30), marketing: Boolean(body.marketing) }
+      if (body.card !== undefined) {
+        const card = clean(body.card, 80)
+        if (!(await cardAllowed(d, user, card))) return say(res, 400, { message: 'That card design is not one you have earned yet.', field: 'card' })
+        set.card = card
+      }
       if (body.avatar !== undefined) {
         const avatar = clean(body.avatar, 300)
         if (!(await pictureAllowed(d, user, avatar))) return say(res, 400, { message: 'That picture is not one you can use.', field: 'avatar' })

@@ -163,6 +163,20 @@ account is needed to buy). A logged-in customer gets:
   security (change the password, log out every device, delete the account: its orders stay with
   the shop, unlinked).
 
+**Rewards** (Shop → Rewards) are what customers earn. Each reward is a **profile picture**, a
+**membership card design** (ink, gold foil, chrome, or a picture of your choosing), or a
+**discount**, and is earned by **confirming their email**, by **a number of orders** (1, 3, 6,
+10...), or by **a number of pieces collected** (refunded and deleted orders do not count). A
+discount becomes a personal code the moment it is earned (one use, only with that customer's
+email, for the days set on the reward), made in Stripe and listed in Sales → Discounts too.
+Customers see every reward under **Rewards** in their account, with how close they are to each,
+and pick their picture and card design under Details; locked ones say how to earn them.
+Confirming the email gives a customer still on their initials the first picture straight away,
+and confirming takes them straight to their account.
+
+Emails (confirm your email, reset your password) come in the site's comic style. Their pictures
+(the logo, the reward) are fetched from the live site, `public/email/`.
+
 Accounts need a MongoDB database: `MONGODB_URI` on Vercel (see `.env.example`). This site shares
 the cluster with DarkBeats but keeps to its own database, `miltona`, with its own database
 user, so their customers and member numbers never mix. Until `MONGODB_URI` is set, accounts

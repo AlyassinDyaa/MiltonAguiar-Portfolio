@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/brand-new-day.webp",
+  "universe": "Marvel",
+  "price": 20,
+  "hidden": false,
+  "date": "2026-08-03",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "sale",
+  "title": "Brand New Day",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/brand-new-day-frame.png",
+  "category": "Fan art",
+  "look": "default"
+}

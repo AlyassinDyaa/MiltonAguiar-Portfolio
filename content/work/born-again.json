@@ -6,17 +6,7 @@
   "price": 20,
   "hidden": false,
   "date": "2026-04-20",
-  "sizes": [
-    {
-      "size": "A3",
-      "price": 20,
-      "salePrice": 10
-    },
-    {
-      "size": "A5",
-      "price": 10
-    }
-  ],
+  "sizes": [],
   "note": "",
   "status": "sale",
   "title": "Born Again",

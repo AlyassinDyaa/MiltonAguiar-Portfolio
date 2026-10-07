@@ -197,8 +197,9 @@ export function showLatest({ content = {}, media = {} }) {
 /* Uploaded images are stored as "/uploads/x.jpg". Prefix the deploy base path. */
 export const asset = (url) => newPictures[url] || (url && url.startsWith('/') ? import.meta.env.BASE_URL.replace(/\/$/, '') + url : url)
 
-/* A piece shows its price while online purchases are switched on and it has one. */
-export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && Number(piece.price) > 0) } // a declaration, so assemble() above can use it
+/* A piece shows its price while online purchases are switched on, it is in the Shop ("Sell it in
+   the Shop" in the admin, or added under Shop) and it has a price. */
+export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && Number(piece.price) > 0) } // a declaration, so assemble() above can use it
 /* Its status, set in the admin: "new", "sale" (with a sale price below the price) or "soldout". */
 export const soldOut = (piece) => piece?.status === 'soldout'
 export const onSale = (piece) => piece?.status === 'sale' && Number(piece.salePrice) > 0 && Number(piece.salePrice) < Number(piece.price)

@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     const slug = String((item && item.slug) || '')
     if (!/^[a-z0-9-]{1,80}$/.test(slug)) return res.status(400).json({ message: 'Something in the cart is not a piece on this site.' })
     const piece = read(`content/work/${slug}.json`)
-    if (!piece || piece.hidden) return res.status(404).json({ message: 'Something in the cart is no longer for sale. Remove it and try again.' })
+    if (!piece || piece.hidden || !piece.inShop) return res.status(404).json({ message: 'Something in the cart is no longer for sale. Remove it and try again.' })
     if (piece.status === 'soldout') return res.status(409).json({ message: `"${piece.title || slug}" has sold out. Remove it from the cart and try again.` })
     // the sale price while the piece is on sale (and it is below the usual price), otherwise the price
     const usual = Number(piece.price), sale = Number(piece.salePrice)

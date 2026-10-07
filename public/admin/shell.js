@@ -20,6 +20,7 @@
   const ICONS = {
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     work: 'M4 5h16v14H4z M4 15l4-4 4 4 3-3 5 5 M9 9h.01',
+    shop: 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
     gallery_sections: 'M4 4h7v9H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 15h7v5H4z',
     redraws: 'M4 5h16v14H4z M12 3v18 M8 10l-2 2 2 2 M16 10l2 2-2 2',
     events: 'M5 6h14v14H5z M5 10h14 M9 4v4 M15 4v4',
@@ -46,7 +47,8 @@
      single pages is looked up as "collection/page". A heading never goes on an on/off switch:
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
-    work: { groups: { title: 'The piece', src: 'Picture, and where it shows', type: 'For sale' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'status', 'price', 'salePrice'] },
+    work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'status', 'price', 'salePrice'] },
+    shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows' }, half: ['price', 'salePrice', 'type', 'status', 'category', 'date', 'shopOnly', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
@@ -379,7 +381,7 @@
     fetch('thumbs.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : {})).then((found) => { thumbs = found || {}; paintThumbs() }).catch(() => { /* cards simply stay without pictures */ })
   }
   const paintThumbs = () => {
-    const section = currentSection()
+    const section = currentSection() === 'shop' ? 'work' : currentSection() // the Shop lists pieces kept with Work
     const cards = document.querySelectorAll('[class*="GridCardLink"]')
     if (!section || !cards.length) return
     loadThumbs()
@@ -415,7 +417,7 @@
     { id: 'cards', label: 'Cards', cards: true },
     { id: 'gallery', label: 'Big pictures', cards: true },
   ]
-  const PICTURED = new Set(['work', 'gallery_sections', 'redraws'])
+  const PICTURED = new Set(['work', 'shop', 'gallery_sections', 'redraws'])
   const viewPlace = () => currentSection() || (/^#\/search/.test(location.hash) ? 'search' : 'other')
   const chosenView = () => {
     let saved = null

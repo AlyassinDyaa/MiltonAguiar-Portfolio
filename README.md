@@ -38,7 +38,8 @@ step open as picture cards; the other lists as rows. Each list remembers the vie
 
 | Section | What you control |
 |---|---|
-| Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place. Under **For sale**: what it is (Prints, Original art...), a tag (New, On sale, Sold out), a price and a sale price, and **Only in the Shop** for something sold that is not portfolio work |
+| Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place. Under **For sale**: **Sell it in the Shop**, what it is (Prints, Original art...), a tag (New, On sale, Sold out), a price and a sale price |
+| Shop | Everything for sale, with **+ Item for sale** to add something new: picture, price, sale price, what it is, tag, category, and **Only in the Shop** (on to start with) to keep it off the Work page |
 | Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
 | Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
 | Conventions | Events, with dates and where to find the table |
@@ -62,8 +63,11 @@ replaced by a button to Instagram as well.
 
 ### Selling online
 
-The shop works like DarkBeats': give a piece in **Work** a price and it is in the Shop, with its
-price on its card (on the Work page too). Opening a piece shows its price and **Add to cart** /
+Everything for sale is under **Shop** in the admin. **+ Item for sale** adds a new one (a print, an
+original, a book): give it a picture and a price and it is on the Shop page. It stays off the Work
+page unless you switch off **Only in the Shop**. A piece already under **Work** goes on sale by
+switching on **Sell it in the Shop** in its *For sale* group and giving it a price; it then shows
+under Shop too, and its price shows on its card on the Work page. Opening a piece shows its price and **Add to cart** /
 **Buy now**. The cart (the bag in the top bar) is kept in the visitor's browser; **Checkout** opens
 one Stripe payment page for everything in it, which asks for the delivery address. Stripe sends
 the buyer back to `/shop?thanks=1`, which thanks them and empties the cart.

@@ -41,7 +41,7 @@ collections:
   - name: work
     label: Work
     label_singular: Piece
-    description: 'Your pieces: covers, pages, pin-ups, sketches. Add a new one here and it appears on the Work page, the home page and the gallery. Give it a price and it is in the Shop too.'
+    description: 'Your pieces: covers, pages, pin-ups, sketches. Add a new one here and it appears on the Work page, the home page and the gallery. Switch on "Sell it in the Shop" and give it a price to sell it.'
     folder: content/work
     create: true
     extension: json
@@ -61,6 +61,7 @@ collections:
       - { name: rough, label: Pencils or work in progress, widget: boolean, default: false, required: false, hint: 'Tick this for sketches and pencilled pages. They stay on the Work page but are left out of the changing pictures beside the page titles, which show finished pieces only.' }
       - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 5 to 9 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
+      - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop in this panel, and once it has a price it is on the Shop page with a Buy button.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop and payments. Only needed for a piece you sell.' }
       - name: status
         label: Tag
@@ -76,6 +77,42 @@ collections:
       - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop and payments. Leave it empty for a piece that is not for sale.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: false, required: false, hint: 'For something you sell that is not a piece of your portfolio (a book, a shirt): it stays off the Work page and the home page.' }
+
+  - name: shop
+    label: Shop
+    label_singular: Item for sale
+    description: 'Everything you sell: prints, original art, comics. A piece added here is for sale straight away once it has a price. A piece already under Work goes on sale by switching on "Sell it in the Shop" on it, and then shows here too.'
+    folder: content/work
+    filter: { field: inShop, value: true }
+    create: true
+    extension: json
+    format: json
+    identifier_field: title
+    slug: '{{slug}}'
+    summary: '{{title}} — {{price}}'
+    sortable_fields: [date, title, price]
+    fields:
+      - { name: inShop, widget: hidden, default: true }
+      - { name: title, label: Title, widget: string }
+      - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, hint: 'A number, in the currency set under Shop and payments.' }
+      - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
+      - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop and payments.' }
+      - name: status
+        label: Tag
+        widget: select
+        default: none
+        required: false
+        options:
+          - { label: 'None', value: none }
+          - { label: 'New (shows a "New" tag)', value: new }
+          - { label: 'On sale (shows the old and the new price)', value: sale }
+          - { label: 'Sold out (no Buy button)', value: soldout }
+      - { name: category, label: Category, widget: select, options: [Originals, Fan art, Covers, Pages, Sketches, Collaborations, Commissions], default: Originals, hint: 'The Shop page can be filtered by it.' }
+      - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest come first.' }
+      - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
+      - { name: shopOnly, label: Only in the Shop, widget: boolean, default: true, required: false, hint: 'On: it stays off the Work page and the home page. Switch it off for a piece that belongs in your portfolio too.' }
+      - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
   - name: gallery_sections
     label: Gallery

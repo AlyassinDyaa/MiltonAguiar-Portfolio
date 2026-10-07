@@ -119,6 +119,15 @@ At the foot of the admin's navigation, under a line, **Sales** has three screens
   (as coupons), never in the site's files, and the checkout checks each one again before
   payment. Orders show the code used and what it took off.
 
+All three lists come a page at a time (10, 15, 20, 50 or 100 rows, remembered in the browser).
+Each row ends in icons: **customer details** (a window with their contact, every address they
+have had things sent to, their orders, totals and the codes made for them) and **delete**, which
+always asks first in a window. Stripe never deletes a payment, so deleting an order or a customer
+takes it off these lists for good while Stripe keeps its record; a discount code really is
+deleted. **Clear test data** does that to every test order, customer and code at once; it only
+appears, and only works, with Stripe's test key. **Show or hide → Sales screens → Test orders and
+codes** hides test data from the three screens without deleting it (real orders always show).
+
 The three screens need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
 before answering (`api/discounts.js` too; `api/discount.js` is the cart's check of a code). Refunds and receipts are done in the Stripe dashboard (each order links to it).
 On this computer (`npm run dev`) the screens use a `STRIPE_SECRET_KEY` from `.env.local`, or with

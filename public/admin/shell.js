@@ -70,7 +70,7 @@
       groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
-    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
+    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testData', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */

@@ -16,6 +16,8 @@ const ITEMS = [
 ]
 const STAGES = ['new', 'new', 'packed', 'shipped', 'shipped', 'delivered', 'delivered', 'cancelled']
 
+import { clearSampleDiscounts } from './sample-discounts.js'
+
 let made = null
 const make = () => {
   const day = 24 * 60 * 60 * 1000
@@ -28,7 +30,7 @@ const make = () => {
     const payment = i === 6 ? 'refunded' : i === 11 ? 'expired' : 'paid'
     const id = `cs_test_a1${(0x5f3a9c + i * 104729).toString(36).toUpperCase()}${(i * 7919 + 4242).toString(36).toUpperCase()}`
     out.push({
-      id, number: id.slice(-8).toUpperCase(), created: Date.now() - (i * 3.7 + 0.3) * day, currency: 'EUR', total,
+      id, test: true, number: id.slice(-8).toUpperCase(), created: Date.now() - (i * 3.7 + 0.3) * day, currency: 'EUR', total,
       refunded: payment === 'refunded' ? total : 0, payment, name, email, phone: '', country, shipTo,
       items, summary: '', fulfilment: payment === 'paid' ? STAGES[i % STAGES.length] : 'new',
       tracking: i % 4 === 3 ? `CTT-${4821 + i}PT` : '', note: '', discount: i % 5 === 2 ? Math.round(total * 0.1 * 100) / 100 : 0, discountCode: i % 5 === 2 ? 'WELCOME10' : '', paymentIntent: `pi_sample${i}`, stripe: 'https://dashboard.stripe.com/test/payments',
@@ -39,7 +41,17 @@ const make = () => {
 
 export function sampleOrders({ method, body }) {
   made = made || make()
-  if (method === 'GET') return { status: 200, json: { orders: made, sample: true } }
+  if (method === 'GET') return { status: 200, json: { orders: made.filter((o) => !o.hidden), sample: true, mode: 'test' } }
+  if (body && body.action === 'hide') {
+    const ids = new Set((body.orders || []).map((o) => o.id))
+    made.forEach((o) => { if (ids.has(o.id)) o.hidden = true })
+    return { status: 200, json: { hidden: ids.size, failed: 0 } }
+  }
+  if (body && body.action === 'clear-test') {
+    const orders = made.filter((o) => !o.hidden).length
+    made.forEach((o) => { o.hidden = true })
+    return { status: 200, json: { orders, codes: clearSampleDiscounts() } }
+  }
   const o = made.find((x) => x.paymentIntent === (body && body.paymentIntent))
   if (!o) return { status: 400, json: { message: 'That order has no payment to save to.' } }
   Object.assign(o, { fulfilment: body.fulfilment, tracking: String(body.tracking || ''), note: String(body.note || '') })

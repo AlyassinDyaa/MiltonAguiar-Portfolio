@@ -12,6 +12,9 @@
     "subcategory": true,
     "type": true
   },
+  "sales": {
+    "testData": true
+  },
   "home": {
     "ticker": true,
     "project": true,

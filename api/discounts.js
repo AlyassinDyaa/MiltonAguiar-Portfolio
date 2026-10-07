@@ -25,7 +25,7 @@ export async function discounts({ method, body }) {
         if (!got.has_more || !got.data.length) break
         after = got.data[got.data.length - 1].id
       }
-      return { status: 200, json: { discounts: all.filter((c) => (c.metadata || {}).ma === '1').map(discount).sort((a, b) => b.created - a.created) } }
+      return { status: 200, json: { mode: /^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY) ? 'test' : 'live', discounts: all.filter((c) => (c.metadata || {}).ma === '1').map(discount).sort((a, b) => b.created - a.created) } }
     }
     const code = cleanCode(b.code)
     if (!goodCode(code)) return { status: 400, json: { message: 'A code is 3 to 32 letters, numbers, - or _.' } }

@@ -44,7 +44,7 @@ export const discount = (c) => {
   const ends = c.redeem_by ? c.redeem_by * 1000 : 0
   const usedUp = c.max_redemptions && c.times_redeemed >= c.max_redemptions
   return {
-    code: c.id, percent: c.percent_off || 0, emails: unpackEmails(c.metadata), starts, ends,
+    code: c.id, test: !c.livemode, percent: c.percent_off || 0, emails: unpackEmails(c.metadata), starts, ends,
     limit: c.max_redemptions || 0, used: c.times_redeemed || 0, created: c.created * 1000,
     status: usedUp ? 'used-up' : ends && ends <= now ? 'expired' : !c.valid ? 'expired' : starts > now ? 'scheduled' : 'active',
   }

@@ -7,9 +7,36 @@ import { configured, goodPass } from './_session.js'
 
    GET  answers { orders: [...] }, newest first, every completed checkout and the unfinished ones.
    POST { paymentIntent, fulfilment, tracking, note } saves those three on the order.
+   POST { action: 'hide', orders: [{ id, paymentIntent }] } takes orders off the admin's lists.
+        Stripe never lets a payment be deleted, so the order is marked (ma_hidden) and left out.
+   POST { action: 'clear-test' } does that to every order and deletes every discount code made
+        here, but only with a test key: real sales can never be cleared this way.
    Both need the admin's pass, the same one the admin saves content with. */
 export const STAGES = ['new', 'packed', 'shipped', 'delivered', 'cancelled']
 const MAX_PAGES = 5 // 500 checkouts; older ones stay in the Stripe dashboard
+const testKey = () => /^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY || '')
+const post = (fields) => ({ method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() })
+const listSessions = async () => {
+  const all = []
+  let after = ''
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const q = new URLSearchParams({ limit: '100' })
+    ;['data.line_items', 'data.payment_intent.latest_charge'].forEach((x) => q.append('expand[]', x))
+    if (after) q.set('starting_after', after)
+    const got = await stripe(`checkout/sessions?${q}`)
+    all.push(...got.data)
+    if (!got.has_more || !got.data.length) break
+    after = got.data[got.data.length - 1].id
+  }
+  return all
+}
+const hidden = (s) => (s.metadata && s.metadata.ma_hidden === '1') || (s.payment_intent && typeof s.payment_intent === 'object' && (s.payment_intent.metadata || {}).ma_hidden === '1')
+/* Mark one order as taken off the lists: on its payment, or (a checkout never paid) on the checkout. */
+const hide = async ({ id, paymentIntent }) => {
+  if (/^pi_[A-Za-z0-9]+$/.test(String(paymentIntent || ''))) return stripe(`payment_intents/${paymentIntent}`, post({ 'metadata[ma_hidden]': '1' }))
+  if (/^cs_[A-Za-z0-9_]+$/.test(String(id || ''))) return stripe(`checkout/sessions/${id}`, post({ 'metadata[ma_hidden]': '1' }))
+  throw Object.assign(new Error('not an order'), { status: 400 })
+}
 
 const stripe = async (path, init = {}) => {
   const answer = await fetch(`https://api.stripe.com/v1/${path}`, { ...init, headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(init.headers || {}) } })
@@ -31,6 +58,7 @@ const order = (s) => {
   const paid = s.payment_status === 'paid' || s.payment_status === 'no_payment_required'
   return {
     id: s.id,
+    test: !s.livemode,
     number: s.id.slice(-8).toUpperCase(),
     created: s.created * 1000,
     currency: String(s.currency || 'eur').toUpperCase(),
@@ -59,22 +87,28 @@ export async function orders({ method, body }) {
   if (!process.env.STRIPE_SECRET_KEY) return { status: 503, json: { code: 'no-stripe', message: 'Stripe is not connected yet: add STRIPE_SECRET_KEY in the Vercel project settings. Orders appear here once it is.' } }
   try {
     if (method === 'GET') {
-      const all = []
-      let after = ''
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const q = new URLSearchParams({ limit: '100' })
-        ;['data.line_items', 'data.payment_intent.latest_charge'].forEach((x) => q.append('expand[]', x))
-        if (after) q.set('starting_after', after)
-        const got = await stripe(`checkout/sessions?${q}`)
-        all.push(...got.data)
-        if (!got.has_more || !got.data.length) break
-        after = got.data[got.data.length - 1].id
-      }
+      const all = await listSessions()
       // a checkout still open (the buyer is on the payment page, or left it) is not an order yet
-      return { status: 200, json: { orders: all.filter((s) => s.status !== 'open' || s.payment_status === 'paid').map(order) } }
+      return { status: 200, json: { mode: testKey() ? 'test' : 'live', orders: all.filter((s) => !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order) } }
     }
     if (method === 'POST') {
       const b = body && typeof body === 'object' ? body : {}
+      if (b.action === 'hide') {
+        const list = (Array.isArray(b.orders) ? b.orders : []).slice(0, 200)
+        let done = 0
+        for (const o of list) { try { await hide(o); done++ } catch (e) { console.error('hide order:', e.message) } }
+        return { status: done || !list.length ? 200 : 502, json: { hidden: done, failed: list.length - done, message: done ? '' : 'Stripe would not take that order off the list. Try again in a moment.' } }
+      }
+      if (b.action === 'clear-test') {
+        if (!testKey()) return { status: 403, json: { message: 'Only test data can be cleared, and this is the live Stripe account.' } }
+        const sessions = (await listSessions()).filter((s) => !hidden(s))
+        let orders = 0
+        for (const s of sessions) { try { await hide({ id: s.id, paymentIntent: s.payment_intent && (s.payment_intent.id || s.payment_intent) }); orders++ } catch { /* left on the list */ } }
+        const coupons = await stripe('coupons?limit=100')
+        let codes = 0
+        for (const c of coupons.data.filter((x) => (x.metadata || {}).ma === '1')) { try { await stripe(`coupons/${encodeURIComponent(c.id)}`, { method: 'DELETE' }); codes++ } catch { /* left */ } }
+        return { status: 200, json: { orders, codes } }
+      }
       if (!/^pi_[A-Za-z0-9]+$/.test(String(b.paymentIntent || ''))) return { status: 400, json: { message: 'That order has no payment to save to.' } }
       if (!STAGES.includes(b.fulfilment)) return { status: 400, json: { message: 'Unknown order status.' } }
       const form = new URLSearchParams()

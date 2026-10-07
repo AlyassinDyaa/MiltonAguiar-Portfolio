@@ -17,8 +17,8 @@ export function sampleDiscounts({ method, body }) {
   codes = codes || make()
   const b = body || {}
   const code = clean(b.code)
-  const out = (d) => ({ ...d, status: status(d) })
-  if (method === 'GET') return { status: 200, json: { discounts: codes.map(out).sort((a, b) => b.created - a.created), sample: true } }
+  const out = (d) => ({ ...d, test: true, status: status(d) })
+  if (method === 'GET') return { status: 200, json: { discounts: codes.map(out).sort((a, b) => b.created - a.created), sample: true, mode: 'test' } }
   if (!/^[A-Z0-9][A-Z0-9_-]{2,31}$/.test(code)) return { status: 400, json: { message: 'A code is 3 to 32 letters, numbers, - or _.' } }
   const found = codes.find((d) => d.code === code)
   if (method === 'POST') {
@@ -34,6 +34,13 @@ export function sampleDiscounts({ method, body }) {
   if (method === 'PATCH') { Object.assign(found, { emails: emailsOf(b.emails), starts: Number(b.starts) || found.starts }); return { status: 200, json: { discount: out(found) } } }
   if (method === 'DELETE') { codes = codes.filter((d) => d !== found); return { status: 200, json: { ok: true } } }
   return { status: 405, json: { message: 'GET, POST, PATCH or DELETE.' } }
+}
+
+export function clearSampleDiscounts() {
+  codes = codes || make()
+  const n = codes.length
+  codes = []
+  return n
 }
 
 export function sampleDiscountCheck({ body }) {

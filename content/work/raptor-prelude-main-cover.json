@@ -1,0 +1,20 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/prelude-cover-art.webp",
+  "universe": "Raptor",
+  "hidden": false,
+  "date": "2022-09-20",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    }
+  ],
+  "status": "sale",
+  "title": "Raptor: Prelude (Main Cover)",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/raptor-prelude-frame.png",
+  "category": "Covers",
+  "look": "default"
+}

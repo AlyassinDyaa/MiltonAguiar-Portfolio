@@ -2,9 +2,21 @@
   "salePrice": 10,
   "shopOnly": true,
   "src": "/uploads/daredevil.webp",
+  "universe": "Marvel",
   "price": 20,
   "hidden": false,
   "date": "2026-04-20",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20,
+      "salePrice": 10
+    },
+    {
+      "size": "A5",
+      "price": 10
+    }
+  ],
   "note": "",
   "status": "sale",
   "title": "Born Again",

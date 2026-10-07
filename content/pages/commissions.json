@@ -1,6 +1,33 @@
 {
-  "open": true,
-  "title": "Get something drawn",
+  "notes": [
+    "Personal use unless we agree otherwise.",
+    "Fan art and original characters are both welcome.",
+    "Turnaround depends on the queue; ask and I will tell you where it stands."
+  ],
+  "requestLabel": "Request",
+  "processLabel": "The process",
+  "steps": [
+    {
+      "title": "Send the idea",
+      "text": "Who or what, the mood, and any reference pictures you have."
+    },
+    {
+      "title": "Quote and pencils",
+      "text": "You get a price, then a pencil drawing to approve before any ink goes on."
+    },
+    {
+      "title": "Inks and colours",
+      "text": "The piece is inked and coloured, with progress shots along the way."
+    },
+    {
+      "title": "Delivery",
+      "text": "A high-resolution file lands in your inbox, ready to print or post."
+    }
+  ],
+  "requestTitle": "Tell me the idea",
+  "processTitle": "How it works",
+  "open": false,
+  "closedTitle": "Join the queue",
   "intro": "Your favourite character, your own character, or a cover for your book, drawn in my style. Tell me what you have in mind.",
   "tiers": [
     {
@@ -43,35 +70,8 @@
       ]
     }
   ],
-  "processLabel": "The process",
-  "processTitle": "How it works",
-  "steps": [
-    {
-      "title": "Send the idea",
-      "text": "Who or what, the mood, and any reference pictures you have."
-    },
-    {
-      "title": "Quote and pencils",
-      "text": "You get a price, then a pencil drawing to approve before any ink goes on."
-    },
-    {
-      "title": "Inks and colours",
-      "text": "The piece is inked and coloured, with progress shots along the way."
-    },
-    {
-      "title": "Delivery",
-      "text": "A high-resolution file lands in your inbox, ready to print or post."
-    }
-  ],
-  "requestLabel": "Request",
-  "requestTitle": "Tell me the idea",
-  "closedTitle": "Join the queue",
-  "closedText": "The books are closed for now. Send the idea anyway and you will hear back when a slot opens.",
-  "notes": [
-    "Personal use unless we agree otherwise.",
-    "Fan art and original characters are both welcome.",
-    "Turnaround depends on the queue; ask and I will tell you where it stands."
-  ],
+  "quoteUrl": "",
   "quoteLabel": "Get a quote",
-  "quoteUrl": ""
+  "title": "Get something drawn",
+  "closedText": "The books are closed for now. Send the idea anyway and you will hear back when a slot opens."
 }

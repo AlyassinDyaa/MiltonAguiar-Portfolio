@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "label": "The shop",
+  "title": "Take one home",
+  "intro": "Prints and original art, straight from the drawing board. Open any piece to buy it.",
+  "currency": "eur",
+  "buttonLabel": "Buy",
+  "cartIcon": "bag",
+  "note": "",
+  "types": [
+    { "name": "Prints", "note": "" },
+    { "name": "Original art", "note": "The original drawing. One of a kind." },
+    { "name": "Comics", "note": "" }
+  ],
+  "signedChoice": false,
+  "signedExtra": 0,
+  "pricePlace": "corner",
+  "tagPlace": "corner",
+  "shipping": true,
+  "countries": ["PT", "ES", "FR", "DE", "IT", "NL", "BE", "IE", "GB", "US", "CA"],
+  "thanksTitle": "Thank you.",
+  "thanksText": "Your order is in. A receipt is on its way to your email.",
+  "emptyTitle": "The shop opens soon.",
+  "emptyText": "Prints and originals are on their way. Follow along on Instagram to hear first."
+}

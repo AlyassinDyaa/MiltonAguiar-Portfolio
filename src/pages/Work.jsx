@@ -8,6 +8,7 @@ import Compare from '../components/Compare'
 import Lightbox from '../components/Lightbox'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
+import ShopTags from '../components/ShopTags'
 
 export default function Work() {
   const [filter, setFilter] = useState('All')
@@ -39,7 +40,8 @@ export default function Work() {
                   <button type="button" className="hp tile" onClick={() => setSel(i)} aria-label={`Open ${p.title}`}>
                     <span className="hp-in">
                       <Poster title={p.title} src={p.src} eager={i < 4} />
-                      <span className="caption"><strong>{p.title}</strong><small>{[p.category, day(p.date)].filter(Boolean).join(' · ')}</small></span>
+                      <ShopTags p={p} place="art" />
+                      <span className="caption"><strong>{p.title}</strong><small>{[p.category, day(p.date)].filter(Boolean).join(' · ')}</small><ShopTags p={p} place="cap" /></span>
                     </span>
                   </button>
                 </motion.li>

@@ -20,6 +20,7 @@ npm run preview    # serve the production build
 |---|---|
 | `/` | Home, page by page: the name and a drawing in the title panel with four pieces beside it, the current project as a splash panel with its cover and two buttons, the latest pieces as slanted panels, step-by-step comparisons, commissions with each offer as a panel, conventions |
 | `/work` | Every piece, with category filters; a piece opens large with its details |
+| `/shop` | Everything for sale: the pieces with a price, with Type and Category filters, New / Sale / Sold out tags and a cart. Shown while online purchases are switched on (**Shop and payments**); until a piece has a price it says the shop opens soon |
 | `/gallery` | Pictures in sections, shown uncropped. Switched off to start with, because it shows the same pieces as Work; switch it on under **Show or hide** |
 | `/commissions` | What is on offer (a card each), how it works (a strip of numbered panels), and where to ask |
 | `/about` | His origin story, a panel at a time; the artist file; where to find him; covers and collaborations |
@@ -37,12 +38,13 @@ step open as picture cards; the other lists as rows. Each list remembers the vie
 
 | Section | What you control |
 |---|---|
-| Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place |
+| Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place. Under **For sale**: what it is (Prints, Original art...), a tag (New, On sale, Sold out), a price and a sale price, and **Only in the Shop** for something sold that is not portfolio work |
 | Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
 | Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
 | Conventions | Events, with dates and where to find the table |
 | Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name and the current project (title, cover, where to read it, and a second button, for example to the publisher); the About form holds the story, one panel at a time, each with its words and picture; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
+| Shop and payments | Online purchases on or off, the Shop page's words, currency, the kinds of thing sold (each with what the buyer gets), signed pieces and their extra cost, where prices and tags sit on the cards, delivery countries, the thank-you message |
 | Show or hide | Switch whole pages, dark or light mode, or parts of the home page, on and off |
 
 Pictures upload straight from the panel into `public/uploads/`. A piece without a picture gets a
@@ -57,6 +59,18 @@ Every offer, price tag and quote button goes to the artist's Instagram (the Inst
 **Name, colour and contact**). Commissions page → *Where the quote button goes* sends them
 somewhere else. With no contact email and no form service set, the request and contact forms are
 replaced by a button to Instagram as well.
+
+### Selling online
+
+The shop works like DarkBeats': give a piece in **Work** a price and it is in the Shop, with its
+price on its card (on the Work page too). Opening a piece shows its price and **Add to cart** /
+**Buy now**. The cart (the bag in the top bar) is kept in the visitor's browser; **Checkout** opens
+one Stripe payment page for everything in it, which asks for the delivery address. Stripe sends
+the buyer back to `/shop?thanks=1`, which thanks them and empties the cart.
+
+Prices are never trusted from the browser: `api/checkout.js` reads every price, sale and
+signature extra again from the content files. Nothing can be bought until `STRIPE_SECRET_KEY` is
+set on Vercel (step 4 below); until then the checkout says so and points to Instagram.
 
 ### The panels on the home page
 
@@ -116,6 +130,10 @@ in needs a GitHub account.
 3. On Vercel: project **Settings → Environment Variables**, add
    `ADMIN_PASSCODE` (the passcode: long and hard to guess, 12 characters or more) and
    `GITHUB_TOKEN` (the token from step 2), then **Deployments → Redeploy**.
+
+4. For the shop: in Stripe, **Developers → API keys**, copy the **Secret key** (`sk_live_...`, or
+   `sk_test_...` to try it with Stripe's test cards) and add it on Vercel as `STRIPE_SECRET_KEY`,
+   then redeploy. The key stays on Vercel; the browser never sees it.
 
 To change the passcode later, change `ADMIN_PASSCODE` on Vercel and redeploy; everyone is
 logged out and uses the new one. A login lasts a week. Pictures uploaded through the admin on

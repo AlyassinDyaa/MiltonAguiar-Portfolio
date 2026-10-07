@@ -709,15 +709,67 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .tag-badge.is-inline { position: relative; top: auto; left: auto; width: fit-content; }
 .caption .tag-badge.is-inline { margin-top: 6px; font-size: 0.78rem; }
 .cap-price { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; font-size: 1.12em; font-weight: 900; font-style: italic; color: var(--accent); }
-/* "View & buy", stamped across the art while it is pointed at */
-.tile-cta { position: absolute; z-index: 2; left: 50%; top: 46%; padding: 8px 16px 7px; font-family: var(--display); font-size: 1.1rem; font-weight: 800; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; background: var(--accent); color: var(--on-accent); opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(0.86); transition: opacity 0.25s, transform 0.35s var(--ease-out); pointer-events: none; }
-button.hp:hover .tile-cta, button.hp:focus-visible .tile-cta { opacity: 1; transform: translate(-50%, -50%) rotate(-5deg) scale(1); }
-@media (hover: none) { .tile-cta { display: none; } }
-.tile.is-gone .inked img, .tile.is-gone .poster-gen { filter: grayscale(0.85) brightness(0.7); }
 @media (max-width: 599px) {
   .tag-price { top: 7px; right: 7px; padding: 5px 10px 4px; font-size: 1.05rem; }
   .tag-badge { top: 7px; left: 7px; padding: 5px 9px 4px 8px; font-size: 0.74rem; }
 }
+
+/* The shop's cards (components/ShopCard.jsx): the art on its own at the top, a red line drawn
+   under it when the card is pointed at; the title and the price on one line, what it is under
+   them; a foot with the way in and a quick add-to-cart. */
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: clamp(14px, 1.6vw, 24px); }
+.shop-grid > li { min-width: 0; }
+.sc { position: relative; display: flex; flex-direction: column; height: 100%; background: var(--panel); border: 1px solid var(--line); transition: border-color 0.25s, transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out); }
+.sc:hover, .sc:focus-within { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 22px 44px -18px rgba(0, 0, 0, 0.6); }
+:root[data-theme='light'] .sc { border: 2px solid var(--frame); }
+:root[data-theme='light'] .sc:hover, :root[data-theme='light'] .sc:focus-within { border-color: var(--accent); box-shadow: 0 22px 40px -22px rgba(0, 0, 0, 0.35); }
+.sc-open { display: flex; flex-direction: column; flex: 1; width: 100%; text-align: left; color: inherit; }
+.sc-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sc-art { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--panel-2); }
+.sc-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; transition: transform 0.7s var(--ease-out), filter 0.3s; }
+.sc:hover .sc-art img { transform: scale(1.045); }
+.sc-art .poster { height: 100%; aspect-ratio: auto; }
+.sc-art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease-out); }
+.sc:hover .sc-art::after, .sc:focus-within .sc-art::after { transform: scaleX(1); }
+.sc-tag { position: absolute; z-index: 1; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px 4px; font-family: var(--display); font-size: 0.74rem; font-weight: 800; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; background: var(--accent); color: #fff; }
+.sc-tag.is-new::before { content: ''; flex: 0 0 auto; width: 9px; height: 9px; background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.sc-tag.is-soldout { background: rgba(11, 11, 12, 0.88); }
+.sc-tag.is-inline { position: static; }
+.sc-info { display: grid; gap: 7px; padding: 16px 18px 15px; }
+.sc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; }
+.sc-title { min-width: 0; font-family: var(--display); font-size: 1.32rem; font-weight: 800; font-style: italic; line-height: 1.02; letter-spacing: 0.01em; text-transform: uppercase; }
+.sc-price { flex: 0 0 auto; display: flex; align-items: baseline; gap: 7px; font-family: var(--display); font-style: italic; white-space: nowrap; }
+.sc-price b { font-size: 1.45rem; font-weight: 900; color: var(--fg); }
+.sc-price s { font-size: 0.95rem; font-weight: 700; color: var(--fg-mute); text-decoration-thickness: 2px; }
+.sc-price s + b { color: var(--accent); }
+.sc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sc-meta small { font-family: var(--display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
+.sc-foot { display: flex; border-top: 1px solid var(--line); }
+.sc-view { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 0 18px; font-family: var(--display); font-size: 0.88rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); transition: color 0.2s; }
+.sc-view span { transition: transform 0.3s var(--ease-out); }
+.sc:hover .sc-view, .sc-view:focus-visible { color: var(--fg); outline: 0; }
+.sc:hover .sc-view span, .sc-view:focus-visible span { transform: translateX(4px); color: var(--accent); }
+.sc-add { flex: 0 0 auto; display: grid; place-items: center; width: 52px; border-left: 1px solid var(--line); color: var(--fg); transition: background 0.2s, color 0.2s; }
+.sc-add:hover, .sc-add:focus-visible { background: var(--accent); color: #fff; outline: 0; }
+.sc-add.is-added { background: var(--open); color: #06140c; }
+.sc-add svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sc.is-gone .sc-art img { filter: grayscale(1) brightness(0.62); }
+.sc.is-gone .sc-price b { color: var(--fg-mute); text-decoration: line-through; text-decoration-thickness: 2px; }
+/* phones: two to a row, the price under the title */
+@media (max-width: 599px) {
+  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .sc-info { gap: 5px; padding: 12px 12px 11px; }
+  .sc-row { flex-direction: column; align-items: flex-start; }
+  .sc-title { font-size: 1.08rem; }
+  .sc-price b { font-size: 1.2rem; }
+  .sc-price s { font-size: 0.82rem; }
+  .sc-meta small { font-size: 0.68rem; letter-spacing: 0.1em; }
+  .sc-tag { top: 8px; left: 8px; font-size: 0.66rem; padding: 4px 7px 3px; }
+  .sc-view { min-height: 42px; padding: 0 12px; font-size: 0.74rem; letter-spacing: 0.1em; }
+  .sc-add { width: 42px; }
+  .sc-add svg { width: 18px; height: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .sc, .sc-art img { transition: none; } .sc:hover { transform: none; } }
 
 /* the top of the shop: how buying works, then the two rows of filters */
 .how-buy { display: flex; flex-wrap: wrap; gap: 6px; margin: 22px 0 0; padding: 0; list-style: none; }

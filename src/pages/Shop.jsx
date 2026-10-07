@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { brand, canBuy, forSale, shop, soldOut, types, work } from '../data/site'
+import { brand, forSale, shop, soldOut, types, work } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Page from '../components/Page'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
-import Poster from '../components/Poster'
 import Lightbox from '../components/Lightbox'
-import ShopTags from '../components/ShopTags'
+import ShopCard from '../components/ShopCard'
 import Magnetic from '../components/Magnetic'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -85,18 +84,11 @@ export default function Shop() {
           ) : shown.length === 0 ? (
             <p className="shop-none">Nothing in that combination. <button type="button" onClick={() => { pickKind('All'); pickCat('All') }}>Show everything</button></p>
           ) : (
-            <motion.ul className="grid" layout>
+            <motion.ul className="shop-grid" layout>
               <AnimatePresence mode="popLayout" initial={false}>
                 {shown.map((p, i) => (
-                  <motion.li key={p.slug} layout initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.35, ease: EASE }}>
-                    <button type="button" className={`hp tile ${soldOut(p) ? 'is-gone' : ''}`} onClick={() => setSel(i)} aria-label={`Open ${p.title}`}>
-                      <span className="hp-in">
-                        <Poster title={p.title} src={p.src} eager={i < 4} />
-                        <ShopTags p={p} place="art" />
-                        <span className="tile-cta">{canBuy(p) ? 'View & buy' : 'View'} <span className="arrow">→</span></span>
-                        <span className="caption"><strong>{p.title}</strong><small>{[p.type, p.category].filter(Boolean).join(' · ')}</small><ShopTags p={p} place="cap" /></span>
-                      </span>
-                    </button>
+                  <motion.li key={p.slug} layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.4, delay: Math.min(i, 8) * 0.04, ease: EASE }}>
+                    <ShopCard p={p} onOpen={() => setSel(i)} eager={i < 4} />
                   </motion.li>
                 ))}
               </AnimatePresence>

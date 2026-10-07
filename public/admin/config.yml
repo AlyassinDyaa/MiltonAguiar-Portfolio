@@ -400,7 +400,7 @@ collections:
           - { name: currency, label: Currency, widget: select, default: eur, options: [{ label: 'Euro (EUR)', value: eur }, { label: 'US dollar (USD)', value: usd }, { label: 'British pound (GBP)', value: gbp }, { label: 'Brazilian real (BRL)', value: brl }, { label: 'Canadian dollar (CAD)', value: cad }, { label: 'Australian dollar (AUD)', value: aud }] }
           - { name: buttonLabel, label: Wording of the Buy button, widget: string, hint: 'Shown as "… now" beside "Add to cart".' }
           - name: pricePlace
-            label: Price on the cards
+            label: Price on the Work page cards
             widget: select
             default: corner
             required: false
@@ -412,7 +412,7 @@ collections:
             widget: select
             default: corner
             required: false
-            hint: 'The New, Sale and Sold out tags.'
+            hint: 'The New, Sale and Sold out tags, on the Shop and Work page cards. (On the Shop page the price always sits beside the title.)'
             options:
               - { label: 'Top corner of the picture', value: corner }
               - { label: 'In the caption, under the title', value: below }

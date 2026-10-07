@@ -257,6 +257,8 @@ has the same effect as using the panel.
 
 ## Deploy on Vercel (site and admin)
 
+**Going live for real (every setting, every step, admin, database, emails, payments): see [DEPLOY.md](DEPLOY.md).**
+
 `vercel.json` holds the build settings and routing, so the site itself needs no setup:
 
 1. On vercel.com: **Add New → Project**, import this GitHub repository, press **Deploy**.

@@ -70,7 +70,7 @@
       groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
-    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
+    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures', rewardText: 'Reward for confirming the email' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
@@ -95,7 +95,7 @@
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
     'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
-    'site/account': 'Customer accounts on or off, the membership card, your note on their page, and the free profile pictures.',
+    'site/account': 'Customer accounts on or off, the membership card, your note on their page, the free profile pictures, and the reward for confirming the email.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -352,7 +352,7 @@
       const compact = currentSection() === 'site' ? /^(types|categories|subcategories|sizes)-field/.test(name) : /^sizes-field/.test(name)
       if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
       // the free profile pictures (Customer accounts): a grid of round tiles
-      const pics = currentSection() === 'site' && /^icons-field/.test(name)
+      const pics = currentSection() === 'site' && /^(icons|verifiedIcons)-field/.test(name)
       if (pics !== field.classList.contains('ia-pics')) field.classList.toggle('ia-pics', pics)
     }
     for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder]), .ia-pics input:not([placeholder])')) {

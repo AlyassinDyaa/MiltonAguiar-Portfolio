@@ -7,13 +7,44 @@
   "savedTitle": "Saved for later",
   "cardLabel": "Collector",
   "icons": [
-    { "picture": "/avatars/skull.svg", "name": "Skull" },
-    { "picture": "/avatars/bolt.svg", "name": "Bolt" },
-    { "picture": "/avatars/flame.svg", "name": "Flame" },
-    { "picture": "/avatars/star.svg", "name": "Star" },
-    { "picture": "/avatars/moon.svg", "name": "Moon" },
-    { "picture": "/avatars/ghost.svg", "name": "Ghost" },
-    { "picture": "/avatars/crown.svg", "name": "Crown" },
-    { "picture": "/avatars/eye.svg", "name": "Eye" }
+    {
+      "picture": "/avatars/skull.svg",
+      "name": "Skull"
+    },
+    {
+      "picture": "/avatars/bolt.svg",
+      "name": "Bolt"
+    },
+    {
+      "picture": "/avatars/flame.svg",
+      "name": "Flame"
+    },
+    {
+      "picture": "/avatars/star.svg",
+      "name": "Star"
+    },
+    {
+      "picture": "/avatars/moon.svg",
+      "name": "Moon"
+    },
+    {
+      "picture": "/avatars/ghost.svg",
+      "name": "Ghost"
+    },
+    {
+      "picture": "/avatars/crown.svg",
+      "name": "Crown"
+    },
+    {
+      "picture": "/avatars/eye.svg",
+      "name": "Eye"
+    }
+  ],
+  "rewardText": "Confirm your email and unlock a profile picture only confirmed members can use.",
+  "verifiedIcons": [
+    {
+      "picture": "/avatars/confirmed.svg",
+      "name": "Confirmed"
+    }
   ]
 }

@@ -63,6 +63,11 @@ const freePictures = () => {
   const page = readJson('content/pages/account.json') || {}
   return (Array.isArray(page.icons) ? page.icons : []).map((i) => i && String(i.picture || '')).filter(Boolean)
 }
+// the reward for confirming the email address: pictures only a customer with a confirmed email may use
+const rewardPictures = () => {
+  const page = readJson('content/pages/account.json') || {}
+  return (Array.isArray(page.verifiedIcons) ? page.verifiedIcons : []).map((i) => i && String(i.picture || '')).filter(Boolean)
+}
 const pieces = () => {
   try {
     return readdirSync(join(process.cwd(), 'content/work')).filter((f) => f.endsWith('.json')).map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/work/${f}`) || {}) })).filter((p) => p.title)
@@ -79,8 +84,18 @@ const ownedSlugs = async (d, user) => {
 }
 const pictureAllowed = async (d, user, avatar) => {
   if (!avatar) return true
-  if (avatar.startsWith('icon:')) return freePictures().includes(avatar.slice(5))
+  if (avatar.startsWith('icon:')) return freePictures().includes(avatar.slice(5)) || (Boolean(user.verified) && rewardPictures().includes(avatar.slice(5)))
   return /^[a-z0-9-]{1,80}$/.test(avatar) && (await ownedSlugs(d, user)).has(avatar)
+}
+
+// the email is confirmed: the reward pictures are theirs, and one still showing their initials gets
+// the first one as their picture straight away (they can change it under Details any time)
+const giveReward = async (users, user) => {
+  const rewards = rewardPictures()
+  if (!rewards.length || !user || user.avatar) return { rewards, avatar: user ? user.avatar || '' : '' }
+  const avatar = `icon:${rewards[0]}`
+  await users.updateOne({ _id: user._id }, { $set: { avatar } })
+  return { rewards, avatar }
 }
 
 const sendVerify = async (req, user) => {
@@ -88,7 +103,7 @@ const sendVerify = async (req, user) => {
   return sendMail({
     to: user.email,
     subject: 'Confirm your email',
-    lines: [`Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`, 'Confirm this is your email address, and your account can show every order placed with it.', `The link works for ${VERIFY_HOURS} hours.`],
+    lines: [`Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`, 'Confirm this is your email address, and your account can show every order placed with it.', ...(rewardPictures().length ? ['As a thank-you, confirming it unlocks a profile picture only confirmed members can use.'] : []), `The link works for ${VERIFY_HOURS} hours.`],
     button: { label: 'Confirm my email', url: `${siteUrl(req)}/account/verify?token=${token}` },
   })
 }
@@ -188,6 +203,8 @@ export default async function handler(req, res) {
       if (!user) return say(res, 400, { message: 'This account no longer exists.' })
       // a reset link reached the inbox, so the address is confirmed too; every other login ends
       await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password), verified: true } })
+      const given = user.verified ? { avatar: user.avatar } : await giveReward(users, { ...user, verified: true })
+      user.avatar = given.avatar
       await d.collection('sessions').deleteMany({ userId: user._id })
       await forgetTries(`login:${user.email}`)
       await startSession(req, res, user._id)
@@ -198,8 +215,9 @@ export default async function handler(req, res) {
       const token = await spendToken(body.token, 'verify')
       if (!token) return say(res, 400, { message: 'This link has run out or has been used. Log in and ask for a new one.' })
       await users.updateOne({ _id: token.userId }, { $set: { verified: true } })
+      const { rewards } = await giveReward(users, await users.findOne({ _id: token.userId }))
       const user = await currentUser(req)
-      return say(res, 200, { verified: true, user: publicUser(user) })
+      return say(res, 200, { verified: true, rewards, user: publicUser(user) })
     }
 
     // ---------- with a login

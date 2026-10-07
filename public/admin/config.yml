@@ -631,6 +631,19 @@ collections:
               - { name: picture, label: Picture, widget: image, choose_url: false }
               - { name: face, label: Crop, widget: facecrop, required: false }
               - { name: name, label: Name, widget: string, required: false }
+          - { name: rewardText, label: What confirming the email unlocks, widget: string, required: false, hint: 'Shown to customers who have not confirmed their email yet, beside the locked pictures below and in the reminder on their account page.' }
+          - name: verifiedIcons
+            label: Reward for confirming the email
+            label_singular: picture
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'Pictures only customers who confirmed their email can use. A customer still showing their initials gets the first one as their picture the moment they confirm; they can change it any time. Before confirming they see these pictures locked. Empty: no reward.'
+            fields:
+              - { name: picture, label: Picture, widget: image, choose_url: false }
+              - { name: face, label: Crop, widget: facecrop, required: false }
+              - { name: name, label: Name, widget: string, required: false }
 
       - name: visibility
         label: Show or hide

@@ -111,9 +111,13 @@ const countryName = (code) => { if (!code) return ''; try { return new Intl.Disp
 const memberNumber = (n) => (n ? `#${String(n).padStart(4, '0')}` : '#----')
 
 function AuthArt({ cardName }) {
+  // logged in (confirming the email, for example): their own card
+  const { user } = useAccount()
   return (
     <aside className="acc-art">
-      <CollectorCard name={cardName} since={new Date().getFullYear()} number={memberNumber(null)} prints="Your collection" />
+      {user
+        ? <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints="Your collection" />
+        : <CollectorCard name={cardName} since={new Date().getFullYear()} number={memberNumber(null)} prints="Your collection" />}
       <ul className="acc-perks">
         {PERKS.map(([t, d]) => <li key={t}><i aria-hidden="true" /><div><b>{t}</b><span>{d}</span></div></li>)}
       </ul>
@@ -263,18 +267,29 @@ function Verify() {
   const token = params.get('token') || ''
   const [state, setState] = useState(token ? 'working' : 'missing')
   const [text, setText] = useState('')
+  const [rewards, setRewards] = useState([]) // the pictures confirming unlocked
   useEffect(() => {
     if (!token) return
     let stale = false
-    call('verify', { token }).then(() => { if (!stale) setState('done') }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
+    call('verify', { token }).then((s) => { if (!stale) { setState('done'); setRewards(Array.isArray(s.rewards) ? s.rewards : []) } }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
     return () => { stale = true }
   }, [token, call])
+  const unlocked = accountPage.verifiedIcons.filter((i) => rewards.includes(i.picture))
   return (
     <Shell title={state === 'done' ? 'Email confirmed' : 'Confirm your email'} label="Your account">
       <div className={`acc-card acc-done ${state === 'failed' || state === 'missing' ? 'is-bad' : ''}`} role="status">
         <i aria-hidden="true">{state === 'done' ? '✓' : state === 'working' ? '…' : '!'}</i>
         <p>{state === 'working' ? 'Checking the link…' : state === 'done' ? 'Thank you. Every order placed with this email now shows in your account.' : state === 'missing' ? 'This page needs the link from the email.' : text}</p>
-        <Link className="btn ghost sm" to={user ? '/account' : '/account/login'}>{user ? 'Go to your account' : 'Log in'} <span className="arrow">→</span></Link>
+        {state === 'done' && unlocked.length > 0 && (
+          <div className="acc-reward">
+            <div className="acc-reward-pics" aria-hidden="true">{unlocked.map((i) => <span key={i.picture} className="acct-pick-pic"><img src={asset(i.picture)} alt="" style={faceLook(i)} /></span>)}</div>
+            <div>
+              <strong>{unlocked.length === 1 ? 'A picture unlocked' : `${unlocked.length} pictures unlocked`}</strong>
+              <span>Only members who confirmed their email can use {unlocked.length === 1 ? 'it' : 'them'}. Choose under Details, any time.</span>
+            </div>
+          </div>
+        )}
+        <Link className="btn ghost sm" to={user ? (state === 'done' && unlocked.length ? '/account?tab=details' : '/account') : '/account/login'}>{user ? (state === 'done' && unlocked.length ? 'See your picture' : 'Go to your account') : 'Log in'} <span className="arrow">→</span></Link>
       </div>
     </Shell>
   )
@@ -332,7 +347,7 @@ function Avatar({ user, size = 'md' }) {
   const piece = user.avatar && !icon ? everything.find((p) => p.slug === user.avatar && p.src) : null
   return (
     <span className={`acct-avatar is-${size}`} aria-hidden="true">
-      {icon ? <img src={asset(icon)} alt="" style={faceLook(accountPage.icons.find((i) => i.picture === icon))} /> : piece ? <img src={asset(piece.src)} alt="" style={faceLook(piece)} /> : <b>{initialsOf(user)}</b>}
+      {icon ? <img src={asset(icon)} alt="" style={faceLook([...accountPage.icons, ...accountPage.verifiedIcons].find((i) => i.picture === icon))} /> : piece ? <img src={asset(piece.src)} alt="" style={faceLook(piece)} /> : <b>{initialsOf(user)}</b>}
     </span>
   )
 }
@@ -620,6 +635,22 @@ function Details({ owned = [] }) {
             })}
           </div>
         </div>
+        {accountPage.verifiedIcons.length > 0 && (
+          <div className={`acct-pick-group is-reward ${user.verified ? '' : 'is-locked'}`} role="radiogroup" aria-label="For confirmed members">
+            <span className="acct-pick-label">For confirmed members <em>{user.verified ? 'unlocked' : 'locked'}</em></span>
+            <div className="acct-pick-grid">
+              {accountPage.verifiedIcons.map((i) => {
+                const v = `icon:${i.picture}`
+                return (
+                  <button key={i.picture} type="button" role="radio" disabled={!user.verified} aria-checked={f.values.avatar === v} aria-label={`${i.name || 'Picture'}${user.verified ? '' : ' (locked)'}`} title={user.verified ? i.name || '' : 'Confirm your email to unlock it'} className={`acct-pick-one is-reward ${f.values.avatar === v ? 'on' : ''}`} onClick={() => f.set('avatar')(v)}>
+                    <span className="acct-pick-pic"><img src={asset(i.picture)} alt="" loading="lazy" style={faceLook(i)} /></span>
+                  </button>
+                )
+              })}
+            </div>
+            {!user.verified && <p className="acct-pick-locked"><i aria-hidden="true">✦</i>{accountPage.rewardText}</p>}
+          </div>
+        )}
         <div className="acct-pick-group is-mine" role="radiogroup" aria-label="From your collection">
           <span className="acct-pick-label">From your collection <em>only yours</em></span>
           {mine.length ? (
@@ -894,7 +925,7 @@ function Home() {
           )}
           {!user.verified && tab !== 'details' && (
             <div className="acc-verify" role="status">
-              <span>Confirm your email: there is a link in your inbox at <b>{user.email}</b>.</span>
+              <span>Confirm your email: there is a link in your inbox at <b>{user.email}</b>.{accountPage.verifiedIcons.length > 0 && <> {accountPage.rewardText}</>}</span>
               <button type="button" className="acc-link" disabled={Boolean(resent)} onClick={async () => { try { await call('resend'); setResent('Sent. Check your inbox (and spam).') } catch (e) { setResent(e.message) } }}>{resent || 'Send it again'}</button>
             </div>
           )}

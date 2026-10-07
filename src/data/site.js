@@ -125,8 +125,10 @@ function assemble(content) {
   if (!about.story.length && about.paragraphs?.length) about.story = about.paragraphs.map((text) => ({ text }))
   about.story = about.story.filter((s) => s && s.text)
   contact = { label: 'Say hello', title: 'Get in touch', topics: [], ...given(page('contact')) }
-  accountPage = { noteTitle: 'A note from the artist', note: '', signature: '', collectionTitle: 'Your collection', savedTitle: 'Saved for later', cardLabel: 'Collector', ...given(page('account')) }
+  accountPage = { noteTitle: 'A note from the artist', note: '', signature: '', collectionTitle: 'Your collection', savedTitle: 'Saved for later', cardLabel: 'Collector', rewardText: 'Confirm your email and unlock a profile picture only confirmed members can use.', ...given(page('account')) }
   accountPage.icons = (Array.isArray(accountPage.icons) ? accountPage.icons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
+  // the reward for confirming the email: pictures only a customer with a confirmed email may use
+  accountPage.verifiedIcons = (Array.isArray(accountPage.verifiedIcons) ? accountPage.verifiedIcons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
   pages = {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },

@@ -1520,3 +1520,21 @@ form.acc-modal-box { max-width: none; }
   .acc-orow-chev { display: none; }
   .acc-orow-pics { grid-row: span 2; }
 }
+
+/* the reward for confirming the email: its pictures in the picker (locked until then), and what
+   the confirmation page says it unlocked */
+.acct-pick-group.is-reward { margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--line-strong); }
+.acct-pick-group.is-reward .acct-pick-label em { background: #ffd34d; color: #0b0b0c; }
+.acct-pick-group.is-reward.is-locked .acct-pick-label em { background: var(--panel-2); color: var(--fg-mute); }
+.acct-pick-one.is-reward { border-color: #ffd34d; }
+.acct-pick-one.is-reward::after { content: '★'; position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.66rem; background: #ffd34d; color: #0b0b0c; box-shadow: 0 0 0 2px var(--page); }
+.acct-pick-one.is-reward:disabled { cursor: not-allowed; border-color: var(--line-strong); transform: none; }
+.acct-pick-one.is-reward:disabled img { filter: grayscale(1) brightness(0.55); }
+.acct-pick-one.is-reward:disabled::after { content: '🔒'; background: var(--panel-2); font-size: 0.6rem; }
+.acct-pick-group.is-reward .acct-pick-locked { margin-top: 12px; }
+.acc-reward { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid #ffd34d; background: rgba(255, 211, 77, 0.08); }
+.acc-reward-pics { display: flex; gap: 8px; }
+.acc-reward-pics .acct-pick-pic { position: relative; inset: auto; display: block; width: 58px; height: 58px; box-shadow: 0 0 0 3px #ffd34d; }
+.acc-reward-pics .acct-pick-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.acc-reward strong { display: block; font-family: var(--display); font-size: 1.15rem; font-weight: 900; font-style: italic; text-transform: uppercase; color: var(--fg); }
+.acc-reward span { display: block; margin-top: 3px; font-size: 0.92rem; color: var(--fg-dim); }

@@ -65,6 +65,7 @@ export const shows = (group, key) => visibility[group]?.[key] !== false
    empty when visitors may choose. With both switched off, both stay on. */
 export const themeOnly = () => (shows('themes', 'dark') === shows('themes', 'light') ? '' : shows('themes', 'dark') ? 'dark' : 'light')
 
+let hiddenCats = new Set(), hiddenSubs = new Set() // categories and sub categories switched to Hide in the admin
 let sizeOrder = [] // the print sizes in the admin's order, for listing a piece's sizes
 let newPictures = {} // pictures saved after this build: "/uploads/x.webp" -> the picture itself
 
@@ -154,19 +155,23 @@ function assemble(content) {
   forSale = everything.filter(buyable)
   const shopLists = site('categories')
   const named = (list) => (Array.isArray(list) ? list : []).map((x) => String((x && x.name) || '').trim()).filter(Boolean)
-  // the admin's order first, then anything in use that the lists do not name
-  const inUse = (listed, field) => {
-    const used = new Set(forSale.map((p) => String(p[field] || '').trim()).filter(Boolean))
+  // a category or sub category switched to "Hide" in the list: not offered as a filter, not named on cards
+  const hiddenIn = (list) => new Set((Array.isArray(list) ? list : []).filter((x) => x && x.hidden).map((x) => String(x.name || '').trim()))
+  hiddenCats = hiddenIn(shopLists.categories)
+  hiddenSubs = hiddenIn(shopLists.subcategories)
+  // the admin's order first, then anything in use that the lists do not name; hidden ones left out
+  const inUse = (listed, field, hidden) => {
+    const used = new Set(forSale.map((p) => String(p[field] || '').trim()).filter((n) => n && !hidden.has(n)))
     return [...listed.filter((n) => used.has(n)), ...[...used].filter((n) => !listed.includes(n))]
   }
   printSizes = named(shopLists.sizes)
   sizeNotes = Object.fromEntries((Array.isArray(shopLists.sizes) ? shopLists.sizes : []).filter((x) => x && x.name).map((x) => [String(x.name).trim(), String(x.note || '').trim()]))
   sizeOrder = printSizes
-  shopCats = inUse(named(shopLists.categories), 'category')
-  subCats = inUse(named(shopLists.subcategories), 'universe')
+  shopCats = inUse(named(shopLists.categories), 'category', hiddenCats)
+  subCats = inUse(named(shopLists.subcategories), 'universe', hiddenSubs)
   const sold = new Set(forSale.map((p) => p.type).filter(Boolean))
   types = [...kinds.map((t) => String(t.name).trim()).filter((n) => sold.has(n)), ...[...sold].filter((n) => !(n in notes))]
-  categories = [...new Set(work.map((p) => p.category).filter(Boolean))]
+  categories = [...new Set(work.map((p) => p.category).filter((c) => c && !hiddenCats.has(String(c).trim())))]
   // the ticked pieces in the order given to them ("Place on the home page"), newest first among those with none
   const place = (p) => (p.homeOrder === '' || p.homeOrder == null ? 99 : Number(p.homeOrder))
   const picked = work.filter((p) => p.featured).sort((a, b) => place(a) - place(b))
@@ -216,6 +221,12 @@ export function showLatest({ content = {}, media = {} }) {
 
 /* Uploaded images are stored as "/uploads/x.jpg". Prefix the deploy base path. */
 export const asset = (url) => newPictures[url] || (url && url.startsWith('/') ? import.meta.env.BASE_URL.replace(/\/$/, '') + url : url)
+
+/* What a card says a piece is, after its type: its sub category, or its category, whichever is not
+   hidden (empty when both are). */
+/* A piece's category, unless that category is switched to Hide. */
+export const catOf = (p) => (p?.category && !hiddenCats.has(String(p.category).trim()) ? p.category : '')
+export const filedUnder = (p) => [p.universe, p.category].map((x) => String(x || '').trim()).find((x, i) => x && !(i ? hiddenCats : hiddenSubs).has(x)) || ''
 
 /* A piece shows its price while online purchases are switched on, it is in the Shop ("Sell it in
    the Shop" in the admin, or added under Shop) and it has a price. */

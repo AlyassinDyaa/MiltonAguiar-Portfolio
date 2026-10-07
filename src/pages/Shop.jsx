@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { brand, forSale, shop, shopCats, soldOut, subCats, types, work } from '../data/site'
+import { brand, forSale, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
 import Dropdown from '../components/Dropdown'
 import { useCart } from '../hooks/useCart'
 import Page from '../components/Page'
@@ -13,12 +13,13 @@ import Magnetic from '../components/Magnetic'
 
 const EASE = [0.16, 1, 0.3, 1]
 
-/* The shop's three drop-downs, each shown once it has two or more choices in use. The lists and
+/* The shop's three drop-downs, each shown once it has two or more choices in use (and not switched
+   off under Show or hide → Parts of the Shop page). The lists and
    their order are kept in the admin (Shop → Categories & sizes, and the kinds under Settings). */
 const FILTERS = [
-  { field: 'category', label: 'Category', all: 'All categories', list: () => shopCats },
-  { field: 'universe', label: 'Sub category', all: 'All', list: () => subCats },
-  { field: 'type', label: 'Type', all: 'Everything', list: () => types },
+  { field: 'category', label: 'Category', all: 'All categories', list: () => shopCats, show: 'category' },
+  { field: 'universe', label: 'Sub category', all: 'All', list: () => subCats, show: 'subcategory' },
+  { field: 'type', label: 'Type', all: 'Everything', list: () => types, show: 'type' },
 ]
 const NONE = Object.fromEntries(FILTERS.map((f) => [f.field, 'All']))
 const fits = (p, chosen) => FILTERS.every((f) => chosen[f.field] === 'All' || String(p[f.field] || '').trim() === chosen[f.field])
@@ -42,7 +43,7 @@ export default function Shop() {
   const filtering = FILTERS.some((f) => pick[f.field] !== 'All')
   // each count reads with the other drop-downs' choices, so it says what picking it would show
   const count = (field, value) => forSale.filter((p) => fits(p, { ...pick, [field]: value })).length
-  const menus = FILTERS.map((f) => ({ ...f, list: f.list() })).filter((f) => f.list.length > 1)
+  const menus = FILTERS.filter((f) => shows('shop', f.show)).map((f) => ({ ...f, list: f.list() })).filter((f) => f.list.length > 1) // each can be switched off under Show or hide
   const steps = ['Pick a piece', 'Pay securely with Stripe', shop.shipping !== false ? 'Posted to your door' : 'Sent to your inbox']
 
   return (

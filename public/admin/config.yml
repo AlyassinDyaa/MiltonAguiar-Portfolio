@@ -530,9 +530,10 @@ collections:
             widget: list
             collapsed: false
             summary: '{{fields.name}}'
-            hint: 'Originals, Fan art, Covers... Used by every piece, in Work and in the Shop. Drag to reorder: the drop-down on the Shop page follows this order. Renaming one does not rename it on the pieces that use it.'
+            hint: 'Originals, Fan art, Covers... Used by every piece, in Work and in the Shop. Add, rename, delete, or drag to reorder: the drop-down on the Shop page follows this order. Hide: it is left out of the drop-down, the Work page buttons and the cards, but its pieces stay on the site. Renaming one does not rename it on the pieces that use it.'
             fields:
               - { name: name, label: Name, widget: string }
+              - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
           - name: subcategories
             label: Sub categories
             label_singular: sub category
@@ -540,9 +541,10 @@ collections:
             collapsed: false
             required: false
             summary: '{{fields.name}}'
-            hint: 'DC, Marvel, Image... A second way to filter the Shop. Optional on each piece.'
+            hint: 'DC, Marvel, Image... A second way to filter the Shop. Optional on each piece. Hide: it is left out of the drop-down and the cards, but its pieces stay in the Shop.'
             fields:
               - { name: name, label: Name, widget: string }
+              - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
           - name: sizes
             label: Print sizes
             label_singular: size
@@ -579,6 +581,15 @@ collections:
             fields:
               - { name: dark, label: Dark mode, widget: boolean, default: true, required: false }
               - { name: light, label: Light mode, widget: boolean, default: true, required: false }
+          - name: shop
+            label: Parts of the Shop page
+            widget: object
+            collapsed: false
+            hint: 'The drop-downs above the pieces. Each also needs two or more choices in use before it shows.'
+            fields:
+              - { name: category, label: Category drop-down, widget: boolean, default: true, required: false }
+              - { name: subcategory, label: Sub category drop-down, widget: boolean, default: true, required: false }
+              - { name: type, label: Type drop-down, widget: boolean, default: true, required: false }
           - name: home
             label: Parts of the home page
             widget: object

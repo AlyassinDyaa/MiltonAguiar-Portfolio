@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { asset, badge, brand, canBuy, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
+import { asset, badge, brand, canBuy, filedUnder, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Poster from './Poster'
 
@@ -26,7 +26,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const from = manyPrices(p)
   const one = sizes[0]?.name // the size whose price shows when there is only one price
   const was = !from && onSale(p, one) ? fullPrice(p, one) : 0
-  const what = [p.type, p.universe || p.category].filter(Boolean).join(' · ')
+  const what = [p.type, filedUnder(p)].filter(Boolean).join(' · ')
   const mock = p.src && p.look !== 'plain'
   return (
     <article className={`pc ${gone ? 'is-gone' : ''}`}>

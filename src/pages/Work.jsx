@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { categories, day, home, pages, redraws, work } from '../data/site'
+import { catOf, categories, day, home, pages, redraws, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
@@ -41,7 +41,7 @@ export default function Work() {
                     <span className="hp-in">
                       <Poster title={p.title} src={p.src} eager={i < 4} />
                       <ShopTags p={p} place="art" />
-                      <span className="caption"><strong>{p.title}</strong><small>{[p.category, day(p.date)].filter(Boolean).join(' · ')}</small><ShopTags p={p} place="cap" /></span>
+                      <span className="caption"><strong>{p.title}</strong><small>{[catOf(p), day(p.date)].filter(Boolean).join(' · ')}</small><ShopTags p={p} place="cap" /></span>
                     </span>
                   </button>
                 </motion.li>

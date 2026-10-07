@@ -80,7 +80,9 @@ discount, a lower price. Buyers choose the size from a drop-down beside the piec
 
 **Categories.** The Shop page filters by **Category**, **Sub category** (DC, Marvel...) and **Type**,
 each a drop-down. The categories, sub categories and print sizes are lists kept under
-**Shop → Categories & sizes**: add, rename, remove or drag them into order. (The categories are
+**Shop → Categories & sizes**: add, rename, remove or drag them into order, and switch any
+category or sub category to **Hide** (it leaves the drop-downs and the cards; its pieces stay).
+Each drop-down can be switched off whole under **Show or hide → Parts of the Shop page**. (The categories are
 the same ones the Work page uses.)
 
 On its Shop card each piece is shown as the thing the buyer gets: a **printed poster** (the art

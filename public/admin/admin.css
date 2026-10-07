@@ -892,4 +892,9 @@ html[data-ia-view='compact'] [class*='ListCard-']:hover { box-shadow: none !impo
 .ia-compact [class*='-listControlItem'] [class*='ControlTopbar'], .ia-compact [class*='-listControlItem'] [class*='ControlHint'] { display: none !important; }
 .ia-compact [class*='-listControlItem'] input { height: 40px !important; min-height: 40px !important; padding: 0 12px !important; font-size: 0.92rem !important; }
 .ia-compact [class*='-listControlItem'] input::placeholder { color: var(--mute); }
+.ia-compact [class*='-listControlItem'] > div:last-child > div:has(> :nth-child(2) [class*='ToggleContainer']) { grid-template-columns: minmax(0, 1fr) auto; }
+/* an on/off switch in a slim row keeps its name ("Hide") beside it, in a box the height of the fields */
+.ia-compact [class*='-listControlItem'] [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) { min-height: 40px !important; height: 40px; padding: 0 12px !important; column-gap: 12px; }
+.ia-compact [class*='-listControlItem'] [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) > [class*='ControlTopbar'] { display: flex !important; align-items: center; }
+.ia-compact [class*='-listControlItem'] [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) [class*='FieldLabel'] { font-size: 0.74rem !important; letter-spacing: 0.14em !important; padding: 0 !important; }
 @media (max-width: 699px) { .ia-compact [class*='-listControlItem'] > div:last-child > div, .ia-compact [class*='-listControlItem'] > div:last-child > div:has(> :nth-child(3)) { grid-template-columns: minmax(0, 1fr); } }

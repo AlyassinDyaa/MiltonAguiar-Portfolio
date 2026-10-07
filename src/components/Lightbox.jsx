@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, buyable, commissions, day } from '../data/site'
+import { asset, buyable, catOf, commissions, day } from '../data/site'
 import { useFinePointer } from '../hooks/useMedia'
 import Poster from './Poster'
 import QuoteLink from './QuoteLink'
@@ -83,7 +83,7 @@ export default function Lightbox({ items, sel, setSel }) {
               </motion.div>
             </AnimatePresence>
             <div className="lightbox-info">
-              {(piece.category || piece.date) && <div className="label accent">{[piece.category, day(piece.date)].filter(Boolean).join(' · ')}</div>}
+              {(catOf(piece) || piece.date) && <div className="label accent">{[catOf(piece), day(piece.date)].filter(Boolean).join(' · ')}</div>}
               {piece.title && <h2 className="display h-md">{piece.title}</h2>}
               {piece.note && <p className="dim">{piece.note}</p>}
               <Buy key={piece.slug || sel} piece={piece} />

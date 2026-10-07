@@ -1,6 +1,5 @@
 {
-  "kicker": "Pencils · Inks · Colours",
-  "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",
+  "redrawTitle": "Pencils to colours",
   "buttons": [
     {
       "words": "Go to the shop",
@@ -21,12 +20,6 @@
       "off": false
     }
   ],
-  "figure": {
-    "src": "/uploads/raptor-cutout.webp",
-    "size": 100,
-    "x": 0,
-    "y": 0
-  },
   "marquee": [
     "Pencils",
     "Inks",
@@ -36,24 +29,31 @@
     "Pin-ups",
     "Commissions"
   ],
-  "project": {
-    "label": "Current project",
-    "title": "Raptor",
-    "subtitle": "The Preamble",
-    "text": "My own vigilante, in his own book. The Preamble is a 54-page origin story from ImaginAction Comics, written by Ryan Haack and Bruce Berrueco. Chapters 1 and 2 are out on GlobalComix.",
-    "image": "/uploads/raptor-the-preamble.webp",
-    "buttonLabel": "Read it on GlobalComix",
-    "url": "https://globalcomix.com/c/raptor",
-    "secondLabel": "ImaginAction Comics",
-    "secondUrl": "https://imaginaction-comics.vercel.app/"
+  "figure": {
+    "src": "/uploads/raptor-cutout.webp",
+    "size": 100,
+    "x": 0,
+    "y": 0
   },
-  "latestLabel": "Fresh off the board",
-  "latestTitle": "Latest pages",
-  "redrawLabel": "The process",
-  "redrawTitle": "Pencils to colours",
   "redrawText": "The same piece at each stage. Drag the line to wipe from the pencils to the finished colours.",
+  "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",
+  "latestLabel": "Fresh off the board",
   "commissionsTitle": "Commissions are",
+  "latestTitle": "Latest pages",
+  "kicker": "Pencils · Inks · Colours",
+  "project": {
+    "secondLabel": "ImaginAction Comics",
+    "buttonLabel": "Read it on GlobalComix",
+    "text": "My own vigilante, in his own book. The Preamble is a 56-page origin story from ImaginAction Comics, written by Ryan Haack and Bruce Berrueco. Chapters 1 and 2 are out on GlobalComix.",
+    "url": "https://globalcomix.com/c/raptor",
+    "label": "Current project",
+    "subtitle": "The Preamble",
+    "title": "Raptor",
+    "secondUrl": "https://imaginaction-comics.vercel.app/",
+    "image": "/uploads/raptor-the-preamble.webp"
+  },
   "commissionsButton": "How it works",
   "eventsLabel": "In person",
+  "redrawLabel": "The process",
   "eventsTitle": "Find me at"
 }

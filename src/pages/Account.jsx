@@ -677,9 +677,12 @@ function Home() {
   const shopOrders = orders || []
   const counts = { orders: shopOrders.length, saved: (user.saved || []).length }
   const prints = shopOrders.reduce((n, o) => n + o.items.reduce((m, i) => m + (i.qty || 1), 0), 0)
-  // the banner: art that is theirs (the piece they picked as their picture, or one they own); else the brand's own colours
+  // the banner: a strip of comic panels. Their own art first (the piece they picked as their picture,
+  // the pieces they own, the ones they saved), then the newest work, so it is never empty
   const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) : null
-  const banner = (chosen && chosen.src) || (owned.find((p) => p.src) || {}).src || ''
+  const savedPieces = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug))
+  const newest = everything.filter((p) => !p.rough).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+  const strip = [...new Map([chosen, ...owned, ...savedPieces, ...newest].filter((p) => p && p.src).map((p) => [p.slug, p])).values()].slice(0, 6)
   const LEADS = {
     orders: 'Every piece you have ordered, and where it is now.',
     saved: 'The pieces you are keeping an eye on.',
@@ -694,8 +697,13 @@ function Home() {
         {/* the profile: a banner of their own art, their picture over its edge, their name */}
         <header className="acct2-hero">
           <div className="acct2-banner" aria-hidden="true">
-            {banner && <img src={asset(banner)} alt="" />}
-            <span className="acct2-lines" />
+            <div className="acct2-issue">
+              <small>{accountPage.cardLabel} no.</small>
+              <b>{memberNumber(user.memberNo)}</b>
+            </div>
+            <div className="acct2-strip">
+              {strip.map((p, i) => <span key={p.slug} className="acct2-panel" style={{ '--i': i }}><img src={asset(p.src)} alt="" /></span>)}
+            </div>
           </div>
           <div className="acct2-id">
             <Avatar user={user} size="xl" />

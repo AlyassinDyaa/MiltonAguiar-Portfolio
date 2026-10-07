@@ -128,8 +128,8 @@ const assetHost = () => {
 }
 const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}${path.startsWith('/') ? '' : '/'}${path}`)
 
-/* Every email in the site's comic style, on the red circuit picture: a banner with the mask, the
-   name on black (the second word in red), a dark panel framed in ink with a small tag, a big italic heading, the words, a picture
+/* Every email in the site's comic style, on the red circuit picture: the name on black (the second
+   word in red), a dark panel framed in ink with a small tag, a big italic heading, the words, a picture
    when there is one, and a red inked button with a hard shadow; under it the link written out,
    and a quiet footer. Built from tables with the styles written on each piece, the way email
    apps need it. */
@@ -149,10 +149,7 @@ export const emailHtml = ({ subject, kicker, title, lines, button, picture, afte
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#6d0d14;">${esc(lines[1] || lines[0] || '')}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" background="${esc(pictureUrl('/email/background.jpg'))}" style="background-color:#6d0d14;background-image:url('${esc(pictureUrl('/email/background.jpg'))}');background-size:cover;background-position:center top;background-repeat:no-repeat;"><tr><td align="center" style="padding:28px 12px 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
-  <tr><td style="border:3px solid #0b0b0c;border-bottom:0;background:#b5121b;line-height:0;font-size:0;">
-    <a href="${esc(home)}" style="display:block;"><img src="${esc(pictureUrl('/email/hero.jpg'))}" width="554" alt="${esc(name)}" style="display:block;width:100%;max-width:554px;height:auto;border:0;"></a>
-  </td></tr>
-  <tr><td style="background:#0b0b0c;border:3px solid #0b0b0c;border-top:0;padding:14px 22px 13px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;">${esc(first)}${second ? ` <span style="color:#ff2a36;">${esc(second)}</span>` : ''}</td></tr>
+  <tr><td style="background:#0b0b0c;border:3px solid #0b0b0c;padding:16px 22px 15px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;">${esc(first)}${second ? ` <span style="color:#ff2a36;">${esc(second)}</span>` : ''}</td></tr>
   <tr><td style="background:#17171a;border:3px solid #0b0b0c;border-top:0;padding:30px 26px 30px;">
     ${kicker ? `<span style="display:inline-block;padding:5px 10px 4px;background:#0b0b0c;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">${esc(kicker)}</span>` : ''}
     <h1 style="margin:16px 0 18px;font-family:${DISPLAY};font-size:32px;line-height:1.05;font-weight:900;font-style:italic;text-transform:uppercase;color:#f3f3f1;">${esc(title || subject)}</h1>

@@ -386,7 +386,8 @@ window.IASales = (() => {
     let stage = o.fulfilment
     const stages = el('div', { className: 'sl-stages', role: 'radiogroup', ariaLabel: 'Status' }, STAGES.map(([k, t]) => {
       const b = el('button', { type: 'button', className: `sl-stage is-${k} ${k === stage ? 'on' : ''}`, role: 'radio', ariaChecked: String(k === stage), textContent: t })
-      b.addEventListener('click', () => { stage = k; stages.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)) }); dirty() })
+      // a new stage is saved at once (with the tracking number and note as they are), so the buyer sees it
+      b.addEventListener('click', () => { if (busy || k === stage) return; stage = k; stages.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)) }); store() })
       return b
     }))
     const tracking = el('input', { className: 'sl-input', value: o.tracking, placeholder: 'For example CTT RR123456789PT', maxLength: 200 })
@@ -396,12 +397,15 @@ window.IASales = (() => {
     state.saved = null
     const dirty = () => { save.disabled = stage === o.fulfilment && tracking.value === o.tracking && note.value === o.note; said.textContent = '' }
     tracking.addEventListener('input', dirty); note.addEventListener('input', dirty)
-    save.addEventListener('click', async () => {
-      save.disabled = true; said.textContent = 'Saving…'
+    let busy = false
+    const store = async () => {
+      busy = true; save.disabled = true; said.textContent = 'Saving…'
       const r = await api('POST', { id: o.id, paymentIntent: o.paymentIntent, fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() })
+      busy = false
       if (r.ok) { Object.assign(o, { fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() }); state.saved = o.id; draw() }
       else { said.textContent = r.json.message || 'Not saved. Try again.'; save.disabled = false }
-    })
+    }
+    save.addEventListener('click', store)
     const block = (title, kids) => el('section', { className: 'sl-block' }, [el('h3', { textContent: title }), ...kids])
     const panel = el('aside', { className: 'sl-panel', role: 'dialog', ariaModal: 'true', ariaLabel: `Order #${o.number}` }, [
       el('header', { className: 'sl-panel-head' }, [

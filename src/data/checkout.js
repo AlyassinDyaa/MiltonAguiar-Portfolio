@@ -1,5 +1,12 @@
 import { payWays } from './site'
 
+/* What is about to be paid for, kept for this tab until the buyer is back (hooks/useCart.jsx:
+   settle), so that exactly those lines leave the cart. */
+const notePaying = (body) => {
+  const lines = Array.isArray(body.items) ? body.items : [body]
+  try { sessionStorage.setItem('ma.paying', JSON.stringify(lines.map((l) => [l.slug, l.size || '', l.signed ? 1 : 0]))) } catch { /* then the whole cart empties after paying */ }
+}
+
 /* Who takes the payment, for the line under the buttons. */
 export const payLine = () => { const w = payWays(); return w.card && w.paypal ? 'Secure checkout by Stripe or PayPal' : w.paypal ? 'Secure checkout with PayPal' : 'Secure checkout by Stripe' }
 
@@ -9,7 +16,7 @@ export async function checkout(body, way = 'card') {
   try {
     const answer = await fetch(way === 'paypal' ? '/api/paypal' : '/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const said = await answer.json().catch(() => ({}))
-    if (answer.ok && said.url) { window.location.href = said.url; return null }
+    if (answer.ok && said.url) { notePaying(body); window.location.href = said.url; return null }
     return said.message || 'The checkout did not answer. Try again in a moment.'
   } catch {
     return 'Could not reach the checkout. Check the connection and try again.'

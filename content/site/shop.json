@@ -1,5 +1,6 @@
 {
   "enabled": true,
+  "payments": "both",
   "buttonLabel": "Buy",
   "emptyTitle": "The shop opens soon.",
   "intro": "Prints and original art, straight from the drawing board. Open any piece to buy it.",

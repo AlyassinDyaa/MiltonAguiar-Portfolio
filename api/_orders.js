@@ -13,6 +13,27 @@ const text = (v, max = 200) => String(v ?? '').trim().slice(0, max)
 export const STAGES = ['new', 'packed', 'shipped', 'delivered', 'cancelled']
 export const shapeAddress = (a, name) => (a ? { name: text(name), line1: text(a.line1), line2: text(a.line2), city: text(a.city), state: text(a.state), postal_code: text(a.postal_code), country: text(a.country, 2) } : null)
 
+/* This site's own Stripe checkouts carry metadata site = SITE, so a Stripe account shared with
+   another site (a sandbox used for both while testing) never mixes their orders. */
+export const SITE = 'miltonaguiar'
+export const ours = (session) => Boolean(session && session.metadata && session.metadata.site === SITE)
+
+/* What was bought, line by line, as [slug, size, signed 1/0]: kept with the checkout so that, once
+   the payment is in, those lines leave the buyer's saved cart (and are never paid for twice). */
+export const boughtOf = (lines) => lines.map((l) => [l.slug, l.size || '', l.signed ? 1 : 0])
+export const readBought = (v) => {
+  try { const list = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(list) ? list.filter((b) => Array.isArray(b) && typeof b[0] === 'string').slice(0, 50) : [] } catch { return [] }
+}
+export const takeFromCart = async (userId, bought) => {
+  if (!dbReady() || !userId || !bought.length) return
+  const users = (await db()).collection('users')
+  const u = await users.findOne({ _id: userId })
+  if (!u || !Array.isArray(u.cart)) return
+  const gone = (l) => bought.some(([slug, size, signed]) => l.slug === slug && (l.size || '') === String(size || '') && Boolean(l.signed) === Boolean(signed))
+  const cart = u.cart.filter((l) => !gone(l))
+  if (cart.length !== u.cart.length) await users.updateOne({ _id: userId }, { $set: { cart } })
+}
+
 // a new order, or more about one (where it is up to, once the admin has set it, is kept)
 export const recordOrder = async (order) => {
   if (!dbReady()) return

@@ -174,6 +174,19 @@ Add endpoint** `https://<the site>/api/stripe-webhook`, events `checkout.session
 Vercel as `STRIPE_WEBHOOK_SECRET`. PayPal orders are saved as they are paid, and with the
 database set up they also show in Sales → Orders beside the Stripe ones.
 
+Paying on this computer works as on DarkBeats: `.env.local` holds a Stripe **sandbox** key
+(`sk_test_...`) and a PayPal **sandbox** app (never live keys), and Stripe's messages reach the
+local webhook through the Stripe CLI:
+
+    stripe listen --api-key <the sk_test_ key> --forward-to localhost:5175/api/stripe-webhook
+
+(its `whsec_...` goes in `.env.local` as `STRIPE_WEBHOOK_SECRET`). Pay with Stripe's test card
+4242 4242 4242 4242, any future date, any CVC. The sandbox can be shared with DarkBeats: this
+site marks its own checkouts (`metadata.site = miltonaguiar`), lists and records only those, and
+DarkBeats leaves them out. After paying, exactly what was bought leaves the cart (and the saved
+cart of a logged-in buyer), and a logged-in buyer lands on their orders. A customer can remove
+an order from their account with their password; the shop keeps its record.
+
 On this computer, `MONGODB_URI=memory` in `.env.local` runs the accounts on a stand-in database
 kept in the dev server's memory (`dev/memory-db.js`), forgotten when it restarts. With no email
 service set, the emails are printed in the dev server's log instead, links included.

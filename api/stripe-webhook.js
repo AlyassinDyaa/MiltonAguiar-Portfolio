@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db, dbReady } from './_db.js'
-import { recordOrder, shapeAddress } from './_orders.js'
+import { ours, readBought, recordOrder, shapeAddress, takeFromCart } from './_orders.js'
 
 /* Stripe tells the site here when something happens to a payment, so the order lands in the
    database (and so in the buyer's account) whether or not they come back to the site.
@@ -45,7 +45,8 @@ export default async function handler(req, res) {
 
   try {
     const o = event.data && event.data.object
-    if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && o && o.payment_status === 'paid') {
+    // a checkout of another site sharing the Stripe account is none of this site's business
+    if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && o && o.payment_status === 'paid' && ours(o)) {
       const lines = await stripe(`checkout/sessions/${o.id}/line_items?limit=100`)
       const ship = (o.collected_information && o.collected_information.shipping_details) || o.shipping_details || null
       const who = o.customer_details || {}
@@ -69,6 +70,8 @@ export default async function handler(req, res) {
         test: !o.livemode,
         createdAt: new Date((o.created || Date.now() / 1000) * 1000),
       })
+      // paid: what was bought leaves the buyer's saved cart, even if they never come back to the site
+      await takeFromCart(userId, readBought(o.metadata && o.metadata.bought))
     }
     if (event.type === 'charge.refunded' && o && o.payment_intent && o.refunded) {
       await (await db()).collection('orders').updateOne({ pi: o.payment_intent }, { $set: { status: 'refunded', updatedAt: new Date() } })

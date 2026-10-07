@@ -1,5 +1,6 @@
 import { priceCart, takes } from './_cart.js'
 import { buyer } from './_buyer.js'
+import { SITE, boughtOf } from './_orders.js'
 
 /* Paying by card, through Stripe. The site sends the cart (see _cart.js); this works out what it
    costs from the site's own content, asks Stripe for one checkout page with a line per piece, and
@@ -32,7 +33,8 @@ export default async function handler(req, res) {
   const origin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`
   const ask = new URLSearchParams()
   ask.set('mode', 'payment')
-  ask.set('success_url', `${origin}/shop?thanks=1`)
+  // paid: a logged-in buyer goes on to the orders in their account; anyone else back to the shop
+  ask.set('success_url', user ? `${origin}/account?tab=orders&thanks=1` : `${origin}/shop?thanks=1`)
   ask.set('cancel_url', `${origin}/shop`)
   lines.forEach((l, i) => {
     const at = `line_items[${i}]`
@@ -44,6 +46,7 @@ export default async function handler(req, res) {
     if (typeof l.piece.src === 'string' && l.piece.src.startsWith('/')) ask.set(`${at}[price_data][product_data][images][0]`, origin + l.piece.src)
   })
   ask.set('metadata[order]', summary.slice(0, 500))
+  ask.set('metadata[site]', SITE) // this site's checkout (see api/_orders.js)
   if (deal) {
     ask.set('discounts[0][coupon]', deal.code)
     ask.set('metadata[discount]', deal.code)
@@ -53,6 +56,9 @@ export default async function handler(req, res) {
   if (user) {
     ask.set('client_reference_id', user._id)
     if (!deal || !deal.email) ask.set('customer_email', user.email)
+    // what is bought, so the webhook can take it out of their saved cart (Stripe keeps 500 characters)
+    const bought = JSON.stringify(boughtOf(lines))
+    if (bought.length <= 500) ask.set('metadata[bought]', bought)
   }
   if (shop.shipping !== false) {
     const countries = (Array.isArray(shop.countries) ? shop.countries : []).map((c) => String(c).trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c))

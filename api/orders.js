@@ -1,6 +1,6 @@
 import { configured, goodPass } from './_session.js'
 import { db, dbReady } from './_db.js'
-import { setTrack } from './_orders.js'
+import { ours, setTrack } from './_orders.js'
 
 /* The shop's orders, for the admin (Sales → Orders and Customers). There is no database: every
    purchase is a Stripe checkout, so this reads them from Stripe with STRIPE_SECRET_KEY, and keeps
@@ -139,7 +139,8 @@ export async function orders({ method, body }) {
     if (method === 'GET') {
       const all = await listSessions()
       // a checkout still open (the buyer is on the payment page, or left it) is not an order yet
-      const list = all.filter((s) => !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
+      // this site's checkouts only: a Stripe sandbox shared with another site keeps their orders apart
+      const list = all.filter((s) => ours(s) && !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
       list.push(...await paypalOrders())
       list.sort((x, y) => y.created - x.created)
       return { status: 200, json: { mode: testKey() ? 'test' : 'live', orders: list } }
@@ -159,7 +160,7 @@ export async function orders({ method, body }) {
       }
       if (b.action === 'clear-test') {
         if (!testKey()) return { status: 403, json: { message: 'Only test data can be cleared, and this is the live Stripe account.' } }
-        const sessions = (await listSessions()).filter((s) => !hidden(s))
+        const sessions = (await listSessions()).filter((s) => ours(s) && !hidden(s))
         let orders = 0
         for (const s of sessions) { try { await hide({ id: s.id, paymentIntent: s.payment_intent && (s.payment_intent.id || s.payment_intent) }); orders++ } catch { /* left on the list */ } }
         const coupons = await stripe('coupons?limit=100')

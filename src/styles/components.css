@@ -1467,3 +1467,17 @@ a.buy-btn { text-decoration: none; }
 .acct2-id > .acct-avatar { margin-top: 0; }
 .acct2-actions { padding-bottom: 0; }
 @media (max-width: 799px) { .acct2-id { padding-top: 24px; gap: 12px; } .acct2-id > .acct-avatar { margin-top: 0; } }
+
+/* removing an order from the account: a small bin beside its status, and its password window */
+.acc-order-right { display: inline-flex; align-items: center; gap: 10px; }
+.acc-order-del { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line); color: var(--fg-mute); cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.acc-order-del svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.acc-order-del:hover, .acc-order-del:focus-visible { color: var(--acc-bad); border-color: var(--acc-bad); outline: 0; }
+.acc-modal-field { margin-top: 18px; }
+.acc-modal-box .acc-problem { margin-top: 12px; }
+form.acc-modal-box { max-width: none; }
+/* the welcome and thank-you line, with a cross to close it */
+.acc-welcome.is-closable { display: flex; align-items: center; gap: 14px; }
+.acc-welcome.is-closable > span { flex: 1; min-width: 0; }
+.acc-welcome-x { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin: -6px -6px -6px 0; font-size: 1.4rem; line-height: 1; color: var(--fg-dim); cursor: pointer; transition: color 0.2s; }
+.acc-welcome-x:hover, .acc-welcome-x:focus-visible { color: var(--fg); outline: 0; }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { brand, forSale, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
 import Dropdown from '../components/Dropdown'
@@ -28,7 +28,8 @@ const fits = (p, chosen) => FILTERS.every((f) => chosen[f.field] === 'All' || St
 
 /* Everything for sale: the pieces with a price, newest first, sold-out ones waiting at the end.
    Open one to see it whole and buy it (components/Buy.jsx). Stripe sends a buyer back here with
-   "?thanks=1", which shows the thank-you panel and empties the cart. */
+   "?thanks=1", which shows the thank-you panel and takes what was bought out of the cart; a
+   logged-in buyer is sent to the orders in their account instead (api/checkout.js). */
 export default function Shop() {
   const [params] = useSearchParams()
   // back from paying: Stripe comes back with ?thanks=1 (already paid); PayPal with ?paypal=return
@@ -36,9 +37,12 @@ export default function Shop() {
   const paypalOrder = params.get('paypal') === 'return' ? params.get('token') : ''
   const [paypal, setPaypal] = useState(paypalOrder ? { state: 'taking' } : null)
   const thanks = params.get('thanks') === '1' || paypal?.state === 'paid'
-  const clearCart = useCart().clear
+  // back from paying: exactly what was bought leaves the cart; a logged-in PayPal buyer goes on to their orders
+  const settle = useCart().settle
   const account = useAccount()
-  useEffect(() => { if (thanks) clearCart() }, [thanks, clearCart])
+  const navigate = useNavigate()
+  useEffect(() => { if (thanks) settle() }, [thanks, settle])
+  useEffect(() => { if (paypal?.state === 'paid' && account.user) navigate('/account?tab=orders&thanks=1', { replace: true }) }, [paypal, account.user, navigate])
   useEffect(() => {
     if (!paypalOrder) return
     let gone = false

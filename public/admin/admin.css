@@ -864,3 +864,29 @@ html[data-ia-view='compact'] [class*='ListCard-']:hover { box-shadow: none !impo
   [data-ia-group]::before { font-size: 24px; line-height: 24px; }
 }
 @media (max-width: 899px) { [class*='DateTimeControl'] { gap: 0 8px; align-content: flex-start; } [class*='DateTimeControl'] input { height: 40px !important; } }
+
+/* 10. The shop.
+   A group heading that opens on an on/off switch (Shop and payments: "Signed pieces", "Delivery")
+   is drawn above the switch's box, where every other heading sits, rather than inside it. */
+[class*='ControlPaneContainer'] > [data-ia-group]:has(> div > [class*='ToggleContainer']) { position: relative; margin-top: 77px !important; }
+[class*='ControlPaneContainer'] > [data-ia-group]:has(> div > [class*='ToggleContainer'])::before { position: absolute; left: -1px; right: -1px; bottom: calc(100% + 17px); margin: 0; }
+@media (min-width: 1101px) {
+  [class*='ControlPaneContainer'] > [data-ia-group][data-ia-half]:has(> div > [class*='ToggleContainer'])::before { right: auto; width: calc(200% + 26px); }
+  [class*='ControlPaneContainer'] > [data-ia-group][data-ia-half]:has(> div > [class*='ToggleContainer']) + [data-ia-half] { padding-top: 0; margin-top: 77px !important; }
+}
+/* compact lists (shell.js marks them .ia-compact): one slim row per entry, its fields side by side
+   and labelled by their placeholders, the drag and delete buttons at the end of the row */
+.ia-compact [class*='-listControlItem'] { display: flex !important; align-items: center; gap: 6px; margin: 6px 0 0 !important; padding: 5px 5px 5px 6px !important; }
+.ia-compact [class*='-listControlItem'] > [class*='NestedObjectLabel'] { display: none !important; }
+.ia-compact [class*='-listControlItem'] > [class*='StyledListItemTopBar'] { order: 2; flex: 0 0 auto; min-height: 0 !important; padding: 0 !important; gap: 0; }
+.ia-compact [class*='-listControlItem'] > [class*='StyledListItemTopBar'] > button:first-child { display: none !important; }
+.ia-compact [class*='-listControlItem'] > [class*='StyledListItemTopBar'] > * { width: 34px; height: 34px; display: grid !important; place-items: center; }
+.ia-compact [class*='-listControlItem'] > [class*='StyledListItemTopBar'] > *:hover { background: rgba(243, 243, 241, 0.08) !important; }
+.ia-compact [class*='-listControlItem'] > div:last-child:not([class*='StyledListItemTopBar']):not([class*='NestedObjectLabel']) { order: 1; flex: 1 1 auto; display: block !important; padding: 0 !important; min-width: 0; }
+.ia-compact [class*='-listControlItem'] > div:last-child > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 6px; }
+.ia-compact [class*='-listControlItem'] > div:last-child > div > :only-child { grid-column: 1 / -1; }
+.ia-compact [class*='-listControlItem'] [class*='ControlContainer'] { margin: 0 !important; }
+.ia-compact [class*='-listControlItem'] [class*='ControlTopbar'], .ia-compact [class*='-listControlItem'] [class*='ControlHint'] { display: none !important; }
+.ia-compact [class*='-listControlItem'] input { height: 40px !important; min-height: 40px !important; padding: 0 12px !important; font-size: 0.92rem !important; }
+.ia-compact [class*='-listControlItem'] input::placeholder { color: var(--mute); }
+@media (max-width: 699px) { .ia-compact [class*='-listControlItem'] > div:last-child > div { grid-template-columns: minmax(0, 1fr); } }

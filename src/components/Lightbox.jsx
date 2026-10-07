@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, commissions, day } from '../data/site'
+import { asset, buyable, commissions, day } from '../data/site'
 import { useFinePointer } from '../hooks/useMedia'
 import Poster from './Poster'
 import QuoteLink from './QuoteLink'
+import Buy from './Buy'
 
 /* One piece, large and uncropped, with its details beside it. Browse with a sideways swipe, the arrow buttons or the arrow keys; a tap outside the
    picture, the × or Escape closes it. `sel` is the index of the open piece in `items`, or null. */
@@ -85,9 +86,10 @@ export default function Lightbox({ items, sel, setSel }) {
               {(piece.category || piece.date) && <div className="label accent">{[piece.category, day(piece.date)].filter(Boolean).join(' · ')}</div>}
               {piece.title && <h2 className="display h-md">{piece.title}</h2>}
               {piece.note && <p className="dim">{piece.note}</p>}
+              <Buy key={piece.slug || sel} piece={piece} />
               <div className="lightbox-actions">
                 {piece.link && <a className="btn ghost sm" href={piece.link} target="_blank" rel="noreferrer">See the post <span className="arrow">↗</span></a>}
-                {commissions.open && <QuoteLink className="btn sm">Commission one like it</QuoteLink>}
+                {commissions.open && <QuoteLink className={`btn sm ${buyable(piece) ? 'ghost' : ''}`}>Commission one like it</QuoteLink>}
               </div>
               <p className="lightbox-hint">{many ? `${sel + 1} / ${count} · ${mouse ? '← → to browse · Esc to close' : 'Swipe to browse'}` : mouse ? 'Esc to close' : ''}</p>
             </div>

@@ -46,7 +46,7 @@
      single pages is looked up as "collection/page". A heading never goes on an on/off switch:
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
-    work: { groups: { title: 'The piece', src: 'Picture, and where it shows' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden'] },
+    work: { groups: { title: 'The piece', src: 'Picture, and where it shows', type: 'For sale' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'status', 'price', 'salePrice'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
@@ -63,7 +63,11 @@
     'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
-    'site/visibility': { groups: {}, half: [], inner: ['work', 'gallery', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
+    'site/shop': {
+      groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
+      half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
+    },
+    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
@@ -74,7 +78,7 @@
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', 'site/shop': 'Shop & payments', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
@@ -83,6 +87,7 @@
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
+    'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
   }
   Object.assign(ICONS, {
@@ -92,6 +97,7 @@
     'pages/about': 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
     'pages/contact': 'M4 6h16v12H4z M4 7l8 6 8-6',
     'site/brand': 'M12 3l2.600 5.600 6.100.700-4.500 4.200 1.200 6-5.400-3-5.400 3 1.200-6L3.300 9.300l6.100-.700z',
+    'site/shop': 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'
@@ -321,6 +327,16 @@
     }
     markRequired(pane)
     nameTheForm()
+    // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
+    for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
+      const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
+      const compact = currentSection() === 'site' && /^types-field/.test(name)
+      if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
+    }
+    for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder])')) {
+      const label = input.closest('[class*="ControlContainer"]')?.querySelector('label')
+      if (label) input.placeholder = label.textContent.replace(/\s*\(optional\)\s*$/i, '')
+    }
   }
 
   /* Decap heads every form "Writing in X collection". Say what is being edited instead: the

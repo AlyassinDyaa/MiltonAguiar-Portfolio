@@ -1,6 +1,7 @@
 {
   "pages": {
     "work": true,
+    "shop": true,
     "gallery": false,
     "commissions": true,
     "about": true,

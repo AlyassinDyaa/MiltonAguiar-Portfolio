@@ -26,8 +26,16 @@ export let project
 /* Headings and introductions of the Work and Gallery pages. */
 export let pages
 export let nav
-/* Every piece, newest first; the file name is the piece's id. */
+/* Every piece, newest first; the file name is the piece's id. Pieces marked "Only in the Shop"
+   (a T-shirt, a book) are left out of it, so they never land on the Work page or the home page. */
 export let work
+/* Selling online (Shop and payments in the admin), and everything that can be bought: the pieces
+   with a price, newest first, whether or not they are on the Work page too. `everything` is every
+   piece, so the cart can find what it holds. */
+export let shop, forSale, everything
+/* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
+   the admin lists them; only the ones in use. */
+export let types
 /* The categories that have at least one piece, in the order they first appear. */
 export let categories
 /* The pieces ticked "Show on the home page", in the order given to them (or simply the newest). */
@@ -102,6 +110,14 @@ function assemble(content) {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },
   }
+  shop = {
+    enabled: false, currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
+    signedChoice: false, signedExtra: 0, cartIcon: 'bag',
+    label: 'The shop', title: 'Take one home',
+    thanksTitle: 'Thank you.', thanksText: 'Your order is in. A receipt is on its way to your email.',
+    emptyTitle: 'The shop opens soon.', emptyText: 'Prints and originals are on their way. Follow along on Instagram to hear first.',
+    ...given(site('shop')),
+  }
   social = links || []
   const insta = social.find((s) => /instagram/i.test(s.label || ''))
   brand.instagram = insta?.url
@@ -112,15 +128,24 @@ function assemble(content) {
   nav = [
     { label: 'Home', to: '/' },
     { label: 'Work', to: '/work' },
+    { label: 'Shop', to: '/shop', off: !shop.enabled }, // only while online purchases are switched on
     { label: 'Gallery', to: '/gallery' },
     { label: 'Commissions', to: '/commissions' },
     { label: 'About', to: '/about' },
     { label: 'Contact', to: '/contact' },
-  ].filter((n) => n.to === '/' || shows('pages', n.to.slice(1)))
+  ].filter((n) => n.to === '/' || (!n.off && shows('pages', n.to.slice(1))))
 
-  work = live(folder('work'))
+  // what the buyer gets: the line written beside the piece's type, or the shop's own line
+  const kinds = (Array.isArray(shop.types) ? shop.types : []).filter((t) => t && String(t.name || '').trim())
+  const notes = Object.fromEntries(kinds.map((t) => [String(t.name).trim(), String(t.note || '').trim()]))
+  everything = live(folder('work'))
     .filter((p) => p.title)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '' }))
+  work = everything.filter((p) => !p.shopOnly)
+  forSale = everything.filter(buyable)
+  const sold = new Set(forSale.map((p) => p.type).filter(Boolean))
+  types = [...kinds.map((t) => String(t.name).trim()).filter((n) => sold.has(n)), ...[...sold].filter((n) => !(n in notes))]
   categories = [...new Set(work.map((p) => p.category).filter(Boolean))]
   // the ticked pieces in the order given to them ("Place on the home page"), newest first among those with none
   const place = (p) => (p.homeOrder === '' || p.homeOrder == null ? 99 : Number(p.homeOrder))
@@ -171,6 +196,34 @@ export function showLatest({ content = {}, media = {} }) {
 
 /* Uploaded images are stored as "/uploads/x.jpg". Prefix the deploy base path. */
 export const asset = (url) => newPictures[url] || (url && url.startsWith('/') ? import.meta.env.BASE_URL.replace(/\/$/, '') + url : url)
+
+/* A piece shows its price while online purchases are switched on and it has one. */
+export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && Number(piece.price) > 0) } // a declaration, so assemble() above can use it
+/* Its status, set in the admin: "new", "sale" (with a sale price below the price) or "soldout". */
+export const soldOut = (piece) => piece?.status === 'soldout'
+export const onSale = (piece) => piece?.status === 'sale' && Number(piece.salePrice) > 0 && Number(piece.salePrice) < Number(piece.price)
+/* What it costs now: the sale price while it is on sale, otherwise the price. */
+export const nowPrice = (piece) => (onSale(piece) ? Number(piece.salePrice) : Number(piece.price))
+/* It can go into a checkout: it shows a price and is not sold out. */
+export const canBuy = (piece) => buyable(piece) && !soldOut(piece)
+/* The small tag on a piece. "New" shows whenever it is set; "Sale" and "Sold out" only while
+   prices are showing, since without a price neither means anything. */
+export const badge = (piece) => {
+  if (!piece) return null
+  if (buyable(piece) && soldOut(piece)) return { kind: 'soldout', text: 'Sold out' }
+  if (buyable(piece) && onSale(piece)) return { kind: 'sale', text: `Sale −${Math.round((1 - Number(piece.salePrice) / Number(piece.price)) * 100)}%` }
+  if (piece.status === 'new') return { kind: 'new', text: 'New' }
+  return null
+}
+/* 40 -> "€40 EUR", 12.5 -> "€12.50 EUR", in the shop's currency. `short` leaves the code off
+   ("€40"), for an old price shown beside the new one. */
+export const money = (amount, short = false) => {
+  const n = Number(amount)
+  const code = String(shop.currency || 'eur').toUpperCase()
+  let figure = String(amount)
+  try { figure = new Intl.NumberFormat('en-GB', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(n) ? 0 : 2 }).format(n) } catch { /* an unknown code: the bare number */ }
+  return short ? figure : `${figure} ${code}`
+}
 
 /* A name is split in two so the second half can take the brand colour: "Milton Aguiar" at its
    first space, a name written as one word at its second capital. Anything else comes back whole. */

@@ -63,7 +63,7 @@
 .nav-link::after { content: ''; position: absolute; z-index: -1; left: -5px; right: -3px; bottom: 7px; height: 7px; background: var(--accent); transform: skewX(-18deg) scaleX(0); transform-origin: left; transition: transform 0.35s var(--ease-out); }
 .nav-link:hover, .nav-link.on { color: var(--fg); }
 .nav-link:hover::after, .nav-link.on::after { transform: skewX(-18deg) scaleX(1); }
-.nav-status { display: inline-flex; align-items: center; gap: 9px; min-height: 40px; padding: 1px 15px 0; font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
+.nav-status { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; min-height: 40px; padding: 1px 15px 0; font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
 a.nav-status:hover { background: var(--loud); color: var(--on-loud); }
 /* the light / dark switch */
 .theme-btn { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
@@ -85,7 +85,8 @@ a.nav-status:hover { background: var(--loud); color: var(--on-loud); }
 .menu-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 .menu-foot .nav-status { background: var(--k); color: #fff; }
 .menu-foot ul { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--display); font-size: 1rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-@media (max-width: 959px) {
+/* the menu button takes over once the links, the status and the buttons no longer fit on one line */
+@media (max-width: 1139px) {
   .nav-links, .nav-bar > .nav-status { display: none; }
   .nav-bar { gap: 12px; }
   .burger { display: block; }
@@ -673,3 +674,148 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 
 /* ---------- not found ---------- */
 .notfound .tp { min-height: clamp(360px, 60vh, 560px); }
+
+/* ---------- the shop ---------- */
+/* The cart button in the top bar, beside the light/dark switch, with a red tab counting what is in it. */
+.nav-cart { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
+.nav-cart:hover, .nav-cart:focus-visible { background: var(--loud); color: var(--on-loud); outline: 0; }
+.nav-cart svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.nav-bar > .theme-btn + .nav-cart, .nav-bar > .nav-status + .nav-cart { margin-left: -20px; }
+.nav-cart-count { position: absolute; top: -8px; right: -10px; min-width: 22px; height: 20px; padding: 1px 7px 0; display: grid; place-items: center; font-family: var(--display); font-size: 0.86rem; font-weight: 900; font-style: italic; line-height: 1; background: var(--accent); color: var(--on-accent); clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); animation: cart-pop 0.45s var(--ease-out); }
+@keyframes cart-pop { from { transform: scale(0.3); } 60% { transform: scale(1.25); } }
+.nav.is-open .nav-cart { background: var(--k); color: #fff; }
+@media (max-width: 1139px) {
+  .nav-bar > .theme-btn + .nav-cart, .nav-bar > .nav-status + .nav-cart { margin-left: -6px; }
+}
+/* three buttons in the bar on a phone: the name gives up a little room so it never runs under them */
+@media (max-width: 479px) {
+  .nav:has(.nav-cart) .brand { gap: 9px; min-width: 0; }
+  .nav:has(.nav-cart) .brand-logo { width: 36px; height: 36px; }
+  .nav:has(.nav-cart) .brand .wordmark { font-size: 1.36rem; }
+}
+@media (max-width: 374px) {
+  .nav:has(.nav-cart) .brand .wordmark { font-size: 1.12rem; }
+  .nav:has(.nav-cart) .nav-bar { gap: 10px; }
+}
+
+/* On a card: the price in a box on the top right corner, the way a cover prints it, and the
+   New / Sale / Sold out tag on the top left. Both lean like the panels do. */
+.tag-price, .tag-badge { position: absolute; z-index: 2; top: 10px; display: inline-flex; align-items: baseline; gap: 6px; font-family: var(--display); font-style: italic; line-height: 1; text-transform: uppercase; clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%); }
+.tag-price { right: 10px; padding: 6px 14px 5px; font-size: 1.3rem; font-weight: 900; letter-spacing: 0.01em; background: var(--loud); color: var(--on-loud); }
+.tag-price s, .cap-price s { font-size: 0.72em; font-weight: 700; opacity: 0.55; text-decoration-thickness: 2px; }
+.tag-badge { left: 10px; align-items: center; padding: 6px 13px 5px 11px; font-size: 0.92rem; font-weight: 800; letter-spacing: 0.08em; background: var(--accent); color: var(--on-accent); }
+.tag-badge.is-new::before { content: ''; flex: 0 0 auto; width: 11px; height: 11px; background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.tag-badge.is-soldout { background: var(--k); color: rgba(255, 255, 255, 0.78); }
+.tag-badge.is-inline { position: relative; top: auto; left: auto; width: fit-content; }
+.caption .tag-badge.is-inline { margin-top: 6px; font-size: 0.78rem; }
+.cap-price { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; font-size: 1.12em; font-weight: 900; font-style: italic; color: var(--accent); }
+/* "View & buy", stamped across the art while it is pointed at */
+.tile-cta { position: absolute; z-index: 2; left: 50%; top: 46%; padding: 8px 16px 7px; font-family: var(--display); font-size: 1.1rem; font-weight: 800; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; background: var(--accent); color: var(--on-accent); opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(0.86); transition: opacity 0.25s, transform 0.35s var(--ease-out); pointer-events: none; }
+button.hp:hover .tile-cta, button.hp:focus-visible .tile-cta { opacity: 1; transform: translate(-50%, -50%) rotate(-5deg) scale(1); }
+@media (hover: none) { .tile-cta { display: none; } }
+.tile.is-gone .inked img, .tile.is-gone .poster-gen { filter: grayscale(0.85) brightness(0.7); }
+@media (max-width: 599px) {
+  .tag-price { top: 7px; right: 7px; padding: 5px 10px 4px; font-size: 1.05rem; }
+  .tag-badge { top: 7px; left: 7px; padding: 5px 9px 4px 8px; font-size: 0.74rem; }
+}
+
+/* the top of the shop: how buying works, then the two rows of filters */
+.how-buy { display: flex; flex-wrap: wrap; gap: 6px; margin: 22px 0 0; padding: 0; list-style: none; }
+.how-buy li { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 1px 14px 0 11px; font-family: var(--display); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; background: var(--panel-2); color: var(--fg); }
+.how-buy b { font-weight: 900; font-style: italic; color: var(--accent); }
+.shop-filters { display: grid; gap: 10px; margin-top: 22px; }
+.shop-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.shop-chips-label { min-width: 82px; font-family: var(--display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-mute); }
+.shop-none { padding: 30px 0; color: var(--fg-dim); }
+.shop-none button { margin-left: 6px; font-weight: 600; color: var(--fg); border-bottom: 2px solid var(--accent); }
+.shop-soon .lead { margin: 16px 0 0; }
+.shop-soon .magnetic { margin-top: 26px; }
+/* back from Stripe */
+.thanks { display: flex; align-items: center; gap: 14px; max-width: 560px; margin-top: 22px; padding: 14px 20px 14px 14px; background: var(--accent); color: var(--on-accent); }
+.thanks i { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; font-style: normal; font-size: 1.2rem; font-weight: 900; background: #fff; color: var(--accent); }
+.thanks div { display: grid; gap: 3px; }
+.thanks strong { font-family: var(--display); font-size: 1.5rem; font-weight: 900; font-style: italic; line-height: 1; text-transform: uppercase; }
+.thanks span { color: rgba(255, 255, 255, 0.9); }
+
+/* An opened piece that is for sale: its price in a box, what the buyer gets, and the buttons. */
+.buy { margin-top: 22px; padding-top: 22px; border-top: 2px solid var(--line-strong); }
+.buy-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.buy-price { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 20px 6px 15px; font-family: var(--display); font-size: clamp(2.2rem, 3.4vw, 2.9rem); font-weight: 900; font-style: italic; line-height: 0.9; background: var(--loud); color: var(--on-loud); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+.buy-price small { font-size: 0.34em; font-weight: 800; font-style: normal; letter-spacing: 0.14em; opacity: 0.6; }
+.buy-price.is-out { background: var(--panel-2); color: var(--fg-mute); text-decoration: line-through; }
+.buy-was { font-family: var(--display); font-size: 1.5rem; font-weight: 800; font-style: italic; color: var(--fg-mute); text-decoration-thickness: 2px; }
+.buy-what { margin: 14px 0 0; color: var(--fg-dim); }
+.buy-save { margin: 8px 0 0; font-family: var(--display); font-size: 0.88rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.buy-sign { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 18px; padding: 12px 14px; text-align: left; background: var(--panel-2); color: var(--fg); transition: box-shadow 0.2s; }
+.buy-sign:hover { box-shadow: inset 0 0 0 2px var(--line-strong); }
+.buy-sign.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.buy-sign:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.buy-sign svg { flex: 0 0 auto; width: 24px; height: 24px; fill: none; stroke: var(--fg-mute); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.2s; }
+.buy-sign.on svg { stroke: var(--accent); }
+.buy-sign-text { flex: 1 1 auto; display: grid; gap: 2px; min-width: 0; }
+.buy-sign-text strong { font-family: var(--display); font-size: 1.05rem; font-weight: 800; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; }
+.buy-sign-text small { font-size: 0.84rem; color: var(--fg-dim); }
+.buy-sign-toggle { position: relative; flex: 0 0 auto; width: 42px; height: 22px; background: var(--line-strong); transition: background 0.25s; }
+.buy-sign-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--fg); transition: transform 0.25s var(--ease-out), background 0.25s; }
+.buy-sign.on .buy-sign-toggle { background: var(--accent); }
+.buy-sign.on .buy-sign-toggle::after { transform: translateX(20px); background: #fff; }
+.btn.buy-btn { justify-content: space-between; width: 100%; min-height: 58px; margin-top: 18px; padding-inline: 24px 18px; }
+.buy-btn-icon { display: grid; place-items: center; width: 28px; font-size: 1.5rem; font-style: normal; transition: transform 0.3s var(--ease-out); }
+.btn.buy-btn:hover .buy-btn-icon { transform: translateX(3px); }
+.btn.buy-btn.is-added { background: var(--open); color: #06140c; }
+.btn.buy-btn.is-out { justify-content: center; background: var(--panel-2); color: var(--fg-mute); cursor: not-allowed; }
+.btn.buy-btn.is-busy { cursor: progress; background: var(--accent); color: var(--on-accent); }
+.buy-spin { display: block; width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, 0.3); border-top-color: #fff; animation: buy-spin 0.7s linear infinite; }
+@keyframes buy-spin { to { transform: rotate(1turn); } }
+.buy-also { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 14px; }
+.buy-now { padding-bottom: 1px; font-family: var(--display); font-size: 0.98rem; font-weight: 800; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg); border-bottom: 2px solid var(--accent); transition: color 0.2s; }
+.buy-now:hover, .buy-now:focus-visible { color: var(--accent); outline: 0; }
+.buy-now.is-busy { cursor: progress; color: var(--accent); }
+.buy-incart { font-family: var(--display); font-size: 0.88rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.buy-incart:hover { text-decoration: underline; }
+.buy-secure { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 0.82rem; color: var(--fg-mute); }
+.buy-secure svg { flex: 0 0 auto; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.buy-secure a { color: var(--fg); border-bottom: 2px solid var(--accent); }
+.buy-note { overflow: hidden; }
+.buy-note p { margin: 14px 0 8px; padding: 10px 12px; font-size: 0.9rem; color: var(--fg); background: var(--panel-2); border-left: 3px solid var(--accent); }
+.buy-note a { display: inline-block; margin: 0 0 4px; font-size: 0.9rem; font-weight: 600; color: var(--fg); border-bottom: 2px solid var(--accent); overflow-wrap: anywhere; }
+
+/* The cart: one tall panel sliding in from the right. A red head cut on a slant, the pieces in
+   it, and a foot with the total and the way to pay. */
+.cart { position: fixed; inset: 0; z-index: 260; background: rgba(0, 0, 0, 0.62); backdrop-filter: blur(4px); }
+.cart-panel { position: absolute; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: min(460px, 100%); background: var(--page); border-left: var(--rule) solid var(--frame); box-shadow: -30px 0 80px rgba(0, 0, 0, 0.45); }
+.cart-head { position: relative; flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 22px 42px 24px; background: linear-gradient(135deg, var(--accent) 35%, var(--accent-deep)); color: #fff; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 22px), 0 100%); }
+.cart-head::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(11, 11, 12, 0.34) 0 2.4px, transparent 3px) 0 0 / 11px 11px; -webkit-mask-image: linear-gradient(100deg, transparent 40%, #000); mask-image: linear-gradient(100deg, transparent 40%, #000); }
+.cart-head > * { position: relative; }
+.cart-kicker { font-family: var(--display); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85); }
+.cart-title { margin: 8px 0 0; font-family: var(--display); font-size: clamp(2.2rem, 7vw, 2.9rem); font-weight: 900; font-style: italic; line-height: 0.9; text-transform: uppercase; text-shadow: 0.05em 0.05em 0 var(--k); }
+.cart-x { flex: 0 0 auto; display: grid; place-items: center; width: 44px; height: 44px; font-size: 1.6rem; background: var(--k); color: #fff; transition: background 0.2s, color 0.2s; }
+.cart-x:hover, .cart-x:focus-visible { background: #fff; color: var(--k); outline: 0; }
+.cart-empty { padding: 8px 24px 28px; color: var(--fg-dim); }
+.cart-empty p { margin: 0 0 20px; }
+.cart-empty b { color: var(--fg); }
+.cart-lines { flex: 1 1 auto; display: grid; align-content: start; gap: var(--gap); margin: 0; padding: 2px 18px 18px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.cart-lines li { position: relative; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 14px; padding: 10px 40px 10px 10px; background: var(--panel); border: var(--rule) solid var(--frame); overflow: hidden; }
+.cart-thumb { width: 74px; aspect-ratio: 3 / 4; overflow: hidden; background: var(--panel-2); }
+.cart-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; }
+.cart-info { display: grid; align-content: start; gap: 4px; min-width: 0; }
+.cart-info strong { font-family: var(--display); font-size: 1.2rem; font-weight: 800; font-style: italic; line-height: 1.05; letter-spacing: 0.02em; text-transform: uppercase; }
+.cart-info small { font-size: 0.82rem; color: var(--fg-mute); }
+.cart-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.cart-qty { display: inline-flex; align-items: center; background: var(--panel-2); }
+.cart-qty button { display: grid; place-items: center; width: 34px; height: 34px; font-size: 1.15rem; color: var(--fg); transition: background 0.2s, color 0.2s; }
+.cart-qty button:hover:not(:disabled), .cart-qty button:focus-visible { background: var(--loud); color: var(--on-loud); outline: 0; }
+.cart-qty button:disabled { opacity: 0.3; cursor: default; }
+.cart-qty span { min-width: 28px; text-align: center; font-family: var(--display); font-size: 1.05rem; font-weight: 800; }
+.cart-price { font-family: var(--display); font-size: 1.35rem; font-weight: 900; font-style: italic; white-space: nowrap; color: var(--accent); }
+.cart-remove { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 30px; height: 30px; font-size: 1.25rem; color: var(--fg-mute); transition: color 0.2s; }
+.cart-remove:hover, .cart-remove:focus-visible { color: var(--fg); outline: 0; }
+.cart-foot { flex: 0 0 auto; padding: 16px 22px calc(20px + env(safe-area-inset-bottom)); background: var(--panel); border-top: var(--rule) solid var(--accent); }
+.cart-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.cart-total span { font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-mute); }
+.cart-total strong { font-family: var(--display); font-size: 2.3rem; font-weight: 900; font-style: italic; line-height: 1; }
+.cart-small { margin: 6px 0 0; font-size: 0.82rem; color: var(--fg-mute); }
+.cart-foot .buy-btn { margin-top: 14px; }
+.cart-clear { display: block; margin: 12px auto 0; font-size: 0.82rem; color: var(--fg-mute); border-bottom: 1px solid transparent; }
+.cart-clear:hover { color: var(--fg); border-color: var(--line-strong); }
+@media (prefers-reduced-motion: reduce) { .buy-spin { animation-duration: 3s; } .nav-cart-count { animation: none; } }

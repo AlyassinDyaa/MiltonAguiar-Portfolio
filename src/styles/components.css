@@ -727,7 +727,7 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .sc-open:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sc-art { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--panel-2); }
 .sc-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; transition: transform 0.7s var(--ease-out), filter 0.3s; }
-.sc:hover .sc-art img { transform: scale(1.045); }
+.sc:hover .sc-art:not(.is-mock) img { transform: scale(1.045); }
 .sc-art .poster { height: 100%; aspect-ratio: auto; }
 .sc-art::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease-out); }
 .sc:hover .sc-art::after, .sc:focus-within .sc-art::after { transform: scaleX(1); }
@@ -755,6 +755,34 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .sc-add svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sc.is-gone .sc-art img { filter: grayscale(1) brightness(0.62); }
 .sc.is-gone .sc-price b { color: var(--fg-mute); text-decoration: line-through; text-decoration-thickness: 2px; }
+/* A piece shown as the thing it is: the top of the card is a wall lit from above, and on it the
+   piece as a printed poster, a framed print, an original art board or a comic book (ShopCard
+   picks the look, set in the admin). The piece keeps its own shape; it lifts off the wall when
+   the card is pointed at. */
+.sc-art.is-mock { container-type: size; background: radial-gradient(130% 85% at 50% 0%, #2c2c32 0%, #1a1a1d 55%, #111113 100%); }
+:root[data-theme='light'] .sc-art.is-mock { background: radial-gradient(130% 85% at 50% 0%, #fdfcf9 0%, #e9e7e0 60%, #dad7ce 100%); }
+.mock { position: absolute; inset: 9% 12% 11%; display: flex; align-items: center; justify-content: center; }
+.mock-item { position: relative; display: block; transform: rotate(var(--tilt, 0deg)); transition: transform 0.6s var(--ease-out); }
+.sc:hover .mock-item, .sc:focus-within .mock-item { transform: translateY(-6px) rotate(calc(var(--tilt, 0deg) * 0.4)); }
+.mock-item img { display: block; box-sizing: border-box; width: auto; height: auto; max-width: 76cqw; max-height: 78cqh; transition: box-shadow 0.6s var(--ease-out); }
+.mock-item::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+/* a printed poster: the art on white paper, a soft sheen across it */
+.look-poster .mock-item img { padding: 3.6cqw; background: #fbfaf6; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 22px -8px rgba(0, 0, 0, 0.6), 0 30px 50px -24px rgba(0, 0, 0, 0.7); }
+.look-poster .mock-item::after { background: linear-gradient(118deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 36%, rgba(0, 0, 0, 0) 72%, rgba(0, 0, 0, 0.08)); }
+/* a framed print: a white mat in a black frame, the frame's shadow falling on the mat */
+.look-framed .mock-item img { padding: 5.5cqw; border: 2.4cqw solid #121214; background: #f5f3ee; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28), 0 0 0 1px #34343a, 0 14px 26px -8px rgba(0, 0, 0, 0.65), 0 32px 52px -26px rgba(0, 0, 0, 0.7); }
+.look-framed .mock-item::after { background: linear-gradient(125deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 30%); }
+/* an original art board: cream Bristol board, the printer's blue-line border, the artist's name
+   pencilled in the margin, laid on at a slight angle */
+.look-board { --tilt: -1.5deg; }
+.look-board .mock-item img { padding: 5cqw 5cqw 9.5cqw; background: #f3eee2; outline: 1px solid rgba(70, 135, 200, 0.55); outline-offset: -2.6cqw; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 14px 26px -10px rgba(0, 0, 0, 0.55), 0 30px 48px -26px rgba(0, 0, 0, 0.6); }
+.mock-note { position: absolute; left: 5cqw; right: 5cqw; bottom: 2.8cqw; overflow: hidden; font-family: var(--display); font-size: 2.6cqw; font-weight: 700; font-style: italic; line-height: 1; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; color: rgba(55, 55, 65, 0.55); }
+/* a comic book: the cover with a crease down the spine, the pages showing at its edge, a gloss */
+.look-comic { --tilt: -2deg; }
+.look-comic .mock-item img { border-radius: 0 2px 2px 0; box-shadow: 1px 0 0 #ebe8e1, 2px 1px 0 #d2cfc7, 3px 2px 0 #b8b5ad, 4px 3px 0 #9d9a93, 0 14px 26px -8px rgba(0, 0, 0, 0.6), 0 30px 50px -24px rgba(0, 0, 0, 0.65); }
+.look-comic .mock-item::before { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; left: 2.4%; width: 3.2%; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.28) 45%, rgba(0, 0, 0, 0.14) 75%, transparent); }
+.look-comic .mock-item::after { background: linear-gradient(112deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 34%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.1)); }
+@media (prefers-reduced-motion: reduce) { .mock-item { transition: none; } .sc:hover .mock-item { transform: rotate(var(--tilt, 0deg)); } }
 /* phones: two to a row, the price under the title */
 @media (max-width: 599px) {
   .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

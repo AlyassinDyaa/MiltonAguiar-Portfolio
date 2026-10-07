@@ -10,5 +10,6 @@
   "title": "Born Again",
   "type": "Prints",
   "inShop": true,
-  "category": "Fan art"
+  "category": "Fan art",
+  "look": "default"
 }

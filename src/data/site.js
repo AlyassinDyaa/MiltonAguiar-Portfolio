@@ -138,10 +138,14 @@ function assemble(content) {
   // what the buyer gets: the line written beside the piece's type, or the shop's own line
   const kinds = (Array.isArray(shop.types) ? shop.types : []).filter((t) => t && String(t.name || '').trim())
   const notes = Object.fromEntries(kinds.map((t) => [String(t.name).trim(), String(t.note || '').trim()]))
+  // how each piece is shown in the shop: its own choice, else its kind's, else the shop's
+  const LOOKS = ['poster', 'framed', 'board', 'comic', 'plain']
+  const looks = Object.fromEntries(kinds.map((t) => [String(t.name).trim(), t.look]))
+  const lookOf = (p) => [p.look, looks[String(p.type || '').trim()], shop.look, 'poster'].find((l) => LOOKS.includes(l))
   everything = live(folder('work'))
     .filter((p) => p.title)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '' }))
+    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p) }))
   work = everything.filter((p) => !p.shopOnly)
   forSale = everything.filter(buyable)
   const sold = new Set(forSale.map((p) => p.type).filter(Boolean))

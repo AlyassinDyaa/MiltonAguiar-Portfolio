@@ -63,6 +63,19 @@ collections:
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
       - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop → Items for sale in this panel, and once it has a price it is on the Shop page with a Buy button.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments. Only needed for a piece you sell.' }
+      - name: look
+        label: Shown in the shop as
+        widget: select
+        default: default
+        required: false
+        options:
+          - { label: 'Same as its kind (set under Settings & payments)', value: default }
+          - { label: 'Printed poster: the art on white paper', value: poster }
+          - { label: 'Framed print: a white mat in a black frame', value: framed }
+          - { label: 'Original art board: cream board, blue-line border', value: board }
+          - { label: 'Comic book: a cover with its spine and pages', value: comic }
+          - { label: 'Just the art, filling the top of the card', value: plain }
+        hint: 'How it looks on its card in the Shop: as the thing the buyer gets.'
       - name: status
         label: Tag
         widget: select
@@ -98,6 +111,19 @@ collections:
       - { name: price, label: Price, widget: number, value_type: float, min: 0, hint: 'A number, in the currency set under Shop → Settings & payments.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }
+      - name: look
+        label: Shown in the shop as
+        widget: select
+        default: default
+        required: false
+        options:
+          - { label: 'Same as its kind (set under Settings & payments)', value: default }
+          - { label: 'Printed poster: the art on white paper', value: poster }
+          - { label: 'Framed print: a white mat in a black frame', value: framed }
+          - { label: 'Original art board: cream board, blue-line border', value: board }
+          - { label: 'Comic book: a cover with its spine and pages', value: comic }
+          - { label: 'Just the art, filling the top of the card', value: plain }
+        hint: 'How it looks on its card in the Shop: as the thing the buyer gets.'
       - name: status
         label: Tag
         widget: select
@@ -425,6 +451,18 @@ collections:
               - { label: 'Shopping bag', value: bag }
               - { label: 'Shopping cart', value: cart }
             hint: 'The button in the top bar that opens the cart.'
+          - name: look
+            label: How pieces are shown in the shop
+            widget: select
+            default: poster
+            required: false
+            options:
+              - { label: 'Printed poster: the art on white paper', value: poster }
+              - { label: 'Framed print: a white mat in a black frame', value: framed }
+              - { label: 'Original art board: cream board, blue-line border', value: board }
+              - { label: 'Comic book: a cover with its spine and pages', value: comic }
+              - { label: 'Just the art, filling the top of the card', value: plain }
+            hint: 'Each piece is shown on its card as the thing the buyer gets. This is the look for any kind below set to "Shop default", and any piece set to "Same as its kind".'
           - { name: note, label: What the buyer gets, widget: string, required: false, hint: 'One line under every price and on the payment page, for example "A4 print on heavy paper." A line written beside a kind below is used instead for pieces of that kind.' }
           - name: types
             label: Kinds of thing you sell
@@ -433,10 +471,22 @@ collections:
             collapsed: false
             required: false
             summary: '{{fields.name}}'
-            hint: 'Prints, Original art, Comics... Each piece you sell is one of these ("What it is", on the piece). Beside each, what the buyer gets; leave it empty to use the line above. Drag to reorder.'
+            hint: 'Prints, Original art, Comics... Each piece you sell is one of these ("What it is", on the piece). Beside each, what the buyer gets (empty: the line above) and how pieces of that kind are shown in the shop. Drag to reorder.'
             fields:
               - { name: name, label: Name, widget: string }
               - { name: note, label: What the buyer gets, widget: string, required: false }
+              - name: look
+                label: Shown as
+                widget: select
+                default: default
+                required: false
+                options:
+                  - { label: 'Shop default', value: default }
+                  - { label: 'Printed poster', value: poster }
+                  - { label: 'Framed print', value: framed }
+                  - { label: 'Original art board', value: board }
+                  - { label: 'Comic book', value: comic }
+                  - { label: 'Just the art', value: plain }
           - { name: signedChoice, label: Buyers can add a signature, widget: boolean, default: false, required: false, hint: 'On: every piece has a "Signed by …" switch beside its price, off to start with; the order says signed or unsigned. Off: no switch.' }
           - { name: signedExtra, label: Extra for a signed piece, widget: number, value_type: float, min: 0, default: 0, required: false, hint: 'Added to the price when the buyer switches the signature on. 0 for no extra cost.' }
           - { name: shipping, label: Ask for a delivery address, widget: boolean, default: true, required: false, hint: 'On for anything you post. Off for downloads.' }

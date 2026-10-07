@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { asset, badge, canBuy, money, nowPrice, onSale, shop, soldOut } from '../data/site'
+import { asset, badge, brand, canBuy, money, nowPrice, onSale, shop, soldOut } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Poster from './Poster'
 
-/* A piece in the shop, as a product card. The art has the top of the card to itself, with only
-   its New / Sale / Sold out tag in the corner; under it the title and the price on one line and
+/* A piece in the shop, as a product card. The top of the card is a lit wall with the piece on it
+   as the thing being sold (its "look", chosen in the admin per kind or per piece): a printed
+   poster, a framed print, an original art board or a comic book, or the art alone filling the
+   top. Only its New / Sale / Sold out tag sits in the corner; under it the title and the price on one line and
    what it is under them; at the foot, the way to see it whole and a button that drops it straight
    into the cart (unsigned, when signing is offered: the signature is chosen on the piece itself). */
 export default function ShopCard({ p, onOpen, eager = false }) {
@@ -15,13 +17,20 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const gone = soldOut(p)
   const add = () => { cart.add(p.slug, false); setAdded(true); setTimeout(() => cart.setOpen(true), 300) }
   const what = [p.type, p.category].filter(Boolean).join(' · ')
+  const mock = p.src && p.look !== 'plain' // shown as the thing it is: a poster, a framed print, a board, a comic
   return (
     <article className={`sc ${gone ? 'is-gone' : ''}`}>
       <button type="button" className="sc-open" onClick={onOpen} aria-label={`Open ${p.title}`}>
-        <span className="sc-art">
-          {p.src
-            ? <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" />
-            : <Poster title={p.title} />}
+        <span className={`sc-art ${mock ? `is-mock look-${p.look}` : ''}`}>
+          {!p.src ? <Poster title={p.title} />
+            : mock ? (
+              <span className="mock">
+                <span className="mock-item">
+                  <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" />
+                  {p.look === 'board' && <span className="mock-note" aria-hidden="true">{brand.artist || brand.name}</span>}
+                </span>
+              </span>
+            ) : <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" />}
           {tag && shop.tagPlace !== 'below' && <span className={`sc-tag is-${tag.kind}`}>{tag.text}</span>}
         </span>
         <span className="sc-info">

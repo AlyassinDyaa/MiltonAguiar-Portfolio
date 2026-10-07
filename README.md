@@ -72,6 +72,11 @@ under Shop too, and its price shows on its card on the Work page. Opening a piec
 one Stripe payment page for everything in it, which asks for the delivery address. Stripe sends
 the buyer back to `/shop?thanks=1`, which thanks them and empties the cart.
 
+On its Shop card each piece is shown as the thing the buyer gets: a **printed poster** (the art
+on white paper), a **framed print**, an **original art board** (cream board, blue-line border), a
+**comic book** (spine, page edges, gloss), or **just the art**. Choose the look for the whole shop and
+for each kind under *Settings & payments*, and override it on any item (*Shown in the shop as*).
+
 Prices are never trusted from the browser: `api/checkout.js` reads every price, sale and
 signature extra again from the content files. Nothing can be bought until `STRIPE_SECRET_KEY` is
 set on Vercel (step 4 below); until then the checkout says so and points to Instagram.

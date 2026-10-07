@@ -1,0 +1,20 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/exclusive-variant-cover-art.webp",
+  "universe": "Raptor",
+  "hidden": false,
+  "date": "2023-01-26",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    }
+  ],
+  "status": "sale",
+  "title": "Raptor: Prelude (Exclusive Cover)",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/raptor-prelude-exclusive-frame.png",
+  "category": "Covers",
+  "look": "default"
+}

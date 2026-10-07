@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { asset, badge, brand, canBuy, filedUnder, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Poster from './Poster'
+import CartIcon from './CartIcon'
 
 const MAX_CHIPS = 3
 
@@ -50,7 +51,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
           {canBuy(p) && (
             <button type="button" className={`pc-add ${added ? 'is-added' : ''}`} onClick={add} aria-label={choose ? `Choose a size of ${p.title}` : `Add ${p.title} to the cart`}>
               <span>{added ? 'Added' : choose ? 'Choose size' : 'Add to cart'}</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={added ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 5v14 M5 12h14'} /></svg>
+              {added ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : <CartIcon />}
             </button>
           )}
         </div>

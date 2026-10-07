@@ -745,7 +745,7 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .pc-add { flex: 0 0 auto; background: var(--accent); color: #fff; }
 .pc-add:hover, .pc-add:focus-visible { background: #fff; color: var(--k); outline: 0; }
 .pc-add.is-added { background: var(--open); color: #06140c; }
-.pc-add svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.pc-add svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
 /* the label under the wall */
 .pc-info { display: grid; gap: 5px; width: 100%; padding: 0 2px; text-align: left; color: inherit; cursor: pointer; }
 .pc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -938,6 +938,19 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .cart-remove { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 30px; height: 30px; font-size: 1.25rem; color: var(--fg-mute); transition: color 0.2s; }
 .cart-remove:hover, .cart-remove:focus-visible { color: var(--fg); outline: 0; }
 .cart-foot { flex: 0 0 auto; padding: 16px 22px calc(20px + env(safe-area-inset-bottom)); background: var(--panel); border-top: var(--rule) solid var(--accent); }
+.cart-deal { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.cart-deal input { flex: 1 1 140px; min-width: 0; height: 42px; padding: 0 12px; font: inherit; font-size: 0.92rem; letter-spacing: 0.04em; color: var(--fg); background: var(--page); border: 2px solid var(--line-strong); border-radius: 0; outline: 0; }
+.cart-deal input:focus { border-color: var(--accent); }
+.cart-deal input[type='email'] { flex-basis: 100%; order: 2; letter-spacing: 0; }
+.cart-deal button { height: 42px; padding: 0 16px; font-family: var(--display); font-size: 0.92rem; font-weight: 800; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
+.cart-deal button:hover:not(:disabled) { background: var(--loud); color: var(--on-loud); }
+.cart-deal button:disabled { opacity: 0.5; cursor: default; }
+.cart-deal p { flex-basis: 100%; order: 3; margin: 2px 0 0; font-size: 0.84rem; color: var(--accent); }
+.cart-deal.is-on { align-items: center; justify-content: space-between; padding: 10px 6px 10px 12px; background: var(--accent-soft, rgba(216, 35, 47, 0.14)); border: 1px dashed var(--accent); font-size: 0.9rem; }
+.cart-deal.is-on b { font-family: var(--display); font-weight: 800; letter-spacing: 0.06em; }
+.cart-deal.is-on strong { margin-left: auto; font-family: var(--display); font-weight: 900; font-style: italic; color: var(--accent); }
+.cart-deal.is-on button { height: 30px; width: 30px; padding: 0; font-size: 1.2rem; font-style: normal; background: transparent; }
+.cart-total strong s { margin-right: 10px; font-size: 0.55em; color: var(--fg-mute); text-decoration-thickness: 2px; }
 .cart-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .cart-total span { font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-mute); }
 .cart-total strong { font-family: var(--display); font-size: 2.3rem; font-weight: 900; font-style: italic; line-height: 1; }

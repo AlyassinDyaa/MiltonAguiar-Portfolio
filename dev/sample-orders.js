@@ -31,7 +31,7 @@ const make = () => {
       id, number: id.slice(-8).toUpperCase(), created: Date.now() - (i * 3.7 + 0.3) * day, currency: 'EUR', total,
       refunded: payment === 'refunded' ? total : 0, payment, name, email, phone: '', country, shipTo,
       items, summary: '', fulfilment: payment === 'paid' ? STAGES[i % STAGES.length] : 'new',
-      tracking: i % 4 === 3 ? `CTT-${4821 + i}PT` : '', note: '', paymentIntent: `pi_sample${i}`, stripe: 'https://dashboard.stripe.com/test/payments',
+      tracking: i % 4 === 3 ? `CTT-${4821 + i}PT` : '', note: '', discount: i % 5 === 2 ? Math.round(total * 0.1 * 100) / 100 : 0, discountCode: i % 5 === 2 ? 'WELCOME10' : '', paymentIntent: `pi_sample${i}`, stripe: 'https://dashboard.stripe.com/test/payments',
     })
   }
   return out

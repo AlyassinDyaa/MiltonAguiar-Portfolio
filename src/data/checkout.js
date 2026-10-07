@@ -10,3 +10,15 @@ export async function checkout(body) {
     return 'Could not reach the checkout. Check the connection and try again.'
   }
 }
+
+/* Ask whether a discount code is good (api/discount.js): { ok, code, percent, needsEmail } or
+   { ok: false, message, needsEmail }. The checkout checks it again itself. */
+export async function checkCode(code, email) {
+  try {
+    const answer = await fetch('/api/discount', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim(), email: email.trim() }) })
+    const said = await answer.json().catch(() => ({}))
+    return answer.ok || said.message ? said : { ok: false, message: 'The code could not be checked. Try again in a moment.' }
+  } catch {
+    return { ok: false, message: 'Could not reach the shop. Check the connection and try again.' }
+  }
+}

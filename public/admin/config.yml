@@ -506,7 +506,7 @@ collections:
             options:
               - { label: 'Shopping bag', value: bag }
               - { label: 'Shopping cart', value: cart }
-            hint: 'The button in the top bar that opens the cart.'
+            hint: 'The icon on the cart button in the top bar and on the Add to cart buttons in the Shop.'
           - name: look
             label: How pieces are shown in the shop
             widget: select

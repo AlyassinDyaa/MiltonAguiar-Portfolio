@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { check } from './_discounts.js'
 
 /* Buying from the shop. The site sends the cart here as a list of { slug, size, signed, qty } (or
    a single piece as { slug, size, signed }; size only for a piece sold in print sizes); this function looks each piece up in the site's own content,
@@ -11,6 +12,10 @@ import { join } from 'node:path'
      from the browser, so a buyer cannot name their own price;
    - Stripe is called with STRIPE_SECRET_KEY, which lives only in the Vercel project settings.
      It is not in the repository and is never sent to the browser.
+
+   A discount code (from the cart, as { code, email }) is checked again here, against Stripe,
+   before it is put on the payment page; a code given to particular people also fixes the email
+   the buyer pays with.
 
    Nothing is sold unless "Online purchases" is switched on in the admin (content/site/shop.json)
    and the key is set. vercel.json ships the content folder along with this function. */
@@ -64,6 +69,13 @@ export default async function handler(req, res) {
     lines.push({ slug, piece, size, signed, cents, qty })
   }
 
+  // a discount code: good now, and for this buyer
+  let deal = null
+  if (body.discount && body.discount.code) {
+    deal = await check(body.discount.code, body.discount.email)
+    if (!deal.ok) return res.status(400).json({ message: deal.message })
+  }
+
   const origin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`
   const ask = new URLSearchParams()
   ask.set('mode', 'payment')
@@ -81,6 +93,11 @@ export default async function handler(req, res) {
   })
   // what was ordered, readable in the Stripe dashboard: "raptor x2 signed, hulk x1"
   ask.set('metadata[order]', lines.map((l) => `${l.slug}${l.size ? ` ${l.size}` : ''} x${l.qty}${choice ? (l.signed ? ' signed' : ' unsigned') : ''}`).join(', ').slice(0, 500))
+  if (deal) {
+    ask.set('discounts[0][coupon]', deal.code)
+    ask.set('metadata[discount]', deal.code)
+    if (deal.email) ask.set('customer_email', deal.email)
+  }
   if (shop.shipping !== false) {
     const countries = (Array.isArray(shop.countries) ? shop.countries : []).map((c) => String(c).trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c))
     ;(countries.length ? countries : ['PT']).forEach((c, i) => ask.set(`shipping_address_collection[allowed_countries][${i}]`, c))

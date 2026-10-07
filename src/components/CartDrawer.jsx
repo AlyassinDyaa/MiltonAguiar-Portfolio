@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, money, shop, shows } from '../data/site'
 import { useCart } from '../hooks/useCart'
-import { checkout } from '../data/checkout'
+import { checkCode, checkout } from '../data/checkout'
 import { Elsewhere, Lock } from './Buy'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -16,6 +16,24 @@ export default function CartDrawer() {
   const cart = useCart()
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
+  // a discount code: what is typed, the email it may need, and the code once it is accepted
+  const [code, setCode] = useState('')
+  const [email, setEmail] = useState('')
+  const [askEmail, setAskEmail] = useState(false)
+  const [deal, setDeal] = useState(null) // { code, percent, email }
+  const [dealNote, setDealNote] = useState('')
+  const [checking, setChecking] = useState(false)
+  const apply = async (e) => {
+    e.preventDefault()
+    if (checking || !code.trim()) return
+    setChecking(true); setDealNote('')
+    const said = await checkCode(code, email)
+    setChecking(false)
+    if (said.ok) { setDeal({ code: said.code, percent: said.percent, email: said.needsEmail ? email.trim() : '' }); setAskEmail(false) }
+    else { setDeal(null); setDealNote(said.message || 'That code is not valid.'); if (said.needsEmail) setAskEmail(true) }
+  }
+  const dropDeal = () => { setDeal(null); setCode(''); setEmail(''); setAskEmail(false); setDealNote('') }
+  const off = deal ? Math.round(cart.total * deal.percent) / 100 : 0
   const { open, lines } = cart
   const setOpen = (v) => { if (!v) setNote(''); cart.setOpen(v) }
 
@@ -32,7 +50,7 @@ export default function CartDrawer() {
   const pay = async () => {
     if (busy || !lines.length) return
     setBusy(true); setNote('')
-    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })) })
+    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(deal ? { discount: { code: deal.code, email: deal.email } } : {}) })
     if (problem) { setNote(problem); setBusy(false) }
   }
 
@@ -82,7 +100,21 @@ export default function CartDrawer() {
                 </ul>
 
                 <footer className="cart-foot">
-                  <div className="cart-total"><span>Total</span><strong>{money(cart.total)}</strong></div>
+                  {deal ? (
+                    <div className="cart-deal is-on">
+                      <span><b>{deal.code}</b> · {deal.percent}% off</span>
+                      <strong>− {money(off, true)}</strong>
+                      <button type="button" onClick={dropDeal} aria-label="Remove the discount code">×</button>
+                    </div>
+                  ) : (
+                    <form className="cart-deal" onSubmit={apply}>
+                      <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Discount code" aria-label="Discount code" autoComplete="off" spellCheck="false" />
+                      {askEmail && <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" aria-label="Your email" autoComplete="email" />}
+                      <button type="submit" disabled={checking || !code.trim()}>{checking ? '…' : 'Apply'}</button>
+                      {dealNote && <p role="alert">{dealNote}</p>}
+                    </form>
+                  )}
+                  <div className="cart-total"><span>Total</span><strong>{deal && <s>{money(cart.total, true)}</s>}{money(cart.total - off)}</strong></div>
                   {shop.shipping !== false && <p className="cart-small">You enter your delivery address on the next page.</p>}
                   <button type="button" className={`btn buy-btn ${busy ? 'is-busy' : ''}`} onClick={pay} aria-busy={busy}>
                     <span>{busy ? 'Opening secure checkout' : 'Checkout'}</span>

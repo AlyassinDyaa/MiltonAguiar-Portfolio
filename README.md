@@ -96,7 +96,7 @@ set on Vercel (step 4 below); until then the checkout says so and points to Inst
 
 ### Orders and customers
 
-At the foot of the admin's navigation, under a line, **Sales** has two screens:
+At the foot of the admin's navigation, under a line, **Sales** has three screens:
 
 - **Orders**: every purchase made through the shop, read from Stripe. Totals for the period at the
   top (sales, orders, to ship, average order); chips to narrow them by where they are up to (To
@@ -108,10 +108,21 @@ At the foot of the admin's navigation, under a line, **Sales** has two screens:
 - **Customers**: everyone who has bought, worked out from the orders: orders, money spent, last
   order, country; who came back, who is waiting for an order. Opening one shows their orders.
 
-Both need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
-before answering. Refunds and receipts are done in the Stripe dashboard (each order links to it).
+- **Discounts**: codes for money off. Make one with **+ New discount**: the code (your own, or
+  a made-up one), the percentage (5% to 50% in one tap, or any number), who can use it
+  (everyone, or chosen customers: picked from the customers in a drop-down, or typed as email
+  addresses), when it starts, how long it lasts (24 hours, 7 days, 30 days, no end, or until a
+  date) and, if you like, how many times it can be used. The list shows which codes are active,
+  starting later or ended, and how often each was used; open one to change who can use it or
+  when it starts, or to delete it. Buyers type the code in the cart; a code given to chosen
+  customers asks for their email, and they pay with that email. The codes are kept in Stripe
+  (as coupons), never in the site's files, and the checkout checks each one again before
+  payment. Orders show the code used and what it took off.
+
+The three screens need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
+before answering (`api/discounts.js` too; `api/discount.js` is the cart's check of a code). Refunds and receipts are done in the Stripe dashboard (each order links to it).
 On this computer (`npm run dev`) the screens use a `STRIPE_SECRET_KEY` from `.env.local`, or with
-none, sample orders (`dev/sample-orders.js`), labelled as such.
+none, sample orders and codes (`dev/`), labelled as such.
 
 ### The buttons under the name
 

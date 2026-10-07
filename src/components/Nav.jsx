@@ -3,16 +3,13 @@ import { Link, NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, brand, commissions, nav, shop, shows, social } from '../data/site'
 import { useCart } from '../hooks/useCart'
+import CartIcon from './CartIcon'
 import Wordmark from './Wordmark'
 import ThemeSwitch from './ThemeSwitch'
 
 function Status() {
   return <><i className={commissions.open ? 'on' : ''} />{commissions.open ? 'Commissions open' : 'Commissions closed'}</>
 }
-
-/* The two cart icons the admin can choose between (Shop and payments). */
-const BAG = 'M5 8.5h14l-1.1 11.6a1.2 1.2 0 0 1-1.2 1.1H7.3a1.2 1.2 0 0 1-1.2-1.1z M9 10.5V7a3 3 0 0 1 6 0v3.5'
-const TROLLEY = 'M2.5 4h2.6l2.3 10.6a1.2 1.2 0 0 0 1.2.9h8.6a1.2 1.2 0 0 0 1.2-.9L20.5 8H6 M9.5 18.1a1.4 1.4 0 1 0 0 2.800 1.4 1.4 0 0 0 0-2.800z M17 18.1a1.4 1.4 0 1 0 0 2.800 1.4 1.4 0 0 0 0-2.800z'
 
 export default function Nav() {
   const cart = useCart()
@@ -44,7 +41,7 @@ export default function Nav() {
           <ThemeSwitch />
           {shop.enabled && (
             <button type="button" className="nav-cart" onClick={() => { setOpen(false); cart.setOpen(true) }} aria-label={`Cart, ${cart.count} ${cart.count === 1 ? 'piece' : 'pieces'}`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={shop.cartIcon === 'cart' ? TROLLEY : BAG} /></svg>
+              <CartIcon />
               {cart.count > 0 && <span key={cart.count} className="nav-cart-count">{cart.count}</span>}
             </button>
           )}

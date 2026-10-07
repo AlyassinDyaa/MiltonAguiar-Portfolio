@@ -4,7 +4,8 @@
      the top, chips to narrow them by where they are up to (to ship, shipped...), a search, a
      period and a sort, and a panel per order with what was bought, who bought it, where it goes,
      and where it is up to (status, tracking number and a note, kept on the order in Stripe);
-   - Customers: everyone who has bought, with what they have spent; one opens their orders.
+   - Customers: everyone who has bought, with what they have spent; one opens their orders;
+   - Discounts: codes for money off, for everyone or chosen customers, for as long as the admin says.
    The orders come from /api/orders (api/orders.js), with the admin's own pass. There is no
    database and no customer accounts on the site: Stripe holds the orders.
    shell.js puts the two links in the navigation and shows this screen at #/sales/orders and
@@ -125,7 +126,7 @@ window.IASales = (() => {
     const q = f.q.trim().toLowerCase()
     const list = state.orders.filter((o) => chip[2](o) && inPeriod(o.created, f.period)
       && (!f.customer || (o.email || o.name).toLowerCase() === f.customer.toLowerCase())
-      && (!q || [o.number, o.name, o.email, o.country, country(o.country), o.tracking, o.note, ...o.items.map((i) => i.name)].join(' ').toLowerCase().includes(q)))
+      && (!q || [o.number, o.name, o.email, o.country, country(o.country), o.tracking, o.note, o.discountCode, ...o.items.map((i) => i.name)].join(' ').toLowerCase().includes(q)))
     const by = { new: (a, b) => b.created - a.created, old: (a, b) => a.created - b.created, high: (a, b) => b.total - a.total, low: (a, b) => a.total - b.total, name: (a, b) => (a.name || a.email).localeCompare(b.name || b.email) }
     return list.sort(by[f.sort] || by.new)
   }
@@ -139,8 +140,8 @@ window.IASales = (() => {
     const list = filteredOrders()
     const set = (k, v) => { state.o[k] = v; if (k !== 'shown') state.o.shown = PAGE; draw() }
     const exportCsv = () => csv([
-      ['Order', 'Date', 'Customer', 'Email', 'Phone', 'Country', 'Ship to', 'Items', 'Total', 'Refunded', 'Currency', 'Payment', 'Status', 'Tracking', 'Note'],
-      ...list.map((o) => [o.number, date(o.created, true), o.name, o.email, o.phone, country(o.country), o.shipTo.join(', '), o.items.map((i) => `${i.name} x${i.qty}`).join('; '), o.total, o.refunded, o.currency, PAYMENT[o.payment] || o.payment, stageName[o.fulfilment], o.tracking, o.note]),
+      ['Order', 'Date', 'Customer', 'Email', 'Phone', 'Country', 'Ship to', 'Items', 'Discount code', 'Discount', 'Total', 'Refunded', 'Currency', 'Payment', 'Status', 'Tracking', 'Note'],
+      ...list.map((o) => [o.number, date(o.created, true), o.name, o.email, o.phone, country(o.country), o.shipTo.join(', '), o.items.map((i) => `${i.name} x${i.qty}`).join('; '), o.discountCode, o.discount, o.total, o.refunded, o.currency, PAYMENT[o.payment] || o.payment, stageName[o.fulfilment], o.tracking, o.note]),
     ], `orders-${new Date().toISOString().slice(0, 10)}.csv`)
     return [
       head('Orders', 'Every purchase made through the shop. Open one to see what was bought, where it goes, and to mark it packed, shipped or delivered.', [
@@ -162,7 +163,7 @@ window.IASales = (() => {
         return b
       })),
       el('div', { className: 'sl-tools' }, [
-        search(f.q, 'Order no., name, email, piece, tracking…', (v) => set('q', v)),
+        search(f.q, 'Order no., name, email, piece, tracking, code…', (v) => set('q', v)),
         select(f.period, PERIODS, (v) => set('period', v), 'Period'),
         select(f.sort, [['new', 'Newest first'], ['old', 'Oldest first'], ['high', 'Total: high to low'], ['low', 'Total: low to high'], ['name', 'Customer A–Z']], (v) => set('sort', v), 'Sort'),
       ]),
@@ -219,6 +220,7 @@ window.IASales = (() => {
         done(o) && o.paymentIntent ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
         block('Pieces', [
           el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: i.name }), el('small', { textContent: `× ${i.qty}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
+          o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,
           el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Total' }), el('strong', { textContent: money(o.total, o.currency) })]),
           o.refunded ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: 'Refunded' }), el('strong', { textContent: `− ${money(o.refunded, o.currency)}` })]) : null,
         ]),
@@ -300,6 +302,194 @@ window.IASales = (() => {
     ]
   }
 
+  // ---------- Discounts ----------
+  /* Discount codes, kept in Stripe (api/discounts.js): a percentage, for everyone or for chosen
+     customers, from a start to an end, as many times as allowed. Buyers type the code in the cart. */
+  const DAY = 24 * 60 * 60 * 1000
+  const D_STATUS = { active: 'Active', scheduled: 'Starts later', expired: 'Ended', 'used-up': 'Used up' }
+  const dState = { loaded: false, loading: false, list: [], sample: false, problem: null, q: '', kind: 'all', sort: 'new', editing: null, said: '' }
+  const dApi = async (method, body) => {
+    try {
+      const r = await fetch('/api/discounts', { method, cache: 'no-store', headers: { Authorization: `token ${pass()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      return { ok: r.ok, status: r.status, json: await r.json().catch(() => ({})) }
+    } catch { return { ok: false, status: 0, json: { message: 'Could not reach the site. Check the connection and try again.' } } }
+  }
+  const loadDiscounts = async () => {
+    dState.loading = true; draw()
+    const r = await dApi('GET')
+    dState.loading = false; dState.loaded = true
+    if (r.ok) { dState.list = r.json.discounts || []; dState.sample = Boolean(r.json.sample); dState.problem = null }
+    else dState.problem = { code: r.json.code || '', status: r.status, message: r.json.message || 'The discount codes could not be loaded.' }
+    draw()
+  }
+  const dayInput = (t) => { if (!t) return ''; const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+  const fromDayInput = (v, endOfDay) => { if (!v) return 0; const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0).getTime() }
+  const newCode = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 6; i++) s += A[Math.floor(Math.random() * A.length)]; return `MA-${s}` }
+  const who = (d) => (d.emails.length ? `${d.emails.length === 1 ? d.emails[0] : `${d.emails.length} people`}` : 'Everyone')
+  const when = (d) => `${date(d.starts)} – ${d.ends ? date(d.ends) : 'no end'}`
+
+  const discountsView = () => {
+    const f = dState
+    const kinds = [['all', 'All codes', () => true], ['active', 'Active', (d) => d.status === 'active'], ['scheduled', 'Starts later', (d) => d.status === 'scheduled'], ['ended', 'Ended', (d) => d.status === 'expired' || d.status === 'used-up']]
+    const kind = kinds.find((k) => k[0] === f.kind) || kinds[0]
+    const q = f.q.trim().toLowerCase()
+    const sorts = { new: (a, b) => b.created - a.created, ending: (a, b) => (a.ends || Infinity) - (b.ends || Infinity), big: (a, b) => b.percent - a.percent, used: (a, b) => b.used - a.used }
+    const list = f.list.filter((d) => kind[2](d) && (!q || [d.code, ...d.emails].join(' ').toLowerCase().includes(q))).sort(sorts[f.sort] || sorts.new)
+    const set = (k, v) => { dState[k] = v; draw() }
+    const problem = f.problem && el('div', { className: `sl-notice ${f.problem.code === 'no-stripe' ? '' : 'is-bad'}` }, [
+      el('strong', { textContent: f.problem.code === 'no-stripe' ? 'Stripe is not connected yet' : f.problem.status === 401 ? 'Your login has run out' : 'The discount codes could not be loaded' }),
+      el('p', { textContent: f.problem.message }),
+    ])
+    return [
+      head('Discounts', 'Codes buyers type in the cart for money off: for everyone, or only for the customers you choose, for as long as you say.', [
+        button(f.loading ? 'Loading…' : 'Refresh', loadDiscounts),
+        button('+ New discount', () => { dState.editing = 'new'; dState.said = ''; draw() }, 'ia-btn'),
+      ]),
+      problem || (f.sample ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample codes' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these codes are made up. On the live site the codes are kept in Stripe.' })]) : null),
+      el('div', { className: 'sl-stats' }, [
+        stat('Active now', String(f.list.filter((d) => d.status === 'active').length)),
+        stat('Start later', String(f.list.filter((d) => d.status === 'scheduled').length)),
+        stat('Times used', String(f.list.reduce((n, d) => n + d.used, 0)), 'across every code'),
+        stat('Ended', String(f.list.filter((d) => d.status === 'expired' || d.status === 'used-up').length)),
+      ]),
+      el('div', { className: 'sl-chips', role: 'group', ariaLabel: 'Show' }, kinds.map(([k, label, test]) => {
+        const b = el('button', { type: 'button', className: `sl-chip ${f.kind === k ? 'on' : ''}`, ariaPressed: String(f.kind === k) }, [label, el('small', { textContent: String(f.list.filter(test).length) })])
+        b.addEventListener('click', () => set('kind', k))
+        return b
+      })),
+      el('div', { className: 'sl-tools' }, [
+        search(f.q, 'Code or email…', (v) => set('q', v)),
+        select(f.sort, [['new', 'Newest first'], ['ending', 'Ending soonest'], ['big', 'Biggest discount'], ['used', 'Most used']], (v) => set('sort', v), 'Sort'),
+      ]),
+      el('p', { className: 'sl-count', textContent: f.loading && !f.loaded ? 'Loading the codes…' : `${list.length} ${list.length === 1 ? 'code' : 'codes'}` }),
+      list.length ? el('div', { className: 'sl-table is-discounts', role: 'table' }, [
+        el('div', { className: 'sl-row sl-th', role: 'row' }, ['Code', 'Discount', 'For', 'Active', 'Used', 'Status'].map((t) => el('span', { role: 'columnheader', textContent: t }))),
+        ...list.map((d) => {
+          const row = el('button', { type: 'button', className: `sl-row ${dState.editing === d.code ? 'on' : ''}`, role: 'row' }, [
+            el('span', { className: 'sl-c-order' }, [el('strong', { textContent: d.code }), el('small', { textContent: `Made ${date(d.created)}` })]),
+            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: `${d.percent}% off` })]),
+            el('span', {}, [el('strong', { textContent: who(d) }), d.emails.length > 1 ? el('small', { textContent: d.emails.slice(0, 2).join(', ') + (d.emails.length > 2 ? '…' : '') }) : null]),
+            el('span', {}, [el('small', { textContent: when(d) })]),
+            el('span', {}, [el('strong', { textContent: d.limit ? `${d.used} / ${d.limit}` : String(d.used) }), el('small', { textContent: d.limit ? 'times' : 'times, no limit' })]),
+            el('span', {}, [badge(`d-${d.status}`, D_STATUS[d.status] || d.status)]),
+          ])
+          row.addEventListener('click', () => { dState.editing = d.code; dState.said = ''; draw() })
+          return row
+        }),
+      ]) : (f.loaded && !f.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: f.list.length ? 'No codes match' : 'No discount codes yet' }), el('p', { textContent: f.list.length ? 'Try another chip or search.' : 'Press New discount to make the first.' })]) : null),
+    ]
+  }
+
+  // the panel that makes a code, or changes one
+  const discountPanel = (d) => {
+    const fresh = d === 'new'
+    const was = fresh ? null : dState.list.find((x) => x.code === d)
+    if (!fresh && !was) return []
+    const close = () => { dState.editing = null; draw() }
+    const v = { code: fresh ? newCode() : was.code, percent: fresh ? 10 : was.percent, emails: fresh ? [] : [...was.emails], everyone: fresh ? true : !was.emails.length, starts: fresh ? 0 : was.starts, lasts: '7', ends: 0, limit: '' }
+    const field = (label, kids, hint) => el('div', { className: 'sl-label' }, [el('span', { textContent: label }), ...kids, hint ? el('small', { className: 'sl-hint', textContent: hint }) : null])
+    const seg = (options, value, onPick) => {
+      const box = el('div', { className: 'sl-seg', role: 'radiogroup' })
+      const paint = (val) => box.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === String(val)); b.setAttribute('aria-checked', String(b.dataset.v === String(val))) })
+      options.forEach(([val, text]) => { const b = el('button', { type: 'button', className: 'sl-stage', role: 'radio', textContent: text }); b.dataset.v = String(val); b.addEventListener('click', () => { paint(val); onPick(val) }); box.append(b) })
+      paint(value)
+      return box
+    }
+
+    // the code
+    const codeIn = el('input', { className: 'sl-input', value: v.code, maxLength: 32, readOnly: !fresh, spellcheck: false })
+    codeIn.addEventListener('input', () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })
+    const another = fresh ? button('New code', () => { codeIn.value = newCode() }, 'ia-btn ghost') : null
+
+    // how much
+    const pctIn = el('input', { className: 'sl-input sl-pct', type: 'number', min: 1, max: 100, step: 1, value: v.percent, readOnly: !fresh })
+    const presets = fresh ? seg([5, 10, 15, 20, 25, 30, 40, 50].map((n) => [n, `${n}%`]), v.percent, (n) => { pctIn.value = n }) : null
+    pctIn.addEventListener('input', () => presets && presets.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === pctIn.value)))
+
+    // who: everyone, or chosen customers (picked from the list of customers, or typed)
+    const chips = el('div', { className: 'sl-people' })
+    const paintPeople = () => chips.replaceChildren(...(v.emails.length ? v.emails.map((e) => {
+      const c = el('span', { className: 'sl-person' }, [el('span', { textContent: e }), el('button', { type: 'button', ariaLabel: `Remove ${e}`, textContent: '×' })])
+      c.querySelector('button').addEventListener('click', () => { v.emails = v.emails.filter((x) => x !== e); paintPeople() })
+      return c
+    }) : [el('small', { className: 'sl-hint', textContent: 'Nobody chosen yet.' })]))
+    const listId = 'sl-customers-list'
+    const pick = el('input', { className: 'sl-input', placeholder: 'Choose a customer, or type an email', type: 'email' })
+    pick.setAttribute('list', listId)
+    const known = customers().filter((c) => c.email)
+    const datalist = el('datalist', { id: listId }, known.map((c) => el('option', { value: c.email, label: `${c.name || c.email} · ${c.orders} ${c.orders === 1 ? 'order' : 'orders'}` })))
+    const add = () => {
+      const e = pick.value.trim().toLowerCase()
+      if (!e) return
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { panelSaid.textContent = `"${e}" is not an email address.`; return }
+      if (!v.emails.includes(e)) v.emails.push(e)
+      pick.value = ''; panelSaid.textContent = ''; paintPeople()
+    }
+    pick.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add() } })
+    pick.addEventListener('change', () => { if (known.some((c) => c.email === pick.value)) add() })
+    const whoBox = el('div', { className: 'sl-who-box' }, [el('div', { className: 'sl-pick' }, [pick, datalist, button('Add', add, 'ia-btn ghost')]), chips])
+    whoBox.hidden = v.everyone
+    const whoSeg = seg([['all', 'Everyone'], ['some', 'Chosen customers']], v.everyone ? 'all' : 'some', (val) => { v.everyone = val === 'all'; whoBox.hidden = v.everyone })
+    paintPeople()
+
+    // when
+    const startIn = el('input', { className: 'sl-input', type: 'date', value: dayInput(v.starts) })
+    const endIn = el('input', { className: 'sl-input', type: 'date', value: '' })
+    const endBox = el('div', {}, [endIn])
+    endBox.hidden = true
+    const lastsSeg = fresh ? seg([['1', '24 hours'], ['7', '7 days'], ['30', '30 days'], ['0', 'No end'], ['date', 'Until a date']], v.lasts, (val) => { v.lasts = val; endBox.hidden = val !== 'date' }) : null
+    const limitIn = el('input', { className: 'sl-input', type: 'number', min: 1, step: 1, placeholder: 'No limit', value: v.limit })
+
+    const panelSaid = el('span', { className: 'sl-said is-bad' })
+    const save = button(fresh ? 'Make the code' : 'Save changes', async () => {
+      const starts = fromDayInput(startIn.value, false) || (fresh ? Date.now() : was.starts)
+      const startAt = Math.max(starts, fresh && !startIn.value ? Date.now() : starts)
+      const ends = !fresh ? undefined : v.lasts === 'date' ? fromDayInput(endIn.value, true) : v.lasts === '0' ? 0 : Math.max(Date.now(), startAt) + Number(v.lasts) * DAY
+      if (fresh && v.lasts === 'date' && !endIn.value) { panelSaid.textContent = 'Pick the day it ends.'; return }
+      if (!v.everyone && !v.emails.length) { panelSaid.textContent = 'Choose at least one customer, or pick Everyone.'; return }
+      save.disabled = true; panelSaid.textContent = 'Saving…'
+      const body = fresh
+        ? { code: codeIn.value, percent: Number(pctIn.value), emails: v.everyone ? [] : v.emails, starts: startAt, ends, limit: Number(limitIn.value) || 0 }
+        : { code: was.code, emails: v.everyone ? [] : v.emails, starts: startAt }
+      const r = await dApi(fresh ? 'POST' : 'PATCH', body)
+      if (!r.ok) { panelSaid.textContent = r.json.message || 'Not saved. Try again.'; save.disabled = false; return }
+      const got = r.json.discount
+      dState.list = [got, ...dState.list.filter((x) => x.code !== got.code)]
+      dState.editing = got.code; dState.said = fresh ? 'Made ✓ Buyers can use it now.' : 'Saved ✓'
+      draw()
+    }, 'ia-btn')
+    const remove = fresh ? null : button('Delete code', async () => {
+      if (!confirm(`Delete ${was.code}? It stops working at once. Orders that used it keep their discount.`)) return
+      const r = await dApi('DELETE', { code: was.code })
+      if (!r.ok) { panelSaid.textContent = r.json.message || 'Not deleted. Try again.'; return }
+      dState.list = dState.list.filter((x) => x.code !== was.code); dState.editing = null; draw()
+    }, 'sl-link sl-danger')
+
+    const block = (title, kids) => el('section', { className: 'sl-block' }, [el('h3', { textContent: title }), ...kids])
+    const panel = el('aside', { className: 'sl-panel', role: 'dialog', ariaModal: 'true', ariaLabel: fresh ? 'New discount' : `Discount ${was.code}` }, [
+      el('header', { className: 'sl-panel-head' }, [
+        el('div', {}, [el('div', { className: 'ia-kicker', textContent: fresh ? 'New discount' : `${was.percent}% off · used ${was.used} ${was.used === 1 ? 'time' : 'times'}` }), el('h2', { textContent: fresh ? 'Make a code' : was.code }), !fresh ? el('div', { className: 'sl-badges' }, [badge(`d-${was.status}`, D_STATUS[was.status])]) : null]),
+        button('×', close, 'sl-x'),
+      ]),
+      el('div', { className: 'sl-panel-body' }, [
+        block('The code', [field('Code buyers type', [el('div', { className: 'sl-pick' }, [codeIn, another])], fresh ? 'Letters, numbers, - and _. Make your own (MILTON10) or press New code.' : 'A code cannot be renamed: make a new one instead.')]),
+        block('How much', [presets, field('Percentage off', [pctIn], fresh ? 'Pick one above, or type any percentage from 1 to 100.' : 'Set when the code was made. For another percentage, make a new code.')]),
+        block('Who can use it', [whoSeg, whoBox, el('small', { className: 'sl-hint', textContent: 'Chosen customers type their email in the cart with the code, and pay with that email.' })]),
+        block('When', [
+          field('Starts', [startIn], 'Empty: straight away.'),
+          fresh ? field('Lasts', [lastsSeg, endBox]) : field('Ends', [el('strong', { className: 'sl-plain', textContent: was.ends ? date(was.ends) : 'No end' })], 'Set when the code was made.'),
+          fresh ? field('How many times it can be used', [limitIn], 'In total, by everyone. Empty: no limit.') : field('Used', [el('strong', { className: 'sl-plain', textContent: was.limit ? `${was.used} of ${was.limit}` : `${was.used}, no limit` })]),
+        ]),
+        el('div', { className: 'sl-save' }, [save, el('span', { className: 'sl-said', textContent: dState.said }), panelSaid]),
+        remove ? el('div', { className: 'sl-save' }, [remove]) : null,
+      ]),
+    ])
+    dState.said = ''
+    const shade = el('div', { className: 'sl-shade' })
+    shade.addEventListener('click', close)
+    return [shade, panel]
+  }
+
   // ---------- drawing ----------
   const draw = () => {
     if (!root) return
@@ -307,18 +497,24 @@ window.IASales = (() => {
     const focusedSearch = document.activeElement && document.activeElement.classList.contains('sl-search')
     const caret = focusedSearch ? document.activeElement.selectionStart : null
     const open = state.view === 'orders' && state.open && state.orders.find((o) => o.id === state.open)
-    root.replaceChildren(el('div', { className: 'sl-inner' }, state.view === 'customers' ? customersView() : ordersView()), ...(open ? orderPanel(open) : []))
+    const views = { orders: ordersView, customers: customersView, discounts: discountsView }
+    const panels = open ? orderPanel(open) : state.view === 'discounts' && dState.editing ? discountPanel(dState.editing) : []
+    const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea') // typing in a panel: leave it as it is
+    if (keep) return
+    root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels)
     root.scrollTop = scroll
     if (focusedSearch) { const s = root.querySelector('.sl-search'); if (s) { s.focus(); s.setSelectionRange(caret, caret) } }
   }
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.open) { state.open = null; draw() } })
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && (state.open || dState.editing)) { state.open = null; dState.editing = null; draw() } })
 
   /* Called by shell.js whenever the address changes to a Sales screen. */
   const show = (view, params) => {
     const before = state.view
-    state.view = view === 'customers' ? 'customers' : 'orders'
+    state.view = ['customers', 'discounts'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
-    if (before !== state.view) state.open = null
+    if (before !== state.view) { state.open = null; dState.editing = null }
+    // the discounts screen also wants the customers, to offer them in its drop-down
+    if (state.view === 'discounts' && !dState.loaded && !dState.loading) loadDiscounts()
     if (!state.loaded && !state.loading) load()
     else draw()
     if (before !== state.view) root.scrollTop = 0
@@ -329,6 +525,7 @@ window.IASales = (() => {
     show,
     links: [
       { view: 'orders', href: '#/sales/orders', label: 'Orders', icon: 'M6 3h12l1 4H5z M5 7h14v13H5z M9 11h6 M9 15h4' },
+      { view: 'discounts', href: '#/sales/discounts', label: 'Discounts', icon: 'M20 12l-8 8-8.5-8.5V4h7.5z M8 8.01h.01 M15 9l-6 6 M10 9.5h.01 M14 14.5h.01' },
       { view: 'customers', href: '#/sales/customers', label: 'Customers', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20v-1a5.5 5.5 0 0 1 5.5-5.5h2A5.5 5.5 0 0 1 15.5 19v1 M16 4.3a3.5 3.5 0 0 1 0 6.4 M18 13.7a5.5 5.5 0 0 1 3.5 5.3v1' },
     ],
   }

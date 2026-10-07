@@ -91,26 +91,34 @@ const adminBundle = () => ({
   name: 'admin-bundle',
   configureServer(server) {
     startAdminBackend(server)
-    // The admin's Sales screens ask /api/orders for the shop's orders. On Vercel that is a function
-    // (api/orders.js). Here the same code runs with the STRIPE_SECRET_KEY from a .env.local file,
-    // and with no key, on sample orders (dev/sample-orders.js), so the screens can be worked on.
-    // There is no login on this computer, so there is no pass to check.
-    server.middlewares.use('/api/orders', async (req, res) => {
-      const env = loadEnv('development', process.cwd(), '')
-      if (env.STRIPE_SECRET_KEY) process.env.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY
-      let body = ''
-      for await (const chunk of req) body += chunk
-      let parsed = {}
-      try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
-      const run = process.env.STRIPE_SECRET_KEY
-        ? (await import(`${pathToFileURL(resolve('api/orders.js')).href}?t=${Date.now()}`)).orders
-        : (await import(pathToFileURL(resolve('dev/sample-orders.js')).href)).sampleOrders
-      const { status, json } = await run({ method: req.method, body: parsed })
-      res.statusCode = status
-      res.setHeader('Content-Type', 'application/json')
-      res.setHeader('Cache-Control', 'no-store')
-      res.end(JSON.stringify(json))
-    })
+    // The admin's Sales screens and the cart ask the functions in /api (on Vercel). Here the same
+    // code runs with the STRIPE_SECRET_KEY from a .env.local file, and with no key, on sample
+    // orders and codes (dev/), so the screens can be worked on. There is no login on this
+    // computer, so there is no pass to check.
+    const local = [
+      ['/api/orders', 'api/orders.js', 'orders', 'dev/sample-orders.js', 'sampleOrders'],
+      ['/api/discounts', 'api/discounts.js', 'discounts', 'dev/sample-discounts.js', 'sampleDiscounts'],
+      ['/api/discount', 'api/discount.js', 'discountCheck', 'dev/sample-discounts.js', 'sampleDiscountCheck'],
+    ]
+    for (const [route, file, name, sampleFile, sampleName] of local) {
+      server.middlewares.use(route, async (req, res, next) => {
+        if ((req.url || '/').split('?')[0] !== '/') return next() // "/api/discount" must not answer "/api/discounts"
+        const env = loadEnv('development', process.cwd(), '')
+        if (env.STRIPE_SECRET_KEY) process.env.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY
+        let body = ''
+        for await (const chunk of req) body += chunk
+        let parsed = {}
+        try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
+        const run = process.env.STRIPE_SECRET_KEY
+          ? (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`))[name]
+          : (await import(pathToFileURL(resolve(sampleFile)).href))[sampleName]
+        const { status, json } = await run({ method: req.method, body: parsed })
+        res.statusCode = status
+        res.setHeader('Content-Type', 'application/json')
+        res.setHeader('Cache-Control', 'no-store')
+        res.end(JSON.stringify(json))
+      })
+    }
     server.middlewares.use('/admin', (req, res, next) => {
       const path = (req.originalUrl || '').split('?')[0]
       const name = (req.url || '').split('?')[0].replace(/^\//, '')

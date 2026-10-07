@@ -44,6 +44,8 @@ const order = (s) => {
     shipTo: address(ship && ship.address),
     items: ((s.line_items && s.line_items.data) || []).map((l) => ({ name: l.description || '', qty: l.quantity || 1, total: (l.amount_total || 0) / 100 })),
     summary: (s.metadata && s.metadata.order) || '',
+    discount: (s.total_details && s.total_details.amount_discount || 0) / 100,
+    discountCode: (s.metadata && s.metadata.discount) || '',
     fulfilment: STAGES.includes(meta.fulfilment) ? meta.fulfilment : 'new',
     tracking: meta.tracking || '',
     note: meta.admin_note || '',

@@ -1,6 +1,6 @@
 {
   "shopOnly": true,
-  "src": "/uploads/scarlet-witch-frame.png",
+  "src": "/uploads/wanda-colors.webp",
   "universe": "Marvel",
   "hidden": false,
   "date": "2021-03-28",
@@ -17,6 +17,7 @@
   "status": "none",
   "title": "Wanda Maximoff",
   "inShop": true,
+  "hover": "/uploads/scarlet-witch-frame.png",
   "category": "Fan art",
   "look": "default"
 }

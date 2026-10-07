@@ -12,6 +12,7 @@
   ],
   "functions": {
     "api/checkout.js": { "includeFiles": "content/**" },
-    "api/paypal.js": { "includeFiles": "content/**" }
+    "api/paypal.js": { "includeFiles": "content/**" },
+    "api/account.js": { "includeFiles": "content/**" }
   }
 }

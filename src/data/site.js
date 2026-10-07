@@ -19,6 +19,8 @@ const byOrder = (a, b) => (a.order ?? 99) - (b.order ?? 99)
 const live = (list) => list.filter((x) => !x.hidden) // entries ticked "Hide from the site"
 
 export let brand, hero, marquee, home, commissions, about, contact, social, footer
+/* The words on a customer's account page, and the free profile pictures (Shop → Customer accounts). */
+export let accountPage
 /* "Get a quote": the wording, and where the price tags and quote buttons take people (the artist's Instagram, unless the admin names somewhere else). */
 export let quote
 /* The comic or series the artist is drawing now, shown in its own block on the home page. */
@@ -72,6 +74,12 @@ let newPictures = {} // pictures saved after this build: "/uploads/x.webp" -> th
 /* Leaves out anything not filled in, so the built-in wording below it shows through. */
 const given = (fields) => Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null))
 
+/* A picture as a profile picture: where the round crop sits and how far in, set in the admin by
+   dragging the picture in its circle. Kept as "left,top,zoom" (percent). */
+const parseFace = (v) => { const [x, y, z] = String(v || '').split(',').map((n) => (n.trim() === '' ? NaN : Number(n))); return { x: Number.isFinite(x) ? x : 50, y: Number.isFinite(y) ? y : 22, zoom: Number.isFinite(z) && z >= 100 ? z : 100 } }
+/* the style that puts it there, on an <img> filling a round frame */
+export const faceLook = (piece) => { const f = (piece && piece.face) || { x: 50, y: 22, zoom: 100 }; return { objectPosition: `${f.x}% ${f.y}%`, transform: `scale(${f.zoom / 100})`, transformOrigin: `${f.x}% ${f.y}%` } }
+
 function assemble(content) {
   // the words on each page (content/pages) and what applies to the whole site (content/site)
   const page = (name) => content[`content/pages/${name}.json`] || {}
@@ -117,18 +125,21 @@ function assemble(content) {
   if (!about.story.length && about.paragraphs?.length) about.story = about.paragraphs.map((text) => ({ text }))
   about.story = about.story.filter((s) => s && s.text)
   contact = { label: 'Say hello', title: 'Get in touch', topics: [], ...given(page('contact')) }
+  accountPage = { noteTitle: 'A note from the artist', note: '', signature: '', collectionTitle: 'Your collection', savedTitle: 'Saved for later', cardLabel: 'Collector', ...given(page('account')) }
+  accountPage.icons = (Array.isArray(accountPage.icons) ? accountPage.icons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
   pages = {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },
   }
   shop = {
     enabled: false, payments: 'stripe', currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
-    signedChoice: false, signedExtra: 0, cartIcon: 'bag',
+    signedChoice: false, signedExtra: 0, cartIcon: 'bag', accounts: 'off',
     label: 'The shop', title: 'Take one home',
     thanksTitle: 'Thank you.', thanksText: 'Your order is in. A receipt is on its way to your email.',
     emptyTitle: 'The shop opens soon.', emptyText: 'Prints and originals are on their way. Follow along on Instagram to hear first.',
     ...given(site('shop')),
   }
+  shop.accounts = accountPage.accounts || shop.accounts // off, optional or required (Shop → Customer accounts)
   social = links || []
   const insta = social.find((s) => /instagram/i.test(s.label || ''))
   brand.instagram = insta?.url
@@ -156,7 +167,7 @@ function assemble(content) {
   everything = live(folder('work'))
     .filter((p) => p.title)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p) }))
+    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p), face: parseFace(p.face) }))
   work = everything.filter((p) => !p.shopOnly)
   forSale = everything.filter(buyable)
   const shopLists = site('categories')

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
+import { useAccount } from '../hooks/useAccount'
 import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
 import { checkout, payLine } from '../data/checkout'
@@ -39,6 +41,8 @@ export const Lock = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M
    for this one piece. If the checkout cannot be reached, a note slides in with another way to buy. */
 export default function Buy({ piece }) {
   const cart = useCart()
+  const account = useAccount()
+  const mustLogIn = account.required && !account.user // accounts required, and nobody logged in
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const [signed, setSigned] = useState(false) // a signature, when the admin offers one: off to start with
@@ -68,6 +72,10 @@ export default function Buy({ piece }) {
         <span className={`buy-price ${out ? 'is-out' : ''} ${sale && !out ? 'is-sale' : ''}`}>{money(now + extra, true)}<small>{String(shop.currency || 'eur').toUpperCase()}</small></span>
         {sale && <s className="buy-was">{money(full + extra, true)}</s>}
         {tag && <span className={`tag-badge is-inline is-${tag.kind}`}>{tag.text}</span>}
+        {/* keep it for later, in the customer's account (logged out: the heart leads to logging in) */}
+        {account.on && (account.user
+          ? <button type="button" className={`buy-heart ${account.isSaved(piece.slug) ? 'on' : ''}`} onClick={() => account.toggleSaved(piece.slug)} aria-pressed={account.isSaved(piece.slug)} title={account.isSaved(piece.slug) ? 'Saved in your account' : 'Save for later'} aria-label={account.isSaved(piece.slug) ? 'Remove from saved' : 'Save for later'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.8c0 5.7-7.5 10.3-7.5 10.3z" /></svg></button>
+          : <Link className="buy-heart" to="/account/login?next=/account?tab=saved" title="Log in to save it for later" aria-label="Log in to save it for later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.8c0 5.7-7.5 10.3-7.5 10.3z" /></svg></Link>)}
       </div>
       {piece.what && <p className="buy-what">{piece.what}</p>}
       {sale && !out && <p className="buy-save">You save {money(full - now, true)}</p>}
@@ -98,9 +106,10 @@ export default function Buy({ piece }) {
             <span>{added ? 'Added to cart' : 'Add to cart'}</span>
             <span className="buy-btn-icon" aria-hidden="true">{added ? '✓' : '+'}</span>
           </button>
-          {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => buyNow('paypal')} label="Buy now with" />}
+          {ways.paypal && !mustLogIn && <PaypalButton busy={busy === 'paypal'} onClick={() => buyNow('paypal')} label="Buy now with" />}
           <div className="buy-also">
-            {ways.card && <button type="button" className={`buy-now ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => buyNow('card')} aria-busy={busy === 'card'}>{busy === 'card' ? 'Opening secure checkout…' : `${shop.buttonLabel} now${ways.paypal ? ' by card' : ''}`} <span aria-hidden="true">→</span></button>}
+            {mustLogIn && <Link className="buy-now" to={`/account/login?next=${encodeURIComponent('/shop')}`}>Log in to buy <span aria-hidden="true">→</span></Link>}
+            {ways.card && !mustLogIn && <button type="button" className={`buy-now ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => buyNow('card')} aria-busy={busy === 'card'}>{busy === 'card' ? 'Opening secure checkout…' : `${shop.buttonLabel} now${ways.paypal ? ' by card' : ''}`} <span aria-hidden="true">→</span></button>}
             {inCart > 0 && <button type="button" className="buy-incart" onClick={() => cart.setOpen(true)}>{inCart} in your cart</button>}
           </div>
           <p className="buy-secure"><Lock /><span>{payLine()}{where ? ` · Ships to ${where}` : ''}</span></p>

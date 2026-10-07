@@ -398,7 +398,7 @@ window.IASales = (() => {
     tracking.addEventListener('input', dirty); note.addEventListener('input', dirty)
     save.addEventListener('click', async () => {
       save.disabled = true; said.textContent = 'Saving…'
-      const r = await api('POST', { paymentIntent: o.paymentIntent, fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() })
+      const r = await api('POST', { id: o.id, paymentIntent: o.paymentIntent, fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() })
       if (r.ok) { Object.assign(o, { fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() }); state.saved = o.id; draw() }
       else { said.textContent = r.json.message || 'Not saved. Try again.'; save.disabled = false }
     })
@@ -409,7 +409,7 @@ window.IASales = (() => {
         button('×', close, 'sl-x'),
       ]),
       el('div', { className: 'sl-panel-body' }, [
-        done(o) && o.paymentIntent ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
+        done(o) && (o.paymentIntent || o.provider === 'paypal') ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
         block('Pieces', [
           el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: i.name }), el('small', { textContent: `× ${i.qty}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
           o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,
@@ -421,7 +421,7 @@ window.IASales = (() => {
           o.email ? button('All orders from this customer', () => { state.open = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(o.email)}` }, 'sl-link') : null,
         ]),
         o.shipTo.length ? block('Ship to', [el('p', { className: 'sl-address' }, [o.name, ...o.shipTo.slice(0, -1), country(o.shipTo[o.shipTo.length - 1])].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line])))]) : null,
-        block('Payment', [el('a', { className: 'ia-btn ghost', href: o.stripe, target: '_blank', rel: 'noopener', textContent: 'Open in Stripe ↗' }), el('p', { className: 'sl-dim', textContent: 'Refunds and receipts are done in Stripe.' })]),
+        block('Payment', [o.stripe ? el('a', { className: 'ia-btn ghost', href: o.stripe, target: '_blank', rel: 'noopener', textContent: o.provider === 'paypal' ? 'Open in PayPal ↗' : 'Open in Stripe ↗' }) : null, el('p', { className: 'sl-dim', textContent: o.provider === 'paypal' ? 'Paid with PayPal. Refunds are done in PayPal.' : 'Refunds and receipts are done in Stripe.' })]),
       ]),
     ])
     const shade = el('div', { className: 'sl-shade' })

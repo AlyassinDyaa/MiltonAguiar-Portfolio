@@ -77,6 +77,7 @@ collections:
           - { label: 'Just the art, filling the top of the card', value: plain }
         hint: 'How it looks on its card in the Shop: as the thing the buyer gets.'
       - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece; an opened piece starts on the first picture, with this one a tap away. Same shape as the first works best.' }
+      - { name: face, label: As a profile picture, widget: facecrop, required: false, hint: 'A customer who buys this piece can use it as their profile picture (only they can). Drag the picture inside the circle to put the face in place, and zoom in.' }
       - name: status
         label: Tag
         widget: select
@@ -123,6 +124,7 @@ collections:
       - { name: title, label: Title, widget: string }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
       - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece; an opened piece starts on the first picture, with this one a tap away. Same shape as the first works best.' }
+      - { name: face, label: As a profile picture, widget: facecrop, required: false, hint: 'A customer who buys this piece can use it as their profile picture (only they can). Drag the picture inside the circle to put the face in place, and zoom in.' }
       - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. For a piece sold in several sizes, leave it empty and add the sizes at the bottom.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }
@@ -597,6 +599,38 @@ collections:
             fields:
               - { name: name, label: Name, widget: string }
               - { name: note, label: Measurements, widget: string, required: false }
+
+      - name: account
+        label: Customer accounts
+        file: content/pages/account.json
+        fields:
+          - name: accounts
+            label: Customer accounts
+            widget: select
+            default: 'off'
+            options:
+              - { label: 'Off: everyone buys as a guest', value: 'off' }
+              - { label: 'Optional: buyers can make an account, or buy as a guest', value: optional }
+              - { label: 'Required: an account is needed to buy', value: required }
+            hint: 'An account keeps the cart on every device, saves pieces for later, shows the buyer their orders with where each is up to, and gives them a membership card with their member number. Needs the database: MONGODB_URI in the Vercel project settings, and for the password and confirmation emails SMTP_HOST, SMTP_USER and SMTP_PASS (or RESEND_API_KEY and MAIL_FROM). Until the database is set up, accounts stay hidden and everyone buys as a guest.'
+          - { name: cardLabel, label: Word on the membership card, widget: string, required: false, hint: 'The tag in the corner of the card: Collector, Member, Fan club...' }
+          - { name: noteTitle, label: Heading of your note, widget: string, required: false, hint: 'Shown to every customer on their account page, signed by you.' }
+          - { name: note, label: Your note to customers, widget: text, required: false, hint: 'A few warm lines. Empty: no note.' }
+          - { name: signature, label: Signed, widget: string, required: false }
+          - { name: collectionTitle, label: Heading over the pieces they own, widget: string, required: false }
+          - { name: savedTitle, label: Heading over the pieces they saved, widget: string, required: false }
+          - name: icons
+            label: Free profile pictures
+            label_singular: picture
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'Pictures any customer can choose for their profile. Drag a picture inside its circle to place it, and zoom with the slider under it. Pieces a customer buys also become pictures that only they can use.'
+            fields:
+              - { name: picture, label: Picture, widget: image, choose_url: false }
+              - { name: face, label: Crop, widget: facecrop, required: false }
+              - { name: name, label: Name, widget: string, required: false }
 
       - name: visibility
         label: Show or hide

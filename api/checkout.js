@@ -1,4 +1,5 @@
 import { priceCart, takes } from './_cart.js'
+import { buyer } from './_buyer.js'
 
 /* Paying by card, through Stripe. The site sends the cart (see _cart.js); this works out what it
    costs from the site's own content, asks Stripe for one checkout page with a line per piece, and
@@ -11,7 +12,11 @@ import { priceCart, takes } from './_cart.js'
    - Stripe is called with STRIPE_SECRET_KEY, which lives only in the Vercel project settings.
 
    Nothing is sold unless "Online purchases" is switched on in the admin, card payment is one of
-   the ways to pay there (Stripe or Both), and the key is set. */
+   the ways to pay there (Stripe or Both), and the key is set.
+
+   With customer accounts on (Customer accounts, in the same settings), a logged-in buyer's order
+   is tied to their account (api/stripe-webhook.js saves it there once paid); with accounts
+   required, nobody buys without one. */
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ message: 'Send the cart with POST.' })
@@ -21,6 +26,8 @@ export default async function handler(req, res) {
   const { shop, lines, deal, name, what, summary } = cart
   if (!takes(shop, 'stripe')) return res.status(403).json({ message: 'Card payment is switched off. Pay with PayPal instead.' })
   if (!key) return res.status(503).json({ message: 'Card payment is not set up yet. Get in touch to buy a piece.' })
+  const { user, mustLogIn } = await buyer(req)
+  if (mustLogIn) return res.status(401).json({ login: true, message: 'Log in, or make an account, to buy.' })
 
   const origin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`
   const ask = new URLSearchParams()
@@ -41,6 +48,11 @@ export default async function handler(req, res) {
     ask.set('discounts[0][coupon]', deal.code)
     ask.set('metadata[discount]', deal.code)
     if (deal.email) ask.set('customer_email', deal.email)
+  }
+  // a logged-in buyer: the order is tied to their account (api/stripe-webhook.js reads this back)
+  if (user) {
+    ask.set('client_reference_id', user._id)
+    if (!deal || !deal.email) ask.set('customer_email', user.email)
   }
   if (shop.shipping !== false) {
     const countries = (Array.isArray(shop.countries) ? shop.countries : []).map((c) => String(c).trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c))

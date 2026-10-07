@@ -138,6 +138,46 @@ before answering (`api/discounts.js` too; `api/discount.js` is the cart's check 
 On this computer (`npm run dev`) the screens use a `STRIPE_SECRET_KEY` from `.env.local`, or with
 none, sample orders and codes (`dev/`), labelled as such.
 
+### Customer accounts and the membership card
+
+Buyers can make an account (ported from the DarkBeats site): log in, make an account, a forgotten
+password by email, confirming the email address, and their own page at `/account`. Switch it
+under **Shop → Customer accounts**: Off (everyone buys as a guest), Optional, or Required (an
+account is needed to buy). A logged-in customer gets:
+
+- **the membership card**: a red card with their name, the year they joined, their member number
+  (`#0001` for the first customer, in sign-up order, never given out twice) and how many pieces
+  they have collected. The word in its corner is set in the admin (Collector, Member...). A
+  visitor sees the card fill in with their name as they make an account;
+- **their orders**, each with where it is up to (the stage and tracking number set in Sales →
+  Orders; a tracking number written as a web address becomes a "Track the parcel" link). Once the
+  email is confirmed, orders placed with it as a guest show too;
+- **their cart on every device**, joined with what they added before logging in;
+- **a heart** beside the price of every piece, to save it for later;
+- **a profile picture**: their initials, one of the free pictures kept in the admin, or a piece
+  they have bought (only they can use it). Each piece has **As a profile picture**, a crop to drag
+  into place;
+- **your note**, signed, on their page; details (name, phone, emails about new pieces) and
+  security (change the password, log out every device, delete the account: its orders stay with
+  the shop, unlinked).
+
+Accounts need a MongoDB database: `MONGODB_URI` on Vercel (see `.env.example`). This site shares
+the cluster with DarkBeats but keeps to its own database, `MiltonAguiar`, with its own database
+user, so their customers and member numbers never mix. Until `MONGODB_URI` is set, accounts
+stay hidden and everyone buys as a guest, whatever the switch says. Emails (the password link,
+confirming the address) go through `SMTP_HOST`, `SMTP_USER` and `SMTP_PASS` (Gmail with an app
+password works) or `RESEND_API_KEY` and `MAIL_FROM`; links in them use `SITE_URL`.
+
+Card orders reach the database through Stripe's webhook: in Stripe, **Developers → Webhooks →
+Add endpoint** `https://<the site>/api/stripe-webhook`, events `checkout.session.completed`,
+`checkout.session.async_payment_succeeded` and `charge.refunded`; its signing secret goes on
+Vercel as `STRIPE_WEBHOOK_SECRET`. PayPal orders are saved as they are paid, and with the
+database set up they also show in Sales → Orders beside the Stripe ones.
+
+On this computer, `MONGODB_URI=memory` in `.env.local` runs the accounts on a stand-in database
+kept in the dev server's memory (`dev/memory-db.js`), forgotten when it restarts. With no email
+service set, the emails are printed in the dev server's log instead, links included.
+
 ### The buttons under the name
 
 Home page → **Buttons** lists the buttons under the name on the home page: the words on each,
@@ -218,6 +258,11 @@ in needs a GitHub account.
 5. Stripe: in Stripe, **Developers → API keys**, copy the **Secret key** (`sk_live_...`, or
    `sk_test_...` to try it with Stripe's test cards) and add it on Vercel as `STRIPE_SECRET_KEY`,
    then redeploy. The key stays on Vercel; the browser never sees it.
+6. Customer accounts: in MongoDB Atlas, on the cluster, **Database Access → Add new database
+   user** (`milton-app`, with **readWrite** on the `MiltonAguiar` database only), then **Connect →
+   Drivers** for the address. On Vercel add `MONGODB_URI` (that address, with the user's
+   password in it), `MONGODB_DB` = `MiltonAguiar`, the email settings and `SITE_URL`, then the
+   Stripe webhook (above), and redeploy. Every setting is listed in `.env.example`.
 
 To change the passcode later, change `ADMIN_PASSCODE` on Vercel and redeploy; everyone is
 logged out and uses the new one. A login lasts a week. Pictures uploaded through the admin on

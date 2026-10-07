@@ -70,19 +70,20 @@
       groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
+    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testData', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
   const GROUPS = [
     { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
-    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery and payments.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' },
+    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' },
     { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' },
+    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' && s.key !== 'site/account' },
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Customer accounts', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
@@ -94,6 +95,7 @@
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
     'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
+    'site/account': 'Customer accounts on or off, the membership card, your note on their page, and the free profile pictures.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -104,6 +106,7 @@
     'site/brand': 'M12 3l2.600 5.600 6.100.700-4.500 4.200 1.200 6-5.400-3-5.400 3 1.200-6L3.300 9.300l6.100-.700z',
     'site/shop': 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
     'site/categories': 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v5H4z M13 14h7v5h-7z',
+    'site/account': 'M12 12.200a4.200 4.200 0 1 0 0-8.400 4.200 4.200 0 0 0 0 8.400z M4 20.500c.800-3.600 4-5.800 8-5.800s7.200 2.200 8 5.800',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'
@@ -361,8 +364,11 @@
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
       const compact = currentSection() === 'site' ? /^(types|categories|subcategories|sizes)-field/.test(name) : /^sizes-field/.test(name)
       if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
+      // the free profile pictures (Customer accounts): a grid of round tiles
+      const pics = currentSection() === 'site' && /^icons-field/.test(name)
+      if (pics !== field.classList.contains('ia-pics')) field.classList.toggle('ia-pics', pics)
     }
-    for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder])')) {
+    for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder]), .ia-pics input:not([placeholder])')) {
       const label = input.closest('[class*="ControlContainer"]')?.querySelector('label')
       if (label) input.placeholder = label.textContent.replace(/\s*\(optional\)\s*$/i, '')
     }
@@ -784,4 +790,72 @@
     const now = await fingerprint()
     if (now && now !== firstPrint) offerReload()
   }, 3 * 60 * 1000)
+
+  /* ---------- a picture as a profile picture: where the circle sits, and how far in ----------
+     The piece's picture in a circle: drag it to put the face in place, zoom with the slider (the
+     sliders under it move it too, for the keyboard). Kept as "left,top,zoom" (percent), which the
+     site uses wherever a buyer shows this print as their picture. */
+  if (window.CMS && window.createClass && window.h) {
+    const h = window.h
+    const clamp = (n, lo, hi) => Math.round(Math.min(hi, Math.max(lo, n)))
+    window.CMS.registerWidget('facecrop', window.createClass({
+      getInitialState() { return { src: '' } },
+      componentDidMount() { this.look(); this.timer = setInterval(() => this.look(), 400) },
+      componentWillUnmount() { clearInterval(this.timer) },
+      // the picture is whatever the form's Picture field holds right now
+      look() {
+        let src = ''
+        // inside a list (the free profile pictures): the picture chosen in the same tile
+        const tile = this.root && this.root.closest('[class*="-listControlItem"]')
+        if (tile) {
+          const img = tile.querySelector('[class*="ImageWrapper"] img')
+          src = img ? img.getAttribute('src') || '' : ''
+        } else {
+          // a piece: the form's Picture field
+          const entry = this.props.getEntry && this.props.getEntry()
+          const data = entry && entry.get('data')
+          const path = data && data.get('src')
+          src = path ? String(this.props.getAsset(path) || '') : ''
+        }
+        if (src !== this.state.src) this.setState({ src })
+      },
+      parts() {
+        const [x, y, z] = String(this.props.value || '').split(',').map((n) => (n.trim() === '' ? NaN : Number(n)))
+        return { x: Number.isFinite(x) ? x : 50, y: Number.isFinite(y) ? y : 22, z: Number.isFinite(z) && z >= 100 ? z : 100 }
+      },
+      put(p) { this.props.onChange(clamp(p.x, 0, 100) + ',' + clamp(p.y, 0, 100) + ',' + clamp(p.z, 100, 400)) },
+      drag(e) {
+        if (!this.state.src) return
+        e.preventDefault()
+        const box = e.currentTarget.getBoundingClientRect()
+        const from = { mx: e.clientX, my: e.clientY, ...this.parts() }
+        const per = 200 / (box.width * (from.z / 100)) // how far one pixel of dragging moves the picture
+        const move = (m) => this.put({ x: from.x - (m.clientX - from.mx) * per, y: from.y - (m.clientY - from.my) * per, z: from.z })
+        const stop = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', stop) }
+        addEventListener('pointermove', move)
+        addEventListener('pointerup', stop)
+      },
+      render() {
+        const { x, y, z } = this.parts()
+        const src = this.state.src
+        const look = { objectPosition: x + '% ' + y + '%', transform: 'scale(' + (z / 100) + ')', transformOrigin: x + '% ' + y + '%' }
+        const circle = (size) => h('span', { className: 'ia-face is-' + size }, src ? h('img', { src, alt: '', draggable: false, style: look }) : null)
+        const now = { x, y, z }
+        const slider = (label, key, min, max) => h('label', { className: 'ia-face-slider' },
+          h('span', {}, label),
+          h('input', { type: 'range', min, max, step: 1, value: now[key], disabled: !src, onChange: (e) => this.put({ ...now, [key]: Number(e.target.value) }) }),
+          h('b', {}, now[key] + '%'))
+        return h('div', { className: 'ia-facecrop', ref: (el) => { this.root = el } },
+          h('div', { className: 'ia-face-drag' + (src ? '' : ' is-empty'), onPointerDown: (e) => this.drag(e), title: src ? 'Drag to move the picture' : '' },
+            circle('big'),
+            src ? null : h('span', { className: 'ia-face-none' }, 'Add the picture first')),
+          h('div', { className: 'ia-face-side' },
+            h('div', { className: 'ia-face-row' }, circle('mid'), circle('small'), h('span', {}, 'As it shows on their profile')),
+            slider('Zoom', 'z', 100, 400),
+            slider('Left to right', 'x', 0, 100),
+            slider('Up and down', 'y', 0, 100),
+            h('button', { type: 'button', className: 'ia-face-reset', disabled: !this.props.value, onClick: () => this.props.onChange('') }, 'Start again')))
+      },
+    }))
+  }
 })()

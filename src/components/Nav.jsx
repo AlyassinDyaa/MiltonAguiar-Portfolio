@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, brand, commissions, nav, shop, shows, social } from '../data/site'
 import { useCart } from '../hooks/useCart'
+import { useAccount } from '../hooks/useAccount'
 import CartIcon from './CartIcon'
 import Wordmark from './Wordmark'
 import ThemeSwitch from './ThemeSwitch'
@@ -13,6 +14,7 @@ function Status() {
 
 export default function Nav() {
   const cart = useCart()
+  const account = useAccount()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -39,6 +41,11 @@ export default function Nav() {
           </nav>
           {hire && <Link className="nav-status" to="/commissions"><Status /></Link>}
           <ThemeSwitch />
+          {account.on && (
+            <Link className={`nav-account ${account.user ? 'is-in' : ''}`} to={account.user ? '/account' : '/account/login'} onClick={() => setOpen(false)} aria-label={account.user ? 'Your account' : 'Log in'} title={account.user ? 'Your account' : 'Log in'}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4z M4 20.5c.8-3.6 4-5.8 8-5.8s7.2 2.2 8 5.8" /></svg>
+            </Link>
+          )}
           {shop.enabled && (
             <button type="button" className="nav-cart" onClick={() => { setOpen(false); cart.setOpen(true) }} aria-label={`Cart, ${cart.count} ${cart.count === 1 ? 'piece' : 'pieces'}`}>
               <CartIcon />
@@ -64,6 +71,7 @@ export default function Nav() {
               </ul>
               <div className="menu-foot">
                 {hire && <span className="nav-status"><Status /></span>}
+                {account.on && <Link className="menu-account" to={account.user ? '/account' : '/account/login'} onClick={() => setOpen(false)}>{account.user ? 'Your account' : 'Log in / make an account'} <span aria-hidden="true">→</span></Link>}
                 <ul>{social.map((s) => <li key={s.label}><a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></li>)}</ul>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, money, payWays, shop, shows } from '../data/site'
 import { useCart } from '../hooks/useCart'
+import { useAccount } from '../hooks/useAccount'
 import { checkCode, checkout, payLine } from '../data/checkout'
 import { Elsewhere, Lock, PaypalButton } from './Buy'
 
@@ -14,6 +15,8 @@ const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
    and one button that pays for all of it on a single Stripe page. */
 export default function CartDrawer() {
   const cart = useCart()
+  const account = useAccount()
+  const mustLogIn = account.required && !account.user // accounts required, and nobody logged in
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   // a discount code: what is typed, the email it may need, and the code once it is accepted
@@ -117,6 +120,12 @@ export default function CartDrawer() {
                   )}
                   <div className="cart-total"><span>Total</span><strong>{deal && <s>{money(cart.total, true)}</s>}{money(cart.total - off)}</strong></div>
                   {shop.shipping !== false && <p className="cart-small">You enter your delivery address on the next page.</p>}
+                  {mustLogIn ? (
+                    <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>
+                      <span>Log in to buy</span>
+                      <span className="buy-btn-icon" aria-hidden="true">→</span>
+                    </Link>
+                  ) : <>
                   {ways.card && (
                     <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'}>
                       <span>{busy === 'card' ? 'Opening secure checkout' : ways.paypal ? 'Pay by card' : 'Checkout'}</span>
@@ -124,7 +133,11 @@ export default function CartDrawer() {
                     </button>
                   )}
                   {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => pay('paypal')} />}
+                  </>}
                   <p className="buy-secure"><Lock /><span>{payLine()}</span></p>
+                  {account.on && !account.user && (
+                    <p className="cart-account">{mustLogIn ? 'New here? ' : 'Log in to keep this cart on every device and follow your orders. '}<Link to={mustLogIn ? '/account/signup?next=/shop' : '/account/login?next=/shop'} onClick={() => setOpen(false)}>{mustLogIn ? 'Make an account' : 'Log in'}</Link></p>
+                  )}
                   <AnimatePresence>
                     {note && (
                       <motion.div className="buy-note" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>

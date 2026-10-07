@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { brand, forSale, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
 import Dropdown from '../components/Dropdown'
 import { useCart } from '../hooks/useCart'
+import { useAccount } from '../hooks/useAccount'
 import { capturePaypal } from '../data/checkout'
 import Page from '../components/Page'
 import PageTitle from '../components/PageTitle'
@@ -36,6 +37,7 @@ export default function Shop() {
   const [paypal, setPaypal] = useState(paypalOrder ? { state: 'taking' } : null)
   const thanks = params.get('thanks') === '1' || paypal?.state === 'paid'
   const clearCart = useCart().clear
+  const account = useAccount()
   useEffect(() => { if (thanks) clearCart() }, [thanks, clearCart])
   useEffect(() => {
     if (!paypalOrder) return
@@ -67,7 +69,7 @@ export default function Shop() {
         ) : thanks ? (
           <motion.div className="thanks" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease: EASE }}>
             <i aria-hidden="true">✓</i>
-            <div><strong>{shop.thanksTitle}</strong><span>{shop.thanksText}</span></div>
+            <div><strong>{shop.thanksTitle}</strong><span>{shop.thanksText}</span>{account.user && <Link className="thanks-link" to="/account?tab=orders">See it in your account →</Link>}</div>
           </motion.div>
         ) : forSale.length > 0 && (
           <ol className="how-buy">{steps.map((s, i) => <li key={s}><b>{String(i + 1).padStart(2, '0')}</b>{s}</li>)}</ol>

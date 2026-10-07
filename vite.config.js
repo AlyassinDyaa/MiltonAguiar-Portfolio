@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { spawn } from 'node:child_process'
 import { connect } from 'node:net'
 import { pathToFileURL } from 'node:url'
+import { memoryDb } from './dev/memory-db.js'
 
 // Copies index.html to 404.html after build so GitHub Pages serves the SPA on deep links.
 const spaFallback = () => ({
@@ -100,12 +101,25 @@ const adminBundle = () => ({
       ['/api/discounts', 'api/discounts.js', 'discounts', 'dev/sample-discounts.js', 'sampleDiscounts'],
       ['/api/discount', 'api/discount.js', 'discountCheck', 'dev/sample-discounts.js', 'sampleDiscountCheck'],
     ]
-    // the payment keys, from a .env.local file beside package.json (never committed: *.local is ignored)
-    const KEYS = ['STRIPE_SECRET_KEY', 'PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_ENV']
-    const useKeys = () => { const env = loadEnv('development', process.cwd(), ''); for (const k of KEYS) if (env[k]) process.env[k] = env[k] }
-    // paying (api/checkout.js for Stripe, api/paypal.js for PayPal) runs here too, so a test key
-    // and a PayPal sandbox can be tried on this computer before the site goes live
-    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js']]) {
+    // the keys for payments, customer accounts (the database) and their emails, from a .env.local
+    // file beside package.json (never committed: *.local is ignored)
+    const KEYS = /^(STRIPE_|PAYPAL_|MONGODB_|SMTP_|RESEND_|MAIL_|SITE_URL$)/
+    // read afresh each time, so an edit to .env.local counts without a restart (what was put in
+    // last time is taken out first: Vite would otherwise prefer it to the file)
+    const ours = new Set()
+    const useKeys = () => {
+      for (const k of ours) delete process.env[k]
+      ours.clear()
+      const env = loadEnv('development', process.cwd(), '')
+      for (const [k, v] of Object.entries(env)) if (KEYS.test(k) && v && !(k in process.env)) { process.env[k] = v; ours.add(k) }
+      // MONGODB_URI=memory: customer accounts on a stand-in database kept in memory (dev/memory-db.js)
+      if (process.env.MONGODB_URI === 'memory') { globalThis.__maTestDb ||= memoryDb(); delete process.env.MONGODB_URI }
+    }
+    // paying (api/checkout.js for Stripe, api/paypal.js for PayPal), customer accounts
+    // (api/account.js) and Stripe's messages about payments (api/stripe-webhook.js) run here too,
+    // so a test key, a PayPal sandbox and the database can be tried on this computer before the
+    // site goes live. The webhook checks its message as it arrived, so it gets it untouched.
+    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js']]) {
       server.middlewares.use(route, async (req, res, next) => {
         if ((req.url || '/').split('?')[0] !== '/') return next()
         useKeys()
@@ -119,7 +133,9 @@ const adminBundle = () => ({
           status(code) { res.statusCode = code; return reply },
           json(data) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); return reply },
         }
-        await handler({ method: req.method, body: parsed, url: req.url, headers: { ...req.headers, 'x-forwarded-proto': 'http' } }, reply)
+        try {
+          await handler({ method: req.method, body: parsed, rawBody: body, url: req.url, socket: req.socket, headers: { ...req.headers, 'x-forwarded-proto': 'http' } }, reply)
+        } catch (e) { if (!res.writableEnded) reply.status(500).json({ message: `${file} failed: ${e.message}` }) }
       })
     }
     for (const [route, file, name, sampleFile, sampleName] of local) {
@@ -130,7 +146,8 @@ const adminBundle = () => ({
         for await (const chunk of req) body += chunk
         let parsed = {}
         try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
-        const run = process.env.STRIPE_SECRET_KEY
+        // the orders also come from the database (PayPal orders), so it alone is enough for them
+        const run = process.env.STRIPE_SECRET_KEY || (name === 'orders' && (globalThis.__maTestDb || (/^mongodb/.test(process.env.MONGODB_URI || '') && !/<[^>]*>/.test(process.env.MONGODB_URI))))
           ? (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`))[name]
           : (await import(pathToFileURL(resolve(sampleFile)).href))[sampleName]
         const { status, json } = await run({ method: req.method, body: parsed })

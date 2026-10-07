@@ -1,0 +1,19 @@
+{
+  "accounts": "optional",
+  "noteTitle": "A note from Milton",
+  "note": "Thank you for being here. Every piece is checked and packed by hand before it leaves the studio. If anything is not quite right with an order, just write to me and I will sort it out.",
+  "signature": "Milton",
+  "collectionTitle": "Your collection",
+  "savedTitle": "Saved for later",
+  "cardLabel": "Collector",
+  "icons": [
+    { "picture": "/avatars/skull.svg", "name": "Skull" },
+    { "picture": "/avatars/bolt.svg", "name": "Bolt" },
+    { "picture": "/avatars/flame.svg", "name": "Flame" },
+    { "picture": "/avatars/star.svg", "name": "Star" },
+    { "picture": "/avatars/moon.svg", "name": "Moon" },
+    { "picture": "/avatars/ghost.svg", "name": "Ghost" },
+    { "picture": "/avatars/crown.svg", "name": "Crown" },
+    { "picture": "/avatars/eye.svg", "name": "Eye" }
+  ]
+}

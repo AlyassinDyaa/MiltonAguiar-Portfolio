@@ -119,7 +119,7 @@ const adminBundle = () => ({
     // (api/account.js) and Stripe's messages about payments (api/stripe-webhook.js) run here too,
     // so a test key, a PayPal sandbox and the database can be tried on this computer before the
     // site goes live. The webhook checks its message as it arrived, so it gets it untouched.
-    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js']]) {
+    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js'], ['/api/contact', 'api/contact.js']]) {
       server.middlewares.use(route, async (req, res, next) => {
         if ((req.url || '/').split('?')[0] !== '/') return next()
         useKeys()

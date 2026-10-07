@@ -73,6 +73,7 @@ Optional for both:
 |---|---|
 | `MAIL_REPLY_TO` | Where customers' replies go, e.g. Milton's own email |
 | `MAIL_BRAND` | The name at the top of emails (the site's name when empty) |
+| `CONTACT_TO` | Where the Contact and Commission forms deliver (the admin's contact email, or else the sending address, when empty) |
 
 ### Card payments (Stripe)
 
@@ -213,6 +214,7 @@ Preview, so test deployments never take real money.
 - [ ] Make an account → the confirmation email arrives (check spam) → the link opens your account
       with the reward unlocked.
 - [ ] **Forgot your password** → the email arrives → a new password works.
+- [ ] Send a message from the **Contact** page and a request from **Commissions** → both arrive in the inbox, and Reply answers the sender.
 - [ ] Buy something small by card → back on the site, the thank-you → the order is in
       **Sales → Orders** and in the buyer's account (if logged in).
 - [ ] Stripe → Developers → Webhooks → the endpoint shows the event delivered (200).

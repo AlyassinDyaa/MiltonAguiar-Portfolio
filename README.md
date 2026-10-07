@@ -174,6 +174,13 @@ and pick their picture and card design under Details; locked ones say how to ear
 Confirming the email gives a customer still on their initials the first picture straight away,
 and confirming takes them straight to their account.
 
+The **Contact** and **Commission** forms are sent by the site itself (`api/contact.js`), straight
+to the artist's inbox: the visitor presses Send and sees "Message sent", no mail app. Replying to
+the email answers the visitor. It goes to `CONTACT_TO` if set, otherwise the contact email in Site
+→ Name, colour and contact, otherwise the address the site sends from. A hidden trap field, a
+check on how fast the form was sent, and at most five messages an hour from one visitor keep
+spam out. Nothing goes back to the visitor, so the form cannot be used to email other people.
+
 Emails (confirm your email, reset your password) come in the site's comic style. Their pictures
 (the logo, the reward) are fetched from the live site, `public/email/`.
 

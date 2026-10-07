@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { brand, commissions, quote, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
@@ -6,24 +5,20 @@ import Magnetic from '../components/Magnetic'
 import Picker from '../components/Picker'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
+import { useSendForm } from '../data/contact'
+import { Elsewhere } from '../components/Buy'
 
 /* The colour of each step's panel, in turn. */
 const TONES = ['is-loud', 'is-red']
 
 export default function Commissions() {
-  const [sent, setSent] = useState(false)
   const { open, title, intro, tiers, steps, notes, processLabel, processTitle, requestLabel, requestTitle, closedTitle, closedText } = commissions
   const kinds = [...tiers.map((t) => t.name), 'Something else']
-  // with no email and no form service to send to, the request goes to Instagram instead of a form
-  const form = Boolean(brand.email || brand.contactAction)
-  const submit = (e) => {
-    if (brand.contactAction) return
-    e.preventDefault()
-    const d = new FormData(e.target)
-    const body = encodeURIComponent(`${d.get('idea')}\n\nReference pictures: ${d.get('refs') || 'none yet'}\nNeeded by: ${d.get('due') || 'no deadline'}\n\n— ${d.get('name')} (${d.get('email')})`)
-    window.location.href = `mailto:${brand.email}?subject=${encodeURIComponent(`Commission: ${d.get('kind')} for ${d.get('name')}`)}&body=${body}`
-    setSent(true)
-  }
+  // the request is sent by the site itself, straight to the artist's inbox (api/contact.js); with a
+  // form service set in the admin it goes there instead
+  const form = true
+  const byService = Boolean(brand.contactAction)
+  const { send, state, problem, fallback, again } = useSendForm('commission')
   let n = 1
   return (
     <Page title="Commissions">
@@ -104,19 +99,29 @@ export default function Commissions() {
               <Reveal className="hp form-panel" delay={0.1}>
                 <div className="hp-in">
                   <div className="words">
-                    <form onSubmit={submit} action={brand.contactAction || undefined} method={brand.contactAction ? 'post' : undefined}>
+                    {state === 'sent' ? (
+                      <div className="form-sent" role="status">
+                        <i aria-hidden="true">✓</i>
+                        <div><strong>Request sent</strong><span>Thank you. I will write back by email with a quote.</span></div>
+                        <button type="button" className="btn ghost sm" onClick={again}>Send another</button>
+                      </div>
+                    ) : (
+                    <form onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
                       <div className="field"><input id="c-name" name="name" type="text" placeholder=" " required autoComplete="name" /><label htmlFor="c-name">Your name</label><span className="bar" /></div>
                       <div className="field"><input id="c-email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="c-email">Email</label><span className="bar" /></div>
                       <Picker label="What kind of piece" name="kind" options={kinds} />
                       <div className="field"><textarea id="c-idea" name="idea" placeholder=" " required rows={5} /><label htmlFor="c-idea">The idea: who or what, the mood, the pose</label><span className="bar" /></div>
                       <div className="field"><input id="c-refs" name="refs" type="text" placeholder=" " /><label htmlFor="c-refs">Link to reference pictures (optional)</label><span className="bar" /></div>
                       <div className="field"><input id="c-due" name="due" type="text" placeholder=" " /><label htmlFor="c-due">Needed by (optional)</label><span className="bar" /></div>
-                      <Magnetic><button className="btn" type="submit">{sent ? 'Opening your mail app…' : 'Send the request'} <span className="arrow">→</span></button></Magnetic>
+                      <input className="hp-trap" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+                      <Magnetic><button className="btn" type="submit" disabled={state === 'sending'} aria-busy={state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send the request'} <span className="arrow">→</span></button></Magnetic>
+                      {problem && <p className="form-alt is-bad" role="alert">{problem}{fallback && <> <Elsewhere subject="A commission request" /></>}</p>}
                       <p className="form-alt">
                         {brand.email && <>Or write to <a href={`mailto:${brand.email}`}>{brand.email}</a>. </>}
                         {quote.url && <>For a quick quote, <a href={quote.url} target="_blank" rel="noreferrer">message me on Instagram</a>.</>}
                       </p>
                     </form>
+                    )}
                   </div>
                 </div>
               </Reveal>

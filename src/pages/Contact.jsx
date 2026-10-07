@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { brand, contact, shows, social } from '../data/site'
 import Page from '../components/Page'
@@ -6,30 +5,17 @@ import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Picker from '../components/Picker'
 import SocialIcon from '../components/SocialIcon'
+import { useSendForm } from '../data/contact'
+import { Elsewhere } from '../components/Buy'
 
 /* The one page that is not panels: an open page with the heading, the form on the left and
    where else to reach him on the right.
-   The form goes to the form service if there is one, or opens the visitor's mail app if there
-   is a contact email. With neither set, the message is copied and Instagram is opened, so it
-   can be pasted there. */
+   The form is sent by the site itself (api/contact.js) straight to the artist's inbox: no mail
+   app. With a form service set in the admin it goes there instead. If the site cannot send email,
+   it says so and offers the email address or Instagram. */
 export default function Contact() {
-  const [sent, setSent] = useState('')
-  const byMail = Boolean(brand.email), byService = Boolean(brand.contactAction)
-  const submit = (e) => {
-    if (byService) return
-    e.preventDefault()
-    const d = new FormData(e.target)
-    const topic = d.get('topic') ? `[${d.get('topic')}] ` : ''
-    const text = `${d.get('message')}\n\n— ${d.get('name')} (${d.get('email')})`
-    if (byMail) {
-      window.location.href = `mailto:${brand.email}?subject=${encodeURIComponent(`${topic}Message from ${d.get('name')}`)}&body=${encodeURIComponent(text)}`
-      return setSent('Opening your mail app…')
-    }
-    // no email to send to: the message goes with the visitor to Instagram
-    navigator.clipboard?.writeText(`${topic}${text}`).catch(() => { /* not copied: they can still write it there */ })
-    if (brand.instagram) window.open(brand.instagram, '_blank', 'noopener')
-    setSent('Message copied. Paste it into a message on Instagram.')
-  }
+  const byService = Boolean(brand.contactAction)
+  const { send, state, problem, fallback, again } = useSendForm('contact')
   return (
     <Page title="Contact">
       {/* two columns from the top of the page: the heading and the form, and beside them where else to reach him */}
@@ -42,14 +28,24 @@ export default function Contact() {
               <p className="lead">{contact.intro}</p>
             </header>
             <Reveal>
-              <form className="lined" onSubmit={submit} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
-                <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" /><label htmlFor="name">Your name</label><span className="bar" /></div>
-                <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
-                {contact.topics.length > 0 && <Picker label="About" name="topic" options={contact.topics} />}
-                <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} /><label htmlFor="message">Message</label><span className="bar" /></div>
-                <Magnetic><button className="btn" type="submit">{byMail || byService ? 'Send message' : 'Send on Instagram'} <span className="arrow">{byMail || byService ? '→' : '↗'}</span></button></Magnetic>
-                {sent && <p className="form-alt" role="status">{sent}</p>}
-              </form>
+              {state === 'sent' ? (
+                <div className="form-sent" role="status">
+                  <i aria-hidden="true">✓</i>
+                  <div><strong>Message sent</strong><span>Thank you. I will write back to you by email.</span></div>
+                  <button type="button" className="btn ghost sm" onClick={again}>Send another</button>
+                </div>
+              ) : (
+                <form className="lined" onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
+                  <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" maxLength={80} /><label htmlFor="name">Your name</label><span className="bar" /></div>
+                  <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
+                  {contact.topics.length > 0 && <Picker label="About" name="topic" options={contact.topics} />}
+                  <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} maxLength={5000} /><label htmlFor="message">Message</label><span className="bar" /></div>
+                  {/* left empty by people, filled in by bots */}
+                  <input className="hp-trap" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+                  <Magnetic><button className="btn" type="submit" disabled={state === 'sending'} aria-busy={state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send message'} <span className="arrow">→</span></button></Magnetic>
+                  {problem && <p className="form-alt is-bad" role="alert">{problem}{fallback && <> <Elsewhere subject="A message from the website" /></>}</p>}
+                </form>
+              )}
             </Reveal>
           </div>
           <Reveal delay={0.1} className="contact-side">

@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/invincible.webp",
+  "universe": "Image",
+  "price": 20,
+  "hidden": false,
+  "date": "2026-04-20",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "sale",
+  "title": "Hey Cecil...",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/invincible-frame.png",
+  "category": "Fan art",
+  "look": "default"
+}

@@ -36,6 +36,9 @@ export let shop, forSale, everything
 /* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
    the admin lists them; only the ones in use. */
 export let types
+/* The shop's own lists, kept under Shop → Categories & sizes: categories, sub categories (DC,
+   Marvel...) and print sizes, in the admin's order. `shopCats` and `subCats` are the ones in use. */
+export let shopCats, subCats, printSizes, sizeNotes
 /* The categories that have at least one piece, in the order they first appear. */
 export let categories
 /* The pieces ticked "Show on the home page", in the order given to them (or simply the newest). */
@@ -62,6 +65,7 @@ export const shows = (group, key) => visibility[group]?.[key] !== false
    empty when visitors may choose. With both switched off, both stay on. */
 export const themeOnly = () => (shows('themes', 'dark') === shows('themes', 'light') ? '' : shows('themes', 'dark') ? 'dark' : 'light')
 
+let sizeOrder = [] // the print sizes in the admin's order, for listing a piece's sizes
 let newPictures = {} // pictures saved after this build: "/uploads/x.webp" -> the picture itself
 
 /* Leaves out anything not filled in, so the built-in wording below it shows through. */
@@ -148,6 +152,18 @@ function assemble(content) {
     .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p) }))
   work = everything.filter((p) => !p.shopOnly)
   forSale = everything.filter(buyable)
+  const shopLists = site('categories')
+  const named = (list) => (Array.isArray(list) ? list : []).map((x) => String((x && x.name) || '').trim()).filter(Boolean)
+  // the admin's order first, then anything in use that the lists do not name
+  const inUse = (listed, field) => {
+    const used = new Set(forSale.map((p) => String(p[field] || '').trim()).filter(Boolean))
+    return [...listed.filter((n) => used.has(n)), ...[...used].filter((n) => !listed.includes(n))]
+  }
+  printSizes = named(shopLists.sizes)
+  sizeNotes = Object.fromEntries((Array.isArray(shopLists.sizes) ? shopLists.sizes : []).filter((x) => x && x.name).map((x) => [String(x.name).trim(), String(x.note || '').trim()]))
+  sizeOrder = printSizes
+  shopCats = inUse(named(shopLists.categories), 'category')
+  subCats = inUse(named(shopLists.subcategories), 'universe')
   const sold = new Set(forSale.map((p) => p.type).filter(Boolean))
   types = [...kinds.map((t) => String(t.name).trim()).filter((n) => sold.has(n)), ...[...sold].filter((n) => !(n in notes))]
   categories = [...new Set(work.map((p) => p.category).filter(Boolean))]
@@ -203,12 +219,38 @@ export const asset = (url) => newPictures[url] || (url && url.startsWith('/') ? 
 
 /* A piece shows its price while online purchases are switched on, it is in the Shop ("Sell it in
    the Shop" in the admin, or added under Shop) and it has a price. */
-export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && Number(piece.price) > 0) } // a declaration, so assemble() above can use it
+export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && (Number(piece.price) > 0 || sizesOf(piece).length > 0)) } // a declaration, so assemble() above can use it
+/* A piece's print sizes, each with its price and, when it is discounted, its lower price
+   ({ name, price, sale, now }). Rows without a size or a price are left out. With none, the piece
+   has the one price of its own. */
+export function sizesOf(piece) {
+  const rows = (Array.isArray(piece?.sizes) ? piece.sizes : [])
+    .map((r) => {
+      const name = String((r && r.size) || '').trim(), price = Number(r && r.price), sale = Number(r && r.salePrice)
+      const off = sale > 0 && sale < price
+      return { name, price, sale: off ? sale : 0, now: off ? sale : price }
+    })
+    .filter((r) => r.name && r.price > 0)
+  const at = (r) => { const i = sizeOrder.indexOf(r.name); return i < 0 ? 999 : i }
+  return rows.sort((a, b) => at(a) - at(b))
+}
+/* One size of a piece, by name (the first when none is named or the name is gone). */
+export const sizeOf = (piece, name) => { const all = sizesOf(piece); return all.find((r) => r.name === name) || all[0] || null }
 /* Its status, set in the admin: "new", "sale" (with a sale price below the price) or "soldout". */
 export const soldOut = (piece) => piece?.status === 'soldout'
-export const onSale = (piece) => piece?.status === 'sale' && Number(piece.salePrice) > 0 && Number(piece.salePrice) < Number(piece.price)
-/* What it costs now: the sale price while it is on sale, otherwise the price. */
-export const nowPrice = (piece) => (onSale(piece) ? Number(piece.salePrice) : Number(piece.price))
+/* On sale: the chosen size is discounted, or (a piece without sizes) its tag is "On sale" with a
+   sale price below its price. */
+export const onSale = (piece, size) => {
+  const r = sizeOf(piece, size)
+  if (r) return r.sale > 0
+  return piece?.status === 'sale' && Number(piece.salePrice) > 0 && Number(piece.salePrice) < Number(piece.price)
+}
+/* The usual price and what it costs now, of the chosen size (or of the piece). */
+export const fullPrice = (piece, size) => { const r = sizeOf(piece, size); return r ? r.price : Number(piece.price) }
+export const nowPrice = (piece, size) => { const r = sizeOf(piece, size); return r ? r.now : (onSale(piece) ? Number(piece.salePrice) : Number(piece.price)) }
+/* The lowest price it can be had for, and whether there is more than one ("from €20"). */
+export const fromPrice = (piece) => { const all = sizesOf(piece); return all.length ? Math.min(...all.map((r) => r.now)) : nowPrice(piece) }
+export const manyPrices = (piece) => new Set(sizesOf(piece).map((r) => r.now)).size > 1
 /* It can go into a checkout: it shows a price and is not sold out. */
 export const canBuy = (piece) => buyable(piece) && !soldOut(piece)
 /* The small tag on a piece. "New" shows whenever it is set; "Sale" and "Sold out" only while
@@ -216,7 +258,12 @@ export const canBuy = (piece) => buyable(piece) && !soldOut(piece)
 export const badge = (piece) => {
   if (!piece) return null
   if (buyable(piece) && soldOut(piece)) return { kind: 'soldout', text: 'Sold out' }
-  if (buyable(piece) && onSale(piece)) return { kind: 'sale', text: `Sale −${Math.round((1 - Number(piece.salePrice) / Number(piece.price)) * 100)}%` }
+  if (buyable(piece)) {
+    // the biggest discount among its sizes (or on the piece itself)
+    const all = sizesOf(piece)
+    const cut = all.length ? Math.max(0, ...all.filter((r) => r.sale).map((r) => 1 - r.sale / r.price)) : onSale(piece) ? 1 - Number(piece.salePrice) / Number(piece.price) : 0
+    if (cut > 0) return { kind: 'sale', text: `${all.length > 1 && all.some((r) => !r.sale) ? 'Up to ' : 'Sale '}−${Math.round(cut * 100)}%` }
+  }
   if (piece.status === 'new') return { kind: 'new', text: 'New' }
   return null
 }

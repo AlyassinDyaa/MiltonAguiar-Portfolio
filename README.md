@@ -45,6 +45,7 @@ step open as picture cards; the other lists as rows. Each list remembers the vie
 | Conventions | Events, with dates and where to find the table |
 | Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name and the current project (title, cover, where to read it, and a second button, for example to the publisher); the About form holds the story, one panel at a time, each with its words and picture; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
+| Shop → Categories & sizes | The lists: categories, sub categories (DC, Marvel...) and print sizes with their measurements |
 | Shop → Settings & payments | Online purchases on or off, the Shop page's words, currency, the kinds of thing sold (each with what the buyer gets), signed pieces and their extra cost, where prices and tags sit on the cards, delivery countries, the thank-you message |
 | Show or hide | Switch whole pages, dark or light mode, or parts of the home page, on and off |
 
@@ -71,6 +72,16 @@ under Shop too, and its price shows on its card on the Work page. Opening a piec
 **Buy now**. The cart (the bag in the top bar) is kept in the visitor's browser; **Checkout** opens
 one Stripe payment page for everything in it, which asks for the delivery address. Stripe sends
 the buyer back to `/shop?thanks=1`, which thanks them and empties the cart.
+
+**Sizes.** A piece can be sold in several print sizes: at the bottom of its form, **Sizes and
+prices** takes a row per size (picked from the list of sizes), each with its price and, for a
+discount, a lower price. Buyers choose the size from a drop-down beside the piece; the card says
+"From €20" and the cart and the Stripe page name the size. Without sizes, the piece's own price is used.
+
+**Categories.** The Shop page filters by **Category**, **Sub category** (DC, Marvel...) and **Type**,
+each a drop-down. The categories, sub categories and print sizes are lists kept under
+**Shop → Categories & sizes**: add, rename, remove or drag them into order. (The categories are
+the same ones the Work page uses.)
 
 On its Shop card each piece is shown as the thing the buyer gets: a **printed poster** (the art
 on white paper), a **framed print**, an **original art board** (cream board, blue-line border), a

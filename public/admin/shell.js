@@ -47,8 +47,9 @@
      single pages is looked up as "collection/page". A heading never goes on an on/off switch:
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
-    work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'look', 'price', 'salePrice'] },
-    shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'date', 'shopOnly', 'hidden'] },
+    work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale', sizes: 'Sizes and prices' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'look', 'price', 'salePrice', 'universe', 'shopOnly'] },
+    'site/categories': { groups: { subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
+    shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
@@ -75,13 +76,13 @@
   /* The navigation and the Home screen list the sections in these groups, in this order. */
   const GROUPS = [
     { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
-    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery and payments.', has: (s) => s.name === 'shop' || s.key === 'site/shop' },
+    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery and payments.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' },
     { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' },
+    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' },
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
@@ -91,6 +92,7 @@
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
+    'site/categories': 'The lists the admin keeps: categories (Originals, Fan art...), sub categories (DC, Marvel...) and print sizes.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
   }
   Object.assign(ICONS, {
@@ -101,6 +103,7 @@
     'pages/contact': 'M4 6h16v12H4z M4 7l8 6 8-6',
     'site/brand': 'M12 3l2.600 5.600 6.100.700-4.500 4.200 1.200 6-5.400-3-5.400 3 1.200-6L3.300 9.300l6.100-.700z',
     'site/shop': 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
+    'site/categories': 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v5H4z M13 14h7v5h-7z',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'
@@ -333,7 +336,7 @@
     // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
     for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
-      const compact = currentSection() === 'site' && /^types-field/.test(name)
+      const compact = currentSection() === 'site' ? /^(types|categories|subcategories|sizes)-field/.test(name) : /^sizes-field/.test(name)
       if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
     }
     for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder])')) {

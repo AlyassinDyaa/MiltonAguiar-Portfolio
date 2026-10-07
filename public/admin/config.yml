@@ -52,7 +52,7 @@ collections:
     sortable_fields: [date, title, category]
     fields:
       - { name: title, label: Title, widget: string }
-      - { name: category, label: Category, widget: select, options: [Originals, Fan art, Covers, Pages, Sketches, Collaborations, Commissions], default: Originals, hint: 'The Work page gets a filter button for every category in use.' }
+      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Work page gets a filter button for every category in use. The list is kept under Shop → Categories & sizes.' }
       - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest pieces come first.' }
       - { name: link, label: Link to the post, widget: string, required: false, hint: 'The Instagram post, if there is one.' }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4 (for example 1500×2000px). Other shapes are cropped on the Work page and shown whole in the gallery.' }
@@ -87,9 +87,22 @@ collections:
           - { label: 'On sale (shows the old and the new price)', value: sale }
           - { label: 'Sold out (no Buy button)', value: soldout }
         hint: 'Sale and Sold out show while online purchases are switched on; New always shows.'
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. Leave it empty for a piece that is not for sale.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. Not used when it is sold in sizes (below).' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
+      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories & sizes; the Shop page can be filtered by it.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: false, required: false, hint: 'For something you sell that is not a piece of your portfolio (a book, a shirt): it stays off the Work page and the home page.' }
+      - name: sizes
+        label: Sizes and prices
+        label_singular: size
+        widget: list
+        collapsed: false
+        required: false
+        summary: '{{fields.size}} — {{fields.price}}'
+        hint: 'Sell it in more than one size: a row per size, each with its own price and, for a discount, a lower price. Buyers pick the size from a drop-down. With sizes here, the price above is not used. Sizes are added or renamed under Shop → Categories & sizes.'
+        fields:
+          - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'] }
+          - { name: price, label: Price, widget: number, value_type: float, min: 0 }
+          - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
 
   - name: shop
     label: Items for sale
@@ -108,7 +121,7 @@ collections:
       - { name: inShop, widget: hidden, default: true }
       - { name: title, label: Title, widget: string }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, hint: 'A number, in the currency set under Shop → Settings & payments.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. For a piece sold in several sizes, leave it empty and add the sizes at the bottom.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }
       - name: look
@@ -134,11 +147,24 @@ collections:
           - { label: 'New (shows a "New" tag)', value: new }
           - { label: 'On sale (shows the old and the new price)', value: sale }
           - { label: 'Sold out (no Buy button)', value: soldout }
-      - { name: category, label: Category, widget: select, options: [Originals, Fan art, Covers, Pages, Sketches, Collaborations, Commissions], default: Originals, hint: 'The Shop page can be filtered by it.' }
+      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Shop page can be filtered by it. The list is kept under Shop → Categories & sizes.' }
+      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories & sizes; the Shop page can be filtered by it.' }
       - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest come first.' }
       - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: true, required: false, hint: 'On: it stays off the Work page and the home page. Switch it off for a piece that belongs in your portfolio too.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
+      - name: sizes
+        label: Sizes and prices
+        label_singular: size
+        widget: list
+        collapsed: false
+        required: false
+        summary: '{{fields.size}} — {{fields.price}}'
+        hint: 'Sell it in more than one size: a row per size, each with its own price and, for a discount, a lower price. Buyers pick the size from a drop-down. With sizes here, the price above is not used. Sizes are added or renamed under Shop → Categories & sizes.'
+        fields:
+          - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'] }
+          - { name: price, label: Price, widget: number, value_type: float, min: 0 }
+          - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
 
   - name: gallery_sections
     label: Gallery
@@ -493,6 +519,41 @@ collections:
           - { name: countries, label: Countries you post to, widget: list, required: false, hint: 'Two-letter country codes, separated by commas: PT, ES, FR, GB, US.' }
           - { name: thanksTitle, label: Heading, widget: string, required: false }
           - { name: thanksText, label: Text, widget: string, required: false }
+
+      - name: categories
+        label: Shop categories and sizes
+        file: content/site/categories.json
+        fields:
+          - name: categories
+            label: Categories
+            label_singular: category
+            widget: list
+            collapsed: false
+            summary: '{{fields.name}}'
+            hint: 'Originals, Fan art, Covers... Used by every piece, in Work and in the Shop. Drag to reorder: the drop-down on the Shop page follows this order. Renaming one does not rename it on the pieces that use it.'
+            fields:
+              - { name: name, label: Name, widget: string }
+          - name: subcategories
+            label: Sub categories
+            label_singular: sub category
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'DC, Marvel, Image... A second way to filter the Shop. Optional on each piece.'
+            fields:
+              - { name: name, label: Name, widget: string }
+          - name: sizes
+            label: Print sizes
+            label_singular: size
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'A4, A3, 50 × 70 cm canvas... The sizes a piece can be sold in; each piece sets its own price per size. Beside each, its measurements, shown in the size drop-down.'
+            fields:
+              - { name: name, label: Name, widget: string }
+              - { name: note, label: Measurements, widget: string, required: false }
 
       - name: visibility
         label: Show or hide

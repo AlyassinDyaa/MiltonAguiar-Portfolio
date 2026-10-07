@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { canBuy, everything, nowPrice, shop } from '../data/site'
+import { canBuy, everything, nowPrice, shop, sizeOf, sizesOf } from '../data/site'
 
 /* The cart. What a visitor has added is kept in their browser (so it survives a reload), as
-   { slug, signed, qty } lines. Every time it is read it is checked against the site's content:
+   { slug, size, signed, qty } lines (size: the print size, for a piece sold in sizes). Every time it is read it is checked against the site's content:
    a piece that has sold out, been hidden or lost its price drops out, and prices always come
    from the content, never from what was stored. The checkout reads the prices again itself. */
 const KEY = 'ma.cart'
@@ -12,7 +12,7 @@ const clamp = (n) => Math.min(MAX_QTY, Math.max(1, Math.round(Number(n) || 1)))
 const load = () => {
   try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.filter((l) => l && typeof l.slug === 'string') : [] } catch { return [] }
 }
-const same = (l, slug, signed) => l.slug === slug && Boolean(l.signed) === Boolean(signed)
+const same = (l, slug, signed, size) => l.slug === slug && Boolean(l.signed) === Boolean(signed) && (l.size || '') === (size || '')
 
 export function CartProvider({ children }) {
   const [raw, setRaw] = useState(load)
@@ -22,18 +22,21 @@ export function CartProvider({ children }) {
   const lines = useMemo(() => raw.map((l) => {
     const piece = everything.find((p) => p.slug === l.slug)
     if (!piece || !canBuy(piece)) return null
+    // a size the piece no longer comes in drops out; so does a size given to a piece without sizes
+    const size = sizesOf(piece).length ? sizeOf(piece, l.size)?.name : ''
+    if (sizesOf(piece).length ? size !== l.size : l.size) return null
     const signed = Boolean(shop.signedChoice && l.signed)
-    const each = nowPrice(piece) + (signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0)
-    return { key: `${l.slug}:${signed ? 's' : 'u'}`, slug: l.slug, signed, qty: clamp(l.qty), piece, each }
+    const each = nowPrice(piece, size) + (signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0)
+    return { key: `${l.slug}:${size}:${signed ? 's' : 'u'}`, slug: l.slug, size, signed, qty: clamp(l.qty), piece, each }
   }).filter(Boolean), [raw])
 
-  const add = useCallback((slug, signed = false) => setRaw((r) => {
-    const i = r.findIndex((l) => same(l, slug, signed))
-    if (i < 0) return [...r, { slug, signed: Boolean(signed), qty: 1 }]
+  const add = useCallback((slug, signed = false, size = '') => setRaw((r) => {
+    const i = r.findIndex((l) => same(l, slug, signed, size))
+    if (i < 0) return [...r, { slug, size: size || '', signed: Boolean(signed), qty: 1 }]
     const next = [...r]; next[i] = { ...next[i], qty: clamp(next[i].qty + 1) }; return next
   }), [])
-  const setQty = useCallback((slug, signed, qty) => setRaw((r) => r.map((l) => (same(l, slug, signed) ? { ...l, qty: clamp(qty) } : l))), [])
-  const remove = useCallback((slug, signed) => setRaw((r) => r.filter((l) => !same(l, slug, signed))), [])
+  const setQty = useCallback((slug, signed, qty, size) => setRaw((r) => r.map((l) => (same(l, slug, signed, size) ? { ...l, qty: clamp(qty) } : l))), [])
+  const remove = useCallback((slug, signed, size) => setRaw((r) => r.filter((l) => !same(l, slug, signed, size))), [])
   const clear = useCallback(() => setRaw([]), [])
 
   const count = lines.reduce((n, l) => n + l.qty, 0)

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { brand, forSale, shop, soldOut, types, work } from '../data/site'
+import { brand, forSale, shop, shopCats, soldOut, subCats, types, work } from '../data/site'
+import Dropdown from '../components/Dropdown'
 import { useCart } from '../hooks/useCart'
 import Page from '../components/Page'
 import PageTitle from '../components/PageTitle'
@@ -12,20 +13,15 @@ import Magnetic from '../components/Magnetic'
 
 const EASE = [0.16, 1, 0.3, 1]
 
-/* A row of chips that narrows the shop: every kind of thing sold, or every category. */
-function Chips({ label, all, list, value, set, count }) {
-  if (list.length < 2) return null
-  return (
-    <div className="shop-chips" role="group" aria-label={label}>
-      <span className="shop-chips-label">{label}</span>
-      {['All', ...list].map((c) => (
-        <button key={c} type="button" className={`chip ${value === c ? 'on' : ''}`} aria-pressed={value === c} onClick={() => set(c)}>
-          {c === 'All' ? all : c}<small>{count(c)}</small>
-        </button>
-      ))}
-    </div>
-  )
-}
+/* The shop's three drop-downs, each shown once it has two or more choices in use. The lists and
+   their order are kept in the admin (Shop → Categories & sizes, and the kinds under Settings). */
+const FILTERS = [
+  { field: 'category', label: 'Category', all: 'All categories', list: () => shopCats },
+  { field: 'universe', label: 'Sub category', all: 'All', list: () => subCats },
+  { field: 'type', label: 'Type', all: 'Everything', list: () => types },
+]
+const NONE = Object.fromEntries(FILTERS.map((f) => [f.field, 'All']))
+const fits = (p, chosen) => FILTERS.every((f) => chosen[f.field] === 'All' || String(p[f.field] || '').trim() === chosen[f.field])
 
 /* Everything for sale: the pieces with a price, newest first, sold-out ones waiting at the end.
    Open one to see it whole and buy it (components/Buy.jsx). Stripe sends a buyer back here with
@@ -35,18 +31,18 @@ export default function Shop() {
   const thanks = params.get('thanks') === '1'
   const clearCart = useCart().clear
   useEffect(() => { if (thanks) clearCart() }, [thanks, clearCart])
-  const [kind, setKind] = useState('All')
-  const [cat, setCat] = useState('All')
+  const [pick, setPick] = useState(NONE)
   const [sel, setSel] = useState(null)
-  const cats = useMemo(() => [...new Set(forSale.map((p) => p.category).filter(Boolean))], [])
   const shown = useMemo(() => {
-    const list = forSale.filter((p) => (kind === 'All' || p.type === kind) && (cat === 'All' || p.category === cat))
+    const list = forSale.filter((p) => fits(p, pick))
     return [...list.filter((p) => !soldOut(p)), ...list.filter(soldOut)]
-  }, [kind, cat])
-  // each count reads with the other row's choice, so it says what picking it would show
-  const count = (field, value, other, otherValue) => forSale.filter((p) => (value === 'All' || p[field] === value) && (otherValue === 'All' || p[other] === otherValue)).length
-  const pickKind = (k) => { setSel(null); setKind(k) }
-  const pickCat = (c) => { setSel(null); setCat(c) }
+  }, [pick])
+  const choose = (field, value) => { setSel(null); setPick((was) => ({ ...was, [field]: value })) }
+  const clear = () => { setSel(null); setPick(NONE) }
+  const filtering = FILTERS.some((f) => pick[f.field] !== 'All')
+  // each count reads with the other drop-downs' choices, so it says what picking it would show
+  const count = (field, value) => forSale.filter((p) => fits(p, { ...pick, [field]: value })).length
+  const menus = FILTERS.map((f) => ({ ...f, list: f.list() })).filter((f) => f.list.length > 1)
   const steps = ['Pick a piece', 'Pay securely with Stripe', shop.shipping !== false ? 'Posted to your door' : 'Sent to your inbox']
 
   return (
@@ -60,17 +56,21 @@ export default function Shop() {
         ) : forSale.length > 0 && (
           <ol className="how-buy">{steps.map((s, i) => <li key={s}><b>{String(i + 1).padStart(2, '0')}</b>{s}</li>)}</ol>
         )}
-        {(types.length > 1 || cats.length > 1) && (
-          <div className="shop-filters">
-            <Chips label="Type" all="Everything" list={types} value={kind} set={pickKind} count={(t) => count('type', t, 'category', cat)} />
-            <Chips label="Category" all="Any" list={cats} value={cat} set={pickCat} count={(c) => count('category', c, 'type', kind)} />
-          </div>
-        )}
       </PageTitle>
 
       <section className="spread">
         <div className="container">
-          <Runner label={kind === 'All' && cat === 'All' ? 'For sale' : [kind, cat].filter((x) => x !== 'All').join(' · ')} page={2} />
+          <Runner label={filtering ? FILTERS.map((f) => pick[f.field]).filter((x) => x !== 'All').join(' · ') : 'For sale'} page={2} />
+          {menus.length > 0 && (
+            <div className="shop-filters">
+              {menus.map((f) => (
+                <Dropdown key={f.field} label={f.label} value={pick[f.field]} onChange={(v) => choose(f.field, v)}
+                  options={['All', ...f.list].map((v) => ({ value: v, label: v === 'All' ? f.all : v, count: count(f.field, v) }))} />
+              ))}
+              {filtering && <button type="button" className="shop-filters-clear" onClick={clear}>Clear</button>}
+              <span className="shop-filters-count">{shown.length} {shown.length === 1 ? 'piece' : 'pieces'}</span>
+            </div>
+          )}
           {forSale.length === 0 ? (
             <div className="hp dm shop-soon">
               <div className="hp-in">
@@ -82,7 +82,7 @@ export default function Shop() {
               </div>
             </div>
           ) : shown.length === 0 ? (
-            <p className="shop-none">Nothing in that combination. <button type="button" onClick={() => { pickKind('All'); pickCat('All') }}>Show everything</button></p>
+            <p className="shop-none">Nothing in that combination. <button type="button" onClick={clear}>Show everything</button></p>
           ) : (
             <motion.ul className="shop-grid" layout>
               <AnimatePresence mode="popLayout" initial={false}>

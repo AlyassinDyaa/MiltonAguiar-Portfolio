@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../hooks/useCart'
-import { badge, brand, buyable, money, nowPrice, onSale, quote, shop, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
+import Dropdown from './Dropdown'
 import { checkout } from '../data/checkout'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -34,6 +35,7 @@ export default function Buy({ piece }) {
   const [note, setNote] = useState('')
   const [signed, setSigned] = useState(false) // a signature, when the admin offers one: off to start with
   const [added, setAdded] = useState(false)
+  const [size, setSize] = useState(() => sizesOf(piece)[0]?.name || '') // the print size: the first to start with
   useEffect(() => { if (!added) return; const t = setTimeout(() => setAdded(false), 1800); return () => clearTimeout(t) }, [added])
   if (!buyable(piece)) return null
   const choice = Boolean(shop.signedChoice)
@@ -41,23 +43,31 @@ export default function Buy({ piece }) {
   const extra = choice && signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0
   const where = shop.shipping !== false ? shipsTo(shop.countries) : ''
   const tag = badge(piece)
+  const sizes = sizesOf(piece)
+  const now = nowPrice(piece, size), full = fullPrice(piece, size), sale = onSale(piece, size)
   const inCart = cart.lines.filter((l) => l.slug === piece.slug).reduce((n, l) => n + l.qty, 0)
-  const addToCart = () => { cart.add(piece.slug, choice && signed); setAdded(true); setTimeout(() => cart.setOpen(true), 350) }
+  const addToCart = () => { cart.add(piece.slug, choice && signed, size); setAdded(true); setTimeout(() => cart.setOpen(true), 350) }
   const buyNow = async () => {
     if (busy || out) return
     setBusy(true); setNote('')
-    const problem = await checkout(choice ? { slug: piece.slug, signed } : { slug: piece.slug })
+    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}) })
     if (problem) { setNote(problem); setBusy(false) } // otherwise it stays "busy" while the page changes
   }
   return (
     <motion.div className="buy" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.45, ease: EASE }}>
       <div className="buy-head">
-        <span className={`buy-price ${out ? 'is-out' : ''}`}>{money(nowPrice(piece) + extra, true)}<small>{String(shop.currency || 'eur').toUpperCase()}</small></span>
-        {onSale(piece) && <s className="buy-was">{money(Number(piece.price) + extra, true)}</s>}
+        <span className={`buy-price ${out ? 'is-out' : ''}`}>{money(now + extra, true)}<small>{String(shop.currency || 'eur').toUpperCase()}</small></span>
+        {sale && <s className="buy-was">{money(full + extra, true)}</s>}
         {tag && <span className={`tag-badge is-inline is-${tag.kind}`}>{tag.text}</span>}
       </div>
       {piece.what && <p className="buy-what">{piece.what}</p>}
-      {onSale(piece) && !out && <p className="buy-save">You save {money(Number(piece.price) - nowPrice(piece), true)}</p>}
+      {sale && !out && <p className="buy-save">You save {money(full - now, true)}</p>}
+      {sizes.length > 0 && !out && (
+        <Dropdown
+          className="buy-size" label="Size" value={size} onChange={setSize}
+          options={sizes.map((r) => ({ value: r.name, label: r.name, note: sizeNotes[r.name] || '', aside: r.sale ? <><s>{money(r.price, true)}</s> {money(r.now, true)}</> : money(r.now, true) }))}
+        />
+      )}
       {choice && !out && (
         <button type="button" role="switch" aria-checked={signed} className={`buy-sign ${signed ? 'on' : ''}`} onClick={() => setSigned(!signed)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17c2.500-.500 3.500-4 5-4s1 3 3 3 2.500-5 4.500-5 1 4 2.500 4 1.500-1 2.500-1.500 M4 21h16" /></svg>

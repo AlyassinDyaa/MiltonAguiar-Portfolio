@@ -1,6 +1,7 @@
 {
   "shopOnly": true,
   "src": "/uploads/batman-and-robin.webp",
+  "universe": "DC",
   "price": 45,
   "hidden": false,
   "featured": true,

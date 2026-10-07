@@ -8,13 +8,13 @@
   "date": "2026-04-20",
   "sizes": [
     {
-      "size": "A5",
-      "price": 50,
-      "salePrice": 30
+      "size": "A3",
+      "price": 20,
+      "salePrice": ""
     },
     {
-      "size": "A3",
-      "price": 20
+      "size": "A4",
+      "price": 10
     }
   ],
   "note": "",

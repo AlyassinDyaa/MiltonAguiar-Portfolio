@@ -48,7 +48,7 @@
      a switch is drawn as a box of its own and the heading would land inside it. */
   const LAYOUT = {
     work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale', sizes: 'Sizes and prices' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'look', 'price', 'salePrice', 'universe', 'shopOnly'] },
-    'site/categories': { groups: { subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
+    'site/categories': { groups: { subcategories: 'Sub categories' }, half: [] },
     shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
@@ -82,7 +82,7 @@
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
@@ -92,7 +92,7 @@
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
-    'site/categories': 'The lists the admin keeps: categories (Originals, Fan art...), sub categories (DC, Marvel...) and print sizes.',
+    'site/categories': 'The categories (Originals, Fan art...) and sub categories (DC, Marvel...) the Shop is filtered by: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
   }
   Object.assign(ICONS, {
@@ -336,7 +336,7 @@
     // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
     for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
-      const compact = currentSection() === 'site' ? /^(types|categories|subcategories|sizes)-field/.test(name) : /^sizes-field/.test(name)
+      const compact = currentSection() === 'site' ? /^(types|categories|subcategories)-field/.test(name) : /^sizes-field/.test(name)
       if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
     }
     for (const input of pane.querySelectorAll('.ia-compact input:not([placeholder])')) {
@@ -728,4 +728,37 @@
       },
     }))
   }
+
+  // ---------- a newer admin has been published ----------
+  /* The admin is one page that never reloads itself, so a tab left open keeps running the version
+     it was opened with, even after the panel has been updated. Every few minutes (while the tab is
+     in view) the panel's own files are compared with the ones it started with; when they differ,
+     a notice offers to reload. Content saved in the meantime is not affected. */
+  const fingerprint = async () => {
+    const texts = await Promise.all(['shell.js', 'config.yml', 'admin.css'].map((f) => fetch(f, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''), () => '')))
+    if (texts.some((t) => !t)) return ''
+    let h = 0
+    for (const t of texts) for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0
+    return String(h)
+  }
+  let firstPrint = ''
+  fingerprint().then((f) => { firstPrint = f })
+  const offerReload = () => {
+    if (document.querySelector('.ia-update')) return
+    const reload = el('button', { type: 'button', className: 'ia-btn', textContent: 'Reload' })
+    reload.addEventListener('click', () => location.reload())
+    const later = el('button', { type: 'button', className: 'ia-btn ghost', textContent: 'Later' })
+    const box = el('div', { className: 'ia-notice ia-update', role: 'status' }, [
+      el('strong', { textContent: 'The admin has been updated' }),
+      el('p', { textContent: 'Reload to get the newest version. Save anything you are editing first.' }),
+      el('div', { className: 'ia-update-actions' }, [reload, later]),
+    ])
+    later.addEventListener('click', () => box.remove())
+    document.body.append(box)
+  }
+  setInterval(async () => {
+    if (document.hidden || !firstPrint || document.querySelector('.ia-update')) return
+    const now = await fingerprint()
+    if (now && now !== firstPrint) offerReload()
+  }, 3 * 60 * 1000)
 })()

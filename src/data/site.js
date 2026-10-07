@@ -36,9 +36,9 @@ export let shop, forSale, everything
 /* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
    the admin lists them; only the ones in use. */
 export let types
-/* The shop's own lists, kept under Shop → Categories & sizes: categories, sub categories (DC,
-   Marvel...) and print sizes, in the admin's order. `shopCats` and `subCats` are the ones in use. */
-export let shopCats, subCats, printSizes, sizeNotes
+/* The shop's own lists, kept under Shop → Categories: categories and sub categories (DC,
+   Marvel...), in the admin's order. `shopCats` and `subCats` are the ones in use. */
+export let shopCats, subCats
 /* The categories that have at least one piece, in the order they first appear. */
 export let categories
 /* The pieces ticked "Show on the home page", in the order given to them (or simply the newest). */
@@ -66,7 +66,6 @@ export const shows = (group, key) => visibility[group]?.[key] !== false
 export const themeOnly = () => (shows('themes', 'dark') === shows('themes', 'light') ? '' : shows('themes', 'dark') ? 'dark' : 'light')
 
 let hiddenCats = new Set(), hiddenSubs = new Set() // categories and sub categories switched to Hide in the admin
-let sizeOrder = [] // the print sizes in the admin's order, for listing a piece's sizes
 let newPictures = {} // pictures saved after this build: "/uploads/x.webp" -> the picture itself
 
 /* Leaves out anything not filled in, so the built-in wording below it shows through. */
@@ -164,9 +163,6 @@ function assemble(content) {
     const used = new Set(forSale.map((p) => String(p[field] || '').trim()).filter((n) => n && !hidden.has(n)))
     return [...listed.filter((n) => used.has(n)), ...[...used].filter((n) => !listed.includes(n))]
   }
-  printSizes = named(shopLists.sizes)
-  sizeNotes = Object.fromEntries((Array.isArray(shopLists.sizes) ? shopLists.sizes : []).filter((x) => x && x.name).map((x) => [String(x.name).trim(), String(x.note || '').trim()]))
-  sizeOrder = printSizes
   shopCats = inUse(named(shopLists.categories), 'category', hiddenCats)
   subCats = inUse(named(shopLists.subcategories), 'universe', hiddenSubs)
   const sold = new Set(forSale.map((p) => p.type).filter(Boolean))
@@ -232,8 +228,9 @@ export const filedUnder = (p) => [p.universe, p.category].map((x) => String(x ||
    the Shop" in the admin, or added under Shop) and it has a price. */
 export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && (Number(piece.price) > 0 || sizesOf(piece).length > 0)) } // a declaration, so assemble() above can use it
 /* A piece's print sizes, each with its price and, when it is discounted, its lower price
-   ({ name, price, sale, now }). Rows without a size or a price are left out. With none, the piece
-   has the one price of its own. */
+   ({ name, price, sale, now }), in the order the admin put the rows in. Each size is typed on the
+   piece itself. Rows without a size or a price are left out. With none, the piece has the one
+   price of its own. */
 export function sizesOf(piece) {
   const rows = (Array.isArray(piece?.sizes) ? piece.sizes : [])
     .map((r) => {
@@ -242,8 +239,7 @@ export function sizesOf(piece) {
       return { name, price, sale: off ? sale : 0, now: off ? sale : price }
     })
     .filter((r) => r.name && r.price > 0)
-  const at = (r) => { const i = sizeOrder.indexOf(r.name); return i < 0 ? 999 : i }
-  return rows.sort((a, b) => at(a) - at(b))
+  return rows.filter((r, i) => rows.findIndex((x) => x.name === r.name) === i) // a size typed twice counts once
 }
 /* One size of a piece, by name (the first when none is named or the name is gone). */
 export const sizeOf = (piece, name) => { const all = sizesOf(piece); return all.find((r) => r.name === name) || all[0] || null }

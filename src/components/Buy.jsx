@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../hooks/useCart'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, quote, shop, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
 import { checkout } from '../data/checkout'
 
@@ -65,7 +65,7 @@ export default function Buy({ piece }) {
       {sizes.length > 0 && !out && (
         <Dropdown
           className="buy-size" label="Size" value={size} onChange={setSize}
-          options={sizes.map((r) => ({ value: r.name, label: r.name, note: sizeNotes[r.name] || '', aside: r.sale ? <><s>{money(r.price, true)}</s> {money(r.now, true)}</> : money(r.now, true) }))}
+          options={sizes.map((r) => ({ value: r.name, label: r.name, aside: r.sale ? <><s>{money(r.price, true)}</s> {money(r.now, true)}</> : money(r.now, true) }))}
         />
       )}
       {choice && !out && (

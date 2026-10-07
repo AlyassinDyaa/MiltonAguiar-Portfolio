@@ -38,31 +38,5 @@
     {
       "name": "Other"
     }
-  ],
-  "sizes": [
-    {
-      "name": "A5",
-      "note": "14.8 \u00d7 21 cm"
-    },
-    {
-      "name": "A4",
-      "note": "21 \u00d7 29.7 cm"
-    },
-    {
-      "name": "A3",
-      "note": "29.7 \u00d7 42 cm"
-    },
-    {
-      "name": "A2",
-      "note": "42 \u00d7 59.4 cm"
-    },
-    {
-      "name": "30 \u00d7 40 cm",
-      "note": "Canvas"
-    },
-    {
-      "name": "50 \u00d7 70 cm",
-      "note": "Canvas"
-    }
   ]
 }

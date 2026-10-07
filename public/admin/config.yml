@@ -52,7 +52,7 @@ collections:
     sortable_fields: [date, title, category]
     fields:
       - { name: title, label: Title, widget: string }
-      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Work page gets a filter button for every category in use. The list is kept under Shop → Categories & sizes.' }
+      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Work page gets a filter button for every category in use. The list is kept under Shop → Categories.' }
       - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest pieces come first.' }
       - { name: link, label: Link to the post, widget: string, required: false, hint: 'The Instagram post, if there is one.' }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4 (for example 1500×2000px). Other shapes are cropped on the Work page and shown whole in the gallery.' }
@@ -89,7 +89,7 @@ collections:
         hint: 'Sale and Sold out show while online purchases are switched on; New always shows.'
       - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. Not used when it is sold in sizes (below).' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
-      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories & sizes; the Shop page can be filtered by it.' }
+      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories; the Shop page can be filtered by it.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: false, required: false, hint: 'For something you sell that is not a piece of your portfolio (a book, a shirt): it stays off the Work page and the home page.' }
       - name: sizes
         label: Sizes and prices
@@ -98,9 +98,9 @@ collections:
         collapsed: false
         required: false
         summary: '{{fields.size}} — {{fields.price}}'
-        hint: 'Sell it in more than one size: a row per size, each with its own price and, for a discount, a lower price. Buyers pick the size from a drop-down. With sizes here, the price above is not used. Sizes are added or renamed under Shop → Categories & sizes.'
+        hint: 'Sell it in more than one size: Add size, type the size (A4, A3, 50 × 70 cm canvas...), its price and, for a discount, a lower price. Drag the rows into the order buyers should see. Buyers pick the size from a drop-down. With sizes here, the price above is not used.'
         fields:
-          - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'] }
+          - { name: size, label: Size, widget: string, hint: 'Type it the way buyers should read it: A4, A3 (29.7 × 42 cm), 50 × 70 cm canvas.' }
           - { name: price, label: Price, widget: number, value_type: float, min: 0 }
           - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
 
@@ -147,8 +147,8 @@ collections:
           - { label: 'New (shows a "New" tag)', value: new }
           - { label: 'On sale (shows the old and the new price)', value: sale }
           - { label: 'Sold out (no Buy button)', value: soldout }
-      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Shop page can be filtered by it. The list is kept under Shop → Categories & sizes.' }
-      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories & sizes; the Shop page can be filtered by it.' }
+      - { name: category, label: Category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], hint: 'The Shop page can be filtered by it. The list is kept under Shop → Categories.' }
+      - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories; the Shop page can be filtered by it.' }
       - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest come first.' }
       - { name: note, label: A few words about it, widget: text, required: false, hint: 'Shown beside the picture when it is opened.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: true, required: false, hint: 'On: it stays off the Work page and the home page. Switch it off for a piece that belongs in your portfolio too.' }
@@ -160,9 +160,9 @@ collections:
         collapsed: false
         required: false
         summary: '{{fields.size}} — {{fields.price}}'
-        hint: 'Sell it in more than one size: a row per size, each with its own price and, for a discount, a lower price. Buyers pick the size from a drop-down. With sizes here, the price above is not used. Sizes are added or renamed under Shop → Categories & sizes.'
+        hint: 'Sell it in more than one size: Add size, type the size (A4, A3, 50 × 70 cm canvas...), its price and, for a discount, a lower price. Drag the rows into the order buyers should see. Buyers pick the size from a drop-down. With sizes here, the price above is not used.'
         fields:
-          - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'] }
+          - { name: size, label: Size, widget: string, hint: 'Type it the way buyers should read it: A4, A3 (29.7 × 42 cm), 50 × 70 cm canvas.' }
           - { name: price, label: Price, widget: number, value_type: float, min: 0 }
           - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
 
@@ -521,7 +521,7 @@ collections:
           - { name: thanksText, label: Text, widget: string, required: false }
 
       - name: categories
-        label: Shop categories and sizes
+        label: Shop categories
         file: content/site/categories.json
         fields:
           - name: categories
@@ -545,17 +545,6 @@ collections:
             fields:
               - { name: name, label: Name, widget: string }
               - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
-          - name: sizes
-            label: Print sizes
-            label_singular: size
-            widget: list
-            collapsed: false
-            required: false
-            summary: '{{fields.name}}'
-            hint: 'A4, A3, 50 × 70 cm canvas... The sizes a piece can be sold in; each piece sets its own price per size. Beside each, its measurements, shown in the size drop-down.'
-            fields:
-              - { name: name, label: Name, widget: string }
-              - { name: note, label: Measurements, widget: string, required: false }
 
       - name: visibility
         label: Show or hide

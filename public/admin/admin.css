@@ -426,6 +426,8 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 .ia-notice.ok { border-color: rgba(84, 201, 140, 0.55); }
 .ia-notice strong { display: block; margin-bottom: 6px; font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; color: var(--fg); }
 .ia-notice p { margin: 0; font-size: 0.86rem; line-height: 1.5; color: var(--dim); }
+.ia-update { padding-right: 20px; }
+.ia-update-actions { display: flex; gap: 8px; margin-top: 14px; }
 .ia-notice button { all: unset; position: absolute; top: 10px; right: 12px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 0; color: var(--mute); font-size: 20px; cursor: pointer; }
 .ia-notice button:hover { background: var(--panel-2); color: var(--fg); }
 

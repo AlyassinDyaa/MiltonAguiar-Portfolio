@@ -1,80 +1,26 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { check } from './_discounts.js'
+import { priceCart, takes } from './_cart.js'
 
-/* Buying from the shop. The site sends the cart here as a list of { slug, size, signed, qty } (or
-   a single piece as { slug, size, signed }; size only for a piece sold in print sizes); this function looks each piece up in the site's own content,
-   asks Stripe for one checkout page with a line per piece, and answers with that page's address.
-   The buyer pays on Stripe's page: no card details come near this site.
+/* Paying by card, through Stripe. The site sends the cart (see _cart.js); this works out what it
+   costs from the site's own content, asks Stripe for one checkout page with a line per piece, and
+   answers with that page's address. The buyer pays on Stripe's page: no card details come near
+   this site.
 
-   Two things keep it honest:
-   - every price is read here, from the content this copy of the site was built from, never taken
-     from the browser, so a buyer cannot name their own price;
+   - every price is read on the server (_cart.js), never taken from the browser;
+   - a discount code is checked again and put on the Stripe page; a code given to particular
+     people also fixes the email the buyer pays with;
    - Stripe is called with STRIPE_SECRET_KEY, which lives only in the Vercel project settings.
-     It is not in the repository and is never sent to the browser.
 
-   A discount code (from the cart, as { code, email }) is checked again here, against Stripe,
-   before it is put on the payment page; a code given to particular people also fixes the email
-   the buyer pays with.
-
-   Nothing is sold unless "Online purchases" is switched on in the admin (content/site/shop.json)
-   and the key is set. vercel.json ships the content folder along with this function. */
-const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return null } }
-const MAX_LINES = 20
-const MAX_QTY = 10
-
+   Nothing is sold unless "Online purchases" is switched on in the admin, card payment is one of
+   the ways to pay there (Stripe or Both), and the key is set. */
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).json({ message: 'Send the cart with POST.' })
-  const shop = read('content/site/shop.json') || {}
-  if (!shop.enabled) return res.status(403).json({ message: 'Online purchases are switched off at the moment.' })
   const key = process.env.STRIPE_SECRET_KEY
-  if (!key) return res.status(503).json({ message: 'Online purchase is not set up yet. Get in touch to buy a piece.' })
-
-  const body = req.body && typeof req.body === 'object' ? req.body : {}
-  const asked = Array.isArray(body.items) ? body.items : [{ slug: body.slug, size: body.size, signed: body.signed, qty: 1 }]
-  if (!asked.length) return res.status(400).json({ message: 'The cart is empty.' })
-  if (asked.length > MAX_LINES) return res.status(400).json({ message: `At most ${MAX_LINES} different pieces in one order.` })
-
-  // signed or unsigned: only while the admin offers the choice; the extra for signing is read here too
-  const choice = Boolean(shop.signedChoice)
-  const extra = Math.max(0, Number(shop.signedExtra) || 0)
-  // what the buyer gets: the line written beside the piece's type, or the shop's own line
-  const typeNote = (type) => { const t = (Array.isArray(shop.types) ? shop.types : []).find((x) => x && String(x.name).trim() === String(type || '').trim()); return (t && String(t.note || '').trim()) || '' }
-  const lines = []
-  for (const item of asked) {
-    const slug = String((item && item.slug) || '')
-    if (!/^[a-z0-9-]{1,80}$/.test(slug)) return res.status(400).json({ message: 'Something in the cart is not a piece on this site.' })
-    const piece = read(`content/work/${slug}.json`)
-    if (!piece || piece.hidden || !piece.inShop) return res.status(404).json({ message: 'Something in the cart is no longer for sale. Remove it and try again.' })
-    if (piece.status === 'soldout') return res.status(409).json({ message: `"${piece.title || slug}" has sold out. Remove it from the cart and try again.` })
-    // a piece sold in print sizes: the size asked for, at its discounted price when it has one below its price
-    const sizes = (Array.isArray(piece.sizes) ? piece.sizes : []).filter((r) => r && String(r.size || '').trim() && Number(r.price) > 0)
-    let base, size = ''
-    if (sizes.length) {
-      const row = sizes.find((r) => String(r.size).trim() === String((item && item.size) || '').trim())
-      if (!row) return res.status(400).json({ message: `Choose a size for "${piece.title || slug}" and try again.` })
-      size = String(row.size).trim()
-      const usual = Number(row.price), sale = Number(row.salePrice)
-      base = sale > 0 && sale < usual ? sale : usual
-    } else {
-      // the sale price while the piece is on sale (and it is below the usual price), otherwise the price
-      const usual = Number(piece.price), sale = Number(piece.salePrice)
-      base = piece.status === 'sale' && sale > 0 && sale < usual ? sale : usual
-    }
-    const signed = choice ? Boolean(item.signed === true) : null
-    const cents = Math.round((base + (signed ? extra : 0)) * 100)
-    if (!(cents >= 50)) return res.status(404).json({ message: `"${piece.title || slug}" is not for sale.` })
-    const qty = Math.min(MAX_QTY, Math.max(1, Math.round(Number(item.qty) || 1)))
-    lines.push({ slug, piece, size, signed, cents, qty })
-  }
-
-  // a discount code: good now, and for this buyer
-  let deal = null
-  if (body.discount && body.discount.code) {
-    deal = await check(body.discount.code, body.discount.email)
-    if (!deal.ok) return res.status(400).json({ message: deal.message })
-  }
+  const cart = await priceCart(req.body)
+  if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message })
+  const { shop, lines, deal, name, what, summary } = cart
+  if (!takes(shop, 'stripe')) return res.status(403).json({ message: 'Card payment is switched off. Pay with PayPal instead.' })
+  if (!key) return res.status(503).json({ message: 'Card payment is not set up yet. Get in touch to buy a piece.' })
 
   const origin = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`
   const ask = new URLSearchParams()
@@ -86,13 +32,11 @@ export default async function handler(req, res) {
     ask.set(`${at}[quantity]`, String(l.qty))
     ask.set(`${at}[price_data][currency]`, String(shop.currency || 'eur').toLowerCase())
     ask.set(`${at}[price_data][unit_amount]`, String(l.cents))
-    ask.set(`${at}[price_data][product_data][name]`, `${String(l.piece.title || l.slug).slice(0, 200)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${choice ? (l.signed ? ' (signed)' : ' (unsigned)') : ''}`)
-    const what = typeNote(l.piece.type) || shop.note
-    if (what) ask.set(`${at}[price_data][product_data][description]`, String(what).slice(0, 500))
+    ask.set(`${at}[price_data][product_data][name]`, name(l))
+    if (what(l)) ask.set(`${at}[price_data][product_data][description]`, String(what(l)).slice(0, 500))
     if (typeof l.piece.src === 'string' && l.piece.src.startsWith('/')) ask.set(`${at}[price_data][product_data][images][0]`, origin + l.piece.src)
   })
-  // what was ordered, readable in the Stripe dashboard: "raptor x2 signed, hulk x1"
-  ask.set('metadata[order]', lines.map((l) => `${l.slug}${l.size ? ` ${l.size}` : ''} x${l.qty}${choice ? (l.signed ? ' signed' : ' unsigned') : ''}`).join(', ').slice(0, 500))
+  ask.set('metadata[order]', summary.slice(0, 500))
   if (deal) {
     ask.set('discounts[0][coupon]', deal.code)
     ask.set('metadata[discount]', deal.code)

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, money, shop, shows } from '../data/site'
+import { asset, money, payWays, shop, shows } from '../data/site'
 import { useCart } from '../hooks/useCart'
-import { checkCode, checkout } from '../data/checkout'
-import { Elsewhere, Lock } from './Buy'
+import { checkCode, checkout, payLine } from '../data/checkout'
+import { Elsewhere, Lock, PaypalButton } from './Buy'
 
 const EASE = [0.16, 1, 0.3, 1]
 const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
@@ -47,10 +47,11 @@ export default function CartDrawer() {
     return () => { removeEventListener('keydown', key); document.body.style.overflow = before; if (!document.querySelector('.lightbox')) window.__lenis?.start?.() }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const pay = async () => {
+  const ways = payWays()
+  const pay = async (way) => {
     if (busy || !lines.length) return
-    setBusy(true); setNote('')
-    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(deal ? { discount: { code: deal.code, email: deal.email } } : {}) })
+    setBusy(way); setNote('')
+    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(deal ? { discount: { code: deal.code, email: deal.email } } : {}) }, way)
     if (problem) { setNote(problem); setBusy(false) }
   }
 
@@ -116,11 +117,14 @@ export default function CartDrawer() {
                   )}
                   <div className="cart-total"><span>Total</span><strong>{deal && <s>{money(cart.total, true)}</s>}{money(cart.total - off)}</strong></div>
                   {shop.shipping !== false && <p className="cart-small">You enter your delivery address on the next page.</p>}
-                  <button type="button" className={`btn buy-btn ${busy ? 'is-busy' : ''}`} onClick={pay} aria-busy={busy}>
-                    <span>{busy ? 'Opening secure checkout' : 'Checkout'}</span>
-                    <span className="buy-btn-icon" aria-hidden="true">{busy ? <i className="buy-spin" /> : '→'}</span>
-                  </button>
-                  <p className="buy-secure"><Lock /><span>Secure checkout by Stripe</span></p>
+                  {ways.card && (
+                    <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'}>
+                      <span>{busy === 'card' ? 'Opening secure checkout' : ways.paypal ? 'Pay by card' : 'Checkout'}</span>
+                      <span className="buy-btn-icon" aria-hidden="true">{busy === 'card' ? <i className="buy-spin" /> : '→'}</span>
+                    </button>
+                  )}
+                  {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => pay('paypal')} />}
+                  <p className="buy-secure"><Lock /><span>{payLine()}</span></p>
                   <AnimatePresence>
                     {note && (
                       <motion.div className="buy-note" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>

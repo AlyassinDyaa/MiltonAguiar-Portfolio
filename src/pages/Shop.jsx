@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { brand, forSale, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
 import Dropdown from '../components/Dropdown'
 import { useCart } from '../hooks/useCart'
+import { capturePaypal } from '../data/checkout'
 import Page from '../components/Page'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
@@ -29,9 +30,19 @@ const fits = (p, chosen) => FILTERS.every((f) => chosen[f.field] === 'All' || St
    "?thanks=1", which shows the thank-you panel and empties the cart. */
 export default function Shop() {
   const [params] = useSearchParams()
-  const thanks = params.get('thanks') === '1'
+  // back from paying: Stripe comes back with ?thanks=1 (already paid); PayPal with ?paypal=return
+  // and its order, which is only paid once it is taken here
+  const paypalOrder = params.get('paypal') === 'return' ? params.get('token') : ''
+  const [paypal, setPaypal] = useState(paypalOrder ? { state: 'taking' } : null)
+  const thanks = params.get('thanks') === '1' || paypal?.state === 'paid'
   const clearCart = useCart().clear
   useEffect(() => { if (thanks) clearCart() }, [thanks, clearCart])
+  useEffect(() => {
+    if (!paypalOrder) return
+    let gone = false
+    capturePaypal(paypalOrder).then((r) => { if (!gone) setPaypal(r.ok ? { state: 'paid' } : { state: 'failed', message: r.message }) })
+    return () => { gone = true }
+  }, [paypalOrder])
   const [pick, setPick] = useState(NONE)
   const [sel, setSel] = useState(null)
   const shown = useMemo(() => {
@@ -49,7 +60,11 @@ export default function Shop() {
   return (
     <Page title="Shop">
       <PageTitle label={shop.label} title={shop.title} lead={shop.intro} slides={forSale.length ? forSale : work} tone="red">
-        {thanks ? (
+        {paypal?.state === 'taking' ? (
+          <div className="thanks is-wait" role="status"><i aria-hidden="true" className="buy-spin" /><div><strong>Finishing your PayPal payment…</strong><span>One moment, and do not close this page.</span></div></div>
+        ) : paypal?.state === 'failed' ? (
+          <div className="thanks is-failed" role="alert"><i aria-hidden="true">!</i><div><strong>The payment did not go through</strong><span>{paypal.message}</span></div></div>
+        ) : thanks ? (
           <motion.div className="thanks" role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5, ease: EASE }}>
             <i aria-hidden="true">✓</i>
             <div><strong>{shop.thanksTitle}</strong><span>{shop.thanksText}</span></div>

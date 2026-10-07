@@ -100,11 +100,32 @@ const adminBundle = () => ({
       ['/api/discounts', 'api/discounts.js', 'discounts', 'dev/sample-discounts.js', 'sampleDiscounts'],
       ['/api/discount', 'api/discount.js', 'discountCheck', 'dev/sample-discounts.js', 'sampleDiscountCheck'],
     ]
+    // the payment keys, from a .env.local file beside package.json (never committed: *.local is ignored)
+    const KEYS = ['STRIPE_SECRET_KEY', 'PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_ENV']
+    const useKeys = () => { const env = loadEnv('development', process.cwd(), ''); for (const k of KEYS) if (env[k]) process.env[k] = env[k] }
+    // paying (api/checkout.js for Stripe, api/paypal.js for PayPal) runs here too, so a test key
+    // and a PayPal sandbox can be tried on this computer before the site goes live
+    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js']]) {
+      server.middlewares.use(route, async (req, res, next) => {
+        if ((req.url || '/').split('?')[0] !== '/') return next()
+        useKeys()
+        let body = ''
+        for await (const chunk of req) body += chunk
+        let parsed = {}
+        try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
+        const handler = (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`)).default
+        const reply = {
+          setHeader: (k, v) => res.setHeader(k, v),
+          status(code) { res.statusCode = code; return reply },
+          json(data) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); return reply },
+        }
+        await handler({ method: req.method, body: parsed, url: req.url, headers: { ...req.headers, 'x-forwarded-proto': 'http' } }, reply)
+      })
+    }
     for (const [route, file, name, sampleFile, sampleName] of local) {
       server.middlewares.use(route, async (req, res, next) => {
         if ((req.url || '/').split('?')[0] !== '/') return next() // "/api/discount" must not answer "/api/discounts"
-        const env = loadEnv('development', process.cwd(), '')
-        if (env.STRIPE_SECRET_KEY) process.env.STRIPE_SECRET_KEY = env.STRIPE_SECRET_KEY
+        useKeys()
         let body = ''
         for await (const chunk of req) body += chunk
         let parsed = {}

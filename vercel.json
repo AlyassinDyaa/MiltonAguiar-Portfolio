@@ -11,6 +11,7 @@
     { "source": "/((?!api/|admin/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/checkout.js": { "includeFiles": "content/**" }
+    "api/checkout.js": { "includeFiles": "content/**" },
+    "api/paypal.js": { "includeFiles": "content/**" }
   }
 }

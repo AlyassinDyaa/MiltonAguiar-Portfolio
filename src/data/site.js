@@ -122,7 +122,7 @@ function assemble(content) {
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },
   }
   shop = {
-    enabled: false, currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
+    enabled: false, payments: 'stripe', currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
     signedChoice: false, signedExtra: 0, cartIcon: 'bag',
     label: 'The shop', title: 'Take one home',
     thanksTitle: 'Thank you.', thanksText: 'Your order is in. A receipt is on its way to your email.',
@@ -228,6 +228,9 @@ export const asset = (url) => newPictures[url] || (url && url.startsWith('/') ? 
 
 /* What a card says a piece is, after its type: its sub category, or its category, whichever is not
    hidden (empty when both are). */
+/* The ways buyers can pay, from Shop → Settings & payments: { card, paypal }. */
+export const payWays = () => { const p = shop?.payments || 'stripe'; return { card: p !== 'paypal', paypal: p === 'paypal' || p === 'both' } }
+
 /* A piece's category, unless that category is switched to Hide. */
 export const catOf = (p) => (p?.category && !hiddenCats.has(String(p.category).trim()) ? p.category : '')
 export const filedUnder = (p) => [p.universe, p.category].map((x) => String(x || '').trim()).find((x, i) => x && !(i ? hiddenCats : hiddenSubs).has(x)) || ''

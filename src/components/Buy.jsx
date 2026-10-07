@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCart } from '../hooks/useCart'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
-import { checkout } from '../data/checkout'
+import { checkout, payLine } from '../data/checkout'
 
 const EASE = [0.16, 1, 0.3, 1]
 
@@ -23,6 +23,14 @@ export function Elsewhere({ subject }) {
   return null
 }
 
+/* The PayPal button, in PayPal's own yellow with its name in its two blues. */
+export function PaypalButton({ busy, onClick, label = 'Pay with' }) {
+  return (
+    <button type="button" className={`pp-btn ${busy ? 'is-busy' : ''}`} onClick={onClick} aria-busy={busy} aria-label="Pay with PayPal">
+      {busy ? <span className="pp-wait">Opening PayPal…</span> : <><span className="pp-say">{label}</span><span className="pp-word"><b>Pay</b><i>Pal</i></span></>}
+    </button>
+  )
+}
 export const Lock = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10.5h12v9.5H6z M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" /></svg>
 
 /* The price of a piece and the buttons that buy it, in the panel beside an opened piece. Shown
@@ -47,10 +55,11 @@ export default function Buy({ piece }) {
   const now = nowPrice(piece, size), full = fullPrice(piece, size), sale = onSale(piece, size)
   const inCart = cart.lines.filter((l) => l.slug === piece.slug).reduce((n, l) => n + l.qty, 0)
   const addToCart = () => { cart.add(piece.slug, choice && signed, size); setAdded(true); setTimeout(() => cart.setOpen(true), 350) }
-  const buyNow = async () => {
+  const ways = payWays()
+  const buyNow = async (way) => {
     if (busy || out) return
-    setBusy(true); setNote('')
-    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}) })
+    setBusy(way); setNote('')
+    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}) }, way)
     if (problem) { setNote(problem); setBusy(false) } // otherwise it stays "busy" while the page changes
   }
   return (
@@ -89,11 +98,12 @@ export default function Buy({ piece }) {
             <span>{added ? 'Added to cart' : 'Add to cart'}</span>
             <span className="buy-btn-icon" aria-hidden="true">{added ? '✓' : '+'}</span>
           </button>
+          {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => buyNow('paypal')} label="Buy now with" />}
           <div className="buy-also">
-            <button type="button" className={`buy-now ${busy ? 'is-busy' : ''}`} onClick={buyNow} aria-busy={busy}>{busy ? 'Opening secure checkout…' : `${shop.buttonLabel} now`} <span aria-hidden="true">→</span></button>
+            {ways.card && <button type="button" className={`buy-now ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => buyNow('card')} aria-busy={busy === 'card'}>{busy === 'card' ? 'Opening secure checkout…' : `${shop.buttonLabel} now${ways.paypal ? ' by card' : ''}`} <span aria-hidden="true">→</span></button>}
             {inCart > 0 && <button type="button" className="buy-incart" onClick={() => cart.setOpen(true)}>{inCart} in your cart</button>}
           </div>
-          <p className="buy-secure"><Lock /><span>Secure checkout by Stripe{where ? ` · Ships to ${where}` : ''}</span></p>
+          <p className="buy-secure"><Lock /><span>{payLine()}{where ? ` · Ships to ${where}` : ''}</span></p>
         </>
       )}
       <AnimatePresence>

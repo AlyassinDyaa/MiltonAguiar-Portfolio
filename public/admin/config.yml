@@ -475,7 +475,16 @@ collections:
         label: Shop settings and payments
         file: content/site/shop.json
         fields:
-          - { name: enabled, label: Online purchases, widget: boolean, default: false, hint: 'On: the Shop page and the cart button are on the site, and every piece with a price shows it with a Buy button that opens a Stripe payment page. Off: no shop, no prices and no buttons anywhere.' }
+          - { name: enabled, label: Online purchases, widget: boolean, default: false, hint: 'On: the Shop page and the cart button are on the site, and every piece with a price shows it with its buttons to buy. Off: no shop, no prices and no buttons anywhere.' }
+          - name: payments
+            label: How buyers pay
+            widget: select
+            default: stripe
+            options:
+              - { label: 'Stripe (card, Apple Pay, Google Pay)', value: stripe }
+              - { label: 'PayPal', value: paypal }
+              - { label: 'Both: buyers choose at checkout', value: both }
+            hint: 'Stripe needs STRIPE_SECRET_KEY in the Vercel settings; PayPal needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (and PAYPAL_ENV = live for real money; without it PayPal runs in its sandbox, for testing). Discount codes are kept in Stripe, so they need the Stripe key either way.'
           - { name: label, label: Small label, widget: string, required: false }
           - { name: title, label: Heading, widget: string }
           - { name: intro, label: Introduction, widget: text, required: false }

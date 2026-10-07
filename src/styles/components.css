@@ -797,6 +797,19 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .is-red .how-buy li { background: rgba(11, 11, 12, 0.34); color: #fff; }
 .is-red .how-buy b { color: #fff; text-shadow: 0.06em 0.06em 0 var(--k); }
 .is-red .thanks { background: var(--k); color: #fff; }
+.is-red .thanks.is-failed i { background: #fff; color: #b3202a; }
+.thanks.is-wait i.buy-spin { width: 28px; height: 28px; margin: 6px; border-radius: 50%; background: none; border: 3px solid rgba(255, 255, 255, 0.3); border-top-color: #fff; }
+/* the PayPal button: PayPal's own yellow, its name in its two blues */
+.pp-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 54px; margin-top: 10px; padding: 0 18px; background: #ffc439; color: #111; border-radius: 4px; font-family: var(--body); font-size: 1rem; font-weight: 600; transition: filter 0.2s, transform 0.15s; }
+.pp-btn:hover, .pp-btn:focus-visible { filter: brightness(0.94); outline: 0; }
+.pp-btn:active { transform: scale(0.99); }
+.pp-btn.is-busy { cursor: progress; }
+.pp-say { color: #111; }
+.pp-word { font-family: Verdana, 'Segoe UI', sans-serif; font-size: 1.22rem; font-weight: 700; font-style: italic; letter-spacing: -0.02em; }
+.pp-word b { color: #003087; font-weight: 800; }
+.pp-word i { color: #009cde; font-weight: 800; }
+.pp-wait { color: #111; font-weight: 600; }
+.cart-foot .pp-btn { margin-top: 10px; }
 .is-red .thanks i { background: var(--accent); color: #fff; }
 .shop-filters { position: relative; z-index: 5; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 6px 0 clamp(22px, 2.6vw, 34px); }
 .shop-filters-clear { min-height: 48px; padding: 0 6px; font-family: var(--display); font-size: 0.86rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); border-bottom: 2px solid var(--accent); }

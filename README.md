@@ -204,7 +204,18 @@ in needs a GitHub account.
    `ADMIN_PASSCODE` (the passcode: long and hard to guess, 12 characters or more) and
    `GITHUB_TOKEN` (the token from step 2), then **Deployments → Redeploy**.
 
-4. For the shop: in Stripe, **Developers → API keys**, copy the **Secret key** (`sk_live_...`, or
+4. For the shop, pick how buyers pay under **Shop → Settings & payments → How buyers pay**:
+   Stripe (card, Apple Pay, Google Pay), PayPal, or Both (buyers choose at checkout). Then add
+   the keys for what you picked:
+   - PayPal: on developer.paypal.com, **Apps & Credentials**, make an app and copy its
+     **Client ID** and **Secret** into `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`. Without
+     `PAYPAL_ENV` it runs in PayPal's **sandbox** (test buyers from developer.paypal.com →
+     Sandbox accounts); set `PAYPAL_ENV` = `live` (with the Live app's keys) for real money.
+   - Stripe: see below.
+   To try either on this computer first, put the same keys in a file `.env.local` beside
+   `package.json` (it is never committed) and run `npm run dev`: the shop's checkout runs
+   locally against Stripe's test mode and PayPal's sandbox.
+5. Stripe: in Stripe, **Developers → API keys**, copy the **Secret key** (`sk_live_...`, or
    `sk_test_...` to try it with Stripe's test cards) and add it on Vercel as `STRIPE_SECRET_KEY`,
    then redeploy. The key stays on Vercel; the browser never sees it.
 

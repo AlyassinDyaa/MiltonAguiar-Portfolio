@@ -141,7 +141,7 @@ export const emailHtml = ({ subject, kicker, title, lines, button, picture, afte
   const cut = name.lastIndexOf(' ')
   const [first, second] = cut > 0 ? [name.slice(0, cut), name.slice(cut + 1)] : [name, '']
   const insta = (Array.isArray(b.social) ? b.social : []).find((x) => /instagram/i.test(x.label || ''))
-  const home = String(process.env.SITE_URL || assetHost()).replace(/\/$/, '')
+  const home = assetHost() // the live address (never this computer's), for the footer link
   const para = (t) => `<p style="margin:0 0 14px;font-family:${BODY};font-size:16px;line-height:1.6;color:#d9d9d6;">${esc(t)}</p>`
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>${esc(subject)}</title></head>

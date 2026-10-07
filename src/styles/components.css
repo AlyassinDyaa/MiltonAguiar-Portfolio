@@ -720,94 +720,74 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
   .tag-badge { top: 7px; left: 7px; padding: 5px 9px 4px 8px; font-size: 0.74rem; }
 }
 
-/* The shop's cards (components/ShopCard.jsx), hung the way a print shop hangs them: the piece on
-   a lit wall with nothing round it but a hairline, a bar of actions that slides up over the foot
-   of the wall when it is pointed at, and under it a label with no box at all: what it is, the
-   title, the sizes and the price. */
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: clamp(30px, 3vw, 46px) clamp(16px, 1.8vw, 26px); }
+/* The shop's cards (components/ShopCard.jsx). The piece fills the card, as the thing the buyer
+   gets: --mat is the edge round the art (the paper of a print, the frame and mat, the margin of a
+   board), so the art and the second picture always sit inside it. Under the piece, one line with
+   the title and the price, and what it is under that. */
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: clamp(34px, 3.4vw, 52px) clamp(18px, 2vw, 30px); }
 .shop-grid > li { min-width: 0; }
-.pc { display: flex; flex-direction: column; gap: 14px; height: 100%; }
-.pc-top { position: relative; overflow: hidden; }
-.pc-top::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow 0.3s; }
-.pc:hover .pc-top::after, .pc:focus-within .pc-top::after { box-shadow: inset 0 0 0 2px var(--accent); }
-:root[data-theme='light'] .pc-top::after { box-shadow: inset 0 0 0 2px var(--frame); }
-.pc-stage { display: block; width: 100%; }
-.pc-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sc-art { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: var(--panel-2); }
-.sc-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; transition: transform 0.7s var(--ease-out), filter 0.3s; }
-.pc:hover .sc-art:not(.is-mock) img { transform: scale(1.045); }
-.sc-art .poster { height: 100%; aspect-ratio: auto; }
-.sc-tag { position: absolute; z-index: 1; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px 4px; font-family: var(--display); font-size: 0.74rem; font-weight: 800; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; background: var(--accent); color: #fff; }
-.sc-tag.is-new::before { content: ''; flex: 0 0 auto; width: 9px; height: 9px; background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
-.sc-tag.is-soldout { background: rgba(11, 11, 12, 0.88); }
-.sc-tag.is-inline { position: static; }
-/* the actions: a dark half and a red half, sliding up from under the wall */
-.pc-actions { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; transform: translateY(101%); transition: transform 0.4s var(--ease-out); }
-.pc:hover .pc-actions, .pc:focus-within .pc-actions { transform: none; }
-.pc-quick, .pc-add { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; font-family: var(--display); font-size: 0.9rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
-.pc-quick { flex: 1; background: rgba(11, 11, 12, 0.9); color: #fff; backdrop-filter: blur(6px); }
-.pc-quick:hover, .pc-quick:focus-visible { background: #000; outline: 0; }
-.pc-add { flex: 0 0 auto; background: var(--accent); color: #fff; }
-.pc-add:hover, .pc-add:focus-visible { background: #fff; color: var(--k); outline: 0; }
-.pc-add.is-added { background: var(--open); color: #06140c; }
-.pc-add svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
-/* the label under the wall */
-.pc-info { display: grid; gap: 5px; width: 100%; padding: 0 2px; text-align: left; color: inherit; cursor: pointer; }
-.pc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.pc-meta small { font-family: var(--display); font-size: 0.76rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-mute); }
-.pc-title { font-family: var(--display); font-size: 1.5rem; font-weight: 800; font-style: italic; line-height: 1; letter-spacing: 0.005em; text-transform: uppercase; transition: color 0.2s; }
-.pc:hover .pc-title { color: var(--accent); }
-.pc-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
-.pc-sizes { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
-.pc-sizes i { padding: 4px 7px 3px; font-family: var(--display); font-size: 0.74rem; font-weight: 700; font-style: normal; line-height: 1; letter-spacing: 0.06em; color: var(--fg-dim); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.pc-price { flex: 0 0 auto; margin-left: auto; display: flex; align-items: baseline; gap: 7px; font-family: var(--display); font-style: italic; white-space: nowrap; }
-.pc-price em { font-size: 0.74rem; font-weight: 700; font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-mute); }
-.pc-price b { font-size: 1.55rem; font-weight: 900; line-height: 1; color: var(--fg); }
-.pc-price b.is-sale { color: var(--accent); }
-.pc-price s { font-size: 0.95rem; font-weight: 700; color: var(--fg-mute); text-decoration-thickness: 2px; }
-.pc-alt { position: absolute; z-index: 1; inset: 0; overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
+.pc { display: flex; flex-direction: column; height: 100%; }
+.pc-art { position: relative; }
+.pc-open { display: block; width: 100%; }
+.pc-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.pc-frame { --mat: 0px; --mat-b: var(--mat); position: relative; display: block; aspect-ratio: 4 / 5; padding: var(--mat) var(--mat) var(--mat-b); overflow: hidden; background: var(--panel-2); box-shadow: 0 22px 40px -22px rgba(0, 0, 0, 0.85); transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out); }
+.pc-frame > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.pc-frame .poster { height: 100%; aspect-ratio: auto; }
+.pc:hover .pc-frame, .pc:focus-within .pc-frame { transform: translateY(-6px); box-shadow: 0 34px 50px -24px rgba(0, 0, 0, 0.9); }
+/* a printed poster: the art on white paper, a little sheen */
+.look-poster .pc-frame { --mat: clamp(8px, 3.4%, 14px); background: #f7f5ef; }
+.look-poster .pc-frame::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 38%); }
+/* a framed print: a black frame round a white mat */
+.look-framed .pc-frame { --mat: clamp(16px, 7%, 26px); background: #f4f2ec; box-shadow: inset 0 0 0 clamp(6px, 2.6%, 10px) #121214, inset 0 0 0 calc(clamp(6px, 2.6%, 10px) + 1px) rgba(0, 0, 0, 0.35), 0 22px 40px -22px rgba(0, 0, 0, 0.85); }
+/* an original art board: cream board, the blue-line border, the artist's name in the margin */
+.look-board .pc-frame { --mat: clamp(10px, 4.5%, 16px); --mat-b: clamp(24px, 10%, 36px); background: #f3eee2; }
+.look-board .pc-frame::before { content: ''; position: absolute; z-index: 2; inset: calc(var(--mat) * 0.45) calc(var(--mat) * 0.45) calc(var(--mat-b) * 0.6); border: 1px solid rgba(70, 135, 200, 0.55); pointer-events: none; }
+.pc-note { position: absolute; z-index: 2; left: var(--mat); right: var(--mat); bottom: calc(var(--mat-b) * 0.22); overflow: hidden; font-family: var(--display); font-size: 0.66rem; font-weight: 700; font-style: italic; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; color: rgba(55, 55, 65, 0.55); }
+/* a comic book: the crease down the spine, a gloss */
+.look-comic .pc-frame::before { content: ''; position: absolute; z-index: 2; top: 0; bottom: 0; left: 2.4%; width: 3.2%; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.28) 45%, rgba(0, 0, 0, 0.14) 75%, transparent); }
+.look-comic .pc-frame::after { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(112deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 34%); }
+.look-comic .pc-frame { box-shadow: 3px 3px 0 #d2cfc7, 5px 5px 0 #9d9a93, 0 22px 40px -22px rgba(0, 0, 0, 0.85); }
+/* the second picture fades in over the art when the card is pointed at */
+.pc-alt { position: absolute; z-index: 1; inset: var(--mat) var(--mat) var(--mat-b); overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
 .pc-alt img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease-out); }
 .pc:hover .pc-alt, .pc:focus-within .pc-alt { opacity: 1; }
-.pc:hover .pc-alt img, .pc:focus-within .pc-alt img { transform: scale(1.045); }
-.pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.62); }
+.pc:hover .pc-alt img, .pc:focus-within .pc-alt img { transform: scale(1.04); }
 @media (hover: none) { .pc-alt { display: none; } }
-.pc.is-gone .sc-art img { filter: grayscale(1) brightness(0.62); }
-.pc.is-gone .pc-price b { color: var(--fg-mute); text-decoration: line-through; text-decoration-thickness: 2px; }
-/* a finger has no hover: the add button stays at the foot of the wall, Quick view is the wall itself */
-@media (hover: none) {
-  .pc-actions { transform: none; justify-content: flex-end; pointer-events: none; }
-  .pc-quick { display: none; }
-  .pc-add { pointer-events: auto; min-height: 40px; padding: 0 12px; font-size: 0.78rem; }
+.pc.is-gone .pc-frame > img, .pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.7); }
+/* the tag, and the cart button that shows when the card is pointed at */
+.sc-tag { position: absolute; z-index: 3; top: 12px; left: -6px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 4px 9px; font-family: var(--display); font-size: 0.74rem; font-weight: 800; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; background: var(--accent); color: #fff; box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.7); }
+.sc-tag.is-new::before { content: ''; flex: 0 0 auto; width: 9px; height: 9px; background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.sc-tag.is-soldout { background: #0b0b0c; }
+.sc-tag.is-inline { position: static; box-shadow: none; }
+.pc-add { position: absolute; z-index: 3; right: 10px; bottom: 10px; display: grid; place-items: center; width: 44px; height: 44px; background: var(--accent); color: #fff; box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.8); opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.35s var(--ease-out), background 0.2s, color 0.2s; }
+.pc:hover .pc-add, .pc:focus-within .pc-add { opacity: 1; transform: translateY(-6px); }
+.pc-add:hover, .pc-add:focus-visible { background: #fff; color: #0b0b0c; outline: 0; }
+.pc-add.is-added { background: var(--open); color: #06140c; opacity: 1; }
+.pc-add svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (hover: none) { .pc-add { opacity: 1; transform: none; width: 40px; height: 40px; } }
+/* under the piece: the title and the price on one line, then what it is */
+.pc-info { display: grid; gap: 5px; width: 100%; margin-top: 16px; padding: 0 2px; text-align: left; color: inherit; cursor: pointer; }
+.pc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; }
+.pc-title { min-width: 0; font-family: var(--display); font-size: 1.32rem; font-weight: 800; font-style: italic; line-height: 1.05; letter-spacing: 0.01em; text-transform: uppercase; transition: color 0.2s; }
+.pc:hover .pc-title { color: var(--accent); }
+.pc-price { flex: 0 0 auto; display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.pc-price b { font-family: var(--display); font-size: 1.3rem; font-weight: 800; letter-spacing: 0.01em; color: var(--fg); }
+.pc-price b.is-sale { color: var(--accent); }
+.pc-price b.is-out { font-size: 0.86rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
+.pc-price s { font-family: var(--display); font-size: 0.95rem; font-weight: 600; color: var(--fg-mute); text-decoration-thickness: 1.5px; }
+.pc-price i { font-style: normal; font-size: 0.82rem; color: var(--fg-mute); }
+.pc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pc-meta small { font-family: var(--display); font-size: 0.76rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
+@media (max-width: 599px) {
+  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+  .pc-info { margin-top: 12px; }
+  .pc-row { flex-direction: column; align-items: flex-start; gap: 3px; }
+  .pc-title { font-size: 1.05rem; }
+  .pc-price b { font-size: 1.1rem; }
+  .pc-meta small { font-size: 0.66rem; letter-spacing: 0.1em; }
+  .sc-tag { top: 8px; font-size: 0.64rem; padding: 4px 7px 3px 7px; }
 }
-
-/* A piece shown as the thing it is: the top of the card is a wall lit from above, and on it the
-   piece as a printed poster, a framed print, an original art board or a comic book (ShopCard
-   picks the look, set in the admin). The piece keeps its own shape; it lifts off the wall when
-   the card is pointed at. */
-.sc-art.is-mock { container-type: size; background: radial-gradient(130% 85% at 50% 0%, #2c2c32 0%, #1a1a1d 55%, #111113 100%); }
-:root[data-theme='light'] .sc-art.is-mock { background: radial-gradient(130% 85% at 50% 0%, #fdfcf9 0%, #e9e7e0 60%, #dad7ce 100%); }
-.mock { position: absolute; inset: 9% 12% 11%; display: flex; align-items: center; justify-content: center; }
-.mock-item { position: relative; display: block; transform: rotate(var(--tilt, 0deg)); transition: transform 0.6s var(--ease-out); }
-.pc:hover .mock-item, .pc:focus-within .mock-item { transform: translateY(-6px) rotate(calc(var(--tilt, 0deg) * 0.4)); }
-.mock-item img { display: block; box-sizing: border-box; width: auto; height: auto; max-width: 76cqw; max-height: 78cqh; transition: box-shadow 0.6s var(--ease-out); }
-.mock-item::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
-/* a printed poster: the art on white paper, a soft sheen across it */
-.look-poster .mock-item img { padding: 3.6cqw; background: #fbfaf6; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 22px -8px rgba(0, 0, 0, 0.6), 0 30px 50px -24px rgba(0, 0, 0, 0.7); }
-.look-poster .mock-item::after { background: linear-gradient(118deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 36%, rgba(0, 0, 0, 0) 72%, rgba(0, 0, 0, 0.08)); }
-/* a framed print: a white mat in a black frame, the frame's shadow falling on the mat */
-.look-framed .mock-item img { padding: 5.5cqw; border: 2.4cqw solid #121214; background: #f5f3ee; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28), 0 0 0 1px #34343a, 0 14px 26px -8px rgba(0, 0, 0, 0.65), 0 32px 52px -26px rgba(0, 0, 0, 0.7); }
-.look-framed .mock-item::after { background: linear-gradient(125deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 30%); }
-/* an original art board: cream Bristol board, the printer's blue-line border, the artist's name
-   pencilled in the margin, laid on at a slight angle */
-.look-board { --tilt: -1.5deg; }
-.look-board .mock-item img { padding: 5cqw 5cqw 9.5cqw; background: #f3eee2; outline: 1px solid rgba(70, 135, 200, 0.55); outline-offset: -2.6cqw; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 14px 26px -10px rgba(0, 0, 0, 0.55), 0 30px 48px -26px rgba(0, 0, 0, 0.6); }
-.mock-note { position: absolute; left: 5cqw; right: 5cqw; bottom: 2.8cqw; overflow: hidden; font-family: var(--display); font-size: 2.6cqw; font-weight: 700; font-style: italic; line-height: 1; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; color: rgba(55, 55, 65, 0.55); }
-/* a comic book: the cover with a crease down the spine, the pages showing at its edge, a gloss */
-.look-comic { --tilt: -2deg; }
-.look-comic .mock-item img { border-radius: 0 2px 2px 0; box-shadow: 1px 0 0 #ebe8e1, 2px 1px 0 #d2cfc7, 3px 2px 0 #b8b5ad, 4px 3px 0 #9d9a93, 0 14px 26px -8px rgba(0, 0, 0, 0.6), 0 30px 50px -24px rgba(0, 0, 0, 0.65); }
-.look-comic .mock-item::before { content: ''; position: absolute; z-index: 1; top: 0; bottom: 0; left: 2.4%; width: 3.2%; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.28) 45%, rgba(0, 0, 0, 0.14) 75%, transparent); }
-.look-comic .mock-item::after { background: linear-gradient(112deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 34%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.1)); }
-@media (prefers-reduced-motion: reduce) { .mock-item { transition: none; } .pc:hover .mock-item { transform: rotate(var(--tilt, 0deg)); } }
+@media (prefers-reduced-motion: reduce) { .pc-frame, .pc-alt, .pc-add { transition: none; } .pc:hover .pc-frame { transform: none; } }
 
 /* the top of the shop: how buying works; the filters sit in a bar over the pieces */
 .how-buy { display: flex; flex-wrap: wrap; gap: 6px; margin: 22px 0 0; padding: 0; list-style: none; }
@@ -857,15 +837,6 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
   .shop-filters-clear, .shop-filters-count { min-height: 0; margin: 0; padding: 4px 0; align-self: center; justify-self: start; }
   .shop-filters-count { grid-column: -2 / -1; justify-self: end; }
   .dd-button { font-size: 0.95rem; padding: 0 10px 0 12px; }
-  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 10px; }
-  .pc { gap: 10px; }
-  .pc-title { font-size: 1.1rem; }
-  .pc-meta small { font-size: 0.66rem; letter-spacing: 0.1em; }
-  .pc-row { flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 8px; }
-  .pc-price { margin-left: 0; }
-  .pc-price b { font-size: 1.2rem; }
-  .pc-sizes i { font-size: 0.66rem; padding: 3px 5px 2px; }
-  .sc-tag { top: 8px; left: 8px; font-size: 0.66rem; padding: 4px 7px 3px; }
 }
 
 /* back from Stripe */
@@ -878,10 +849,11 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 /* An opened piece that is for sale: its price in a box, what the buyer gets, and the buttons. */
 .buy { margin-top: 22px; padding-top: 22px; border-top: 2px solid var(--line-strong); }
 .buy-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
-.buy-price { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 20px 6px 15px; font-family: var(--display); font-size: clamp(2.2rem, 3.4vw, 2.9rem); font-weight: 900; font-style: italic; line-height: 0.9; background: var(--loud); color: var(--on-loud); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
-.buy-price small { font-size: 0.34em; font-weight: 800; font-style: normal; letter-spacing: 0.14em; opacity: 0.6; }
-.buy-price.is-out { background: var(--panel-2); color: var(--fg-mute); text-decoration: line-through; }
-.buy-was { font-family: var(--display); font-size: 1.5rem; font-weight: 800; font-style: italic; color: var(--fg-mute); text-decoration-thickness: 2px; }
+.buy-price { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--display); font-size: clamp(2.4rem, 3.6vw, 3rem); font-weight: 800; line-height: 0.95; letter-spacing: 0.005em; color: var(--fg); }
+.buy-price small { font-size: 0.32em; font-weight: 700; letter-spacing: 0.16em; color: var(--fg-mute); }
+.buy-price.is-sale { color: var(--accent); }
+.buy-price.is-out { color: var(--fg-mute); text-decoration: line-through; text-decoration-thickness: 2px; }
+.buy-was { font-family: var(--display); font-size: 1.3rem; font-weight: 600; color: var(--fg-mute); text-decoration-thickness: 1.5px; }
 .buy-what { margin: 14px 0 0; color: var(--fg-dim); }
 .buy-save { margin: 8px 0 0; font-family: var(--display); font-size: 0.88rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
 .buy-sign { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 18px; padding: 12px 14px; text-align: left; background: var(--panel-2); color: var(--fg); transition: box-shadow 0.2s; }

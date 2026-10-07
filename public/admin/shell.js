@@ -74,13 +74,14 @@
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
   const GROUPS = [
-    { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file },
+    { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
+    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery and payments.', has: (s) => s.name === 'shop' || s.key === 'site/shop' },
     { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' },
+    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' },
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', 'site/shop': 'Shop & payments', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',

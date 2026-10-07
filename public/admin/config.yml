@@ -61,8 +61,8 @@ collections:
       - { name: rough, label: Pencils or work in progress, widget: boolean, default: false, required: false, hint: 'Tick this for sketches and pencilled pages. They stay on the Work page but are left out of the changing pictures beside the page titles, which show finished pieces only.' }
       - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 5 to 9 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
-      - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop in this panel, and once it has a price it is on the Shop page with a Buy button.' }
-      - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop and payments. Only needed for a piece you sell.' }
+      - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop → Items for sale in this panel, and once it has a price it is on the Shop page with a Buy button.' }
+      - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments. Only needed for a piece you sell.' }
       - name: status
         label: Tag
         widget: select
@@ -74,12 +74,12 @@ collections:
           - { label: 'On sale (shows the old and the new price)', value: sale }
           - { label: 'Sold out (no Buy button)', value: soldout }
         hint: 'Sale and Sold out show while online purchases are switched on; New always shows.'
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop and payments. Leave it empty for a piece that is not for sale.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. Leave it empty for a piece that is not for sale.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: false, required: false, hint: 'For something you sell that is not a piece of your portfolio (a book, a shirt): it stays off the Work page and the home page.' }
 
   - name: shop
-    label: Shop
+    label: Items for sale
     label_singular: Item for sale
     description: 'Everything you sell: prints, original art, comics. A piece added here is for sale straight away once it has a price. A piece already under Work goes on sale by switching on "Sell it in the Shop" on it, and then shows here too.'
     folder: content/work
@@ -95,9 +95,9 @@ collections:
       - { name: inShop, widget: hidden, default: true }
       - { name: title, label: Title, widget: string }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, hint: 'A number, in the currency set under Shop and payments.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, hint: 'A number, in the currency set under Shop → Settings & payments.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
-      - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop and payments.' }
+      - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }
       - name: status
         label: Tag
         widget: select
@@ -388,7 +388,7 @@ collections:
           - { name: footerFine, label: Small print after the © line, widget: string, required: false }
 
       - name: shop
-        label: Shop and payments
+        label: Shop settings and payments
         file: content/site/shop.json
         fields:
           - { name: enabled, label: Online purchases, widget: boolean, default: false, hint: 'On: the Shop page and the cart button are on the site, and every piece with a price shows it with a Buy button that opens a Stripe payment page. Off: no shop, no prices and no buttons anywhere.' }
@@ -452,7 +452,7 @@ collections:
             label: Pages
             widget: object
             collapsed: false
-            hint: 'A page that is switched off also leaves the menu. The Shop also needs online purchases switched on, under Shop and payments.'
+            hint: 'A page that is switched off also leaves the menu. The Shop also needs online purchases switched on, under Shop → Settings & payments.'
             fields:
               - { name: work, label: Work, widget: boolean, default: true }
               - { name: shop, label: Shop, widget: boolean, default: true }

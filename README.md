@@ -20,7 +20,7 @@ npm run preview    # serve the production build
 |---|---|
 | `/` | Home, page by page: the name and a drawing in the title panel with four pieces beside it, the current project as a splash panel with its cover and two buttons, the latest pieces as slanted panels, step-by-step comparisons, commissions with each offer as a panel, conventions |
 | `/work` | Every piece, with category filters; a piece opens large with its details |
-| `/shop` | Everything for sale: the pieces with a price, with Type and Category filters, New / Sale / Sold out tags and a cart. Shown while online purchases are switched on (**Shop and payments**); until a piece has a price it says the shop opens soon |
+| `/shop` | Everything for sale: the pieces with a price, with Type and Category filters, New / Sale / Sold out tags and a cart. Shown while online purchases are switched on (**Shop → Settings & payments**); until a piece has a price it says the shop opens soon |
 | `/gallery` | Pictures in sections, shown uncropped. Switched off to start with, because it shows the same pieces as Work; switch it on under **Show or hide** |
 | `/commissions` | What is on offer (a card each), how it works (a strip of numbered panels), and where to ask |
 | `/about` | His origin story, a panel at a time; the artist file; where to find him; covers and collaborations |
@@ -39,13 +39,13 @@ step open as picture cards; the other lists as rows. Each list remembers the vie
 | Section | What you control |
 |---|---|
 | Work | Every piece: picture, title, category, date, link to the post, a note, whether it is on the home page and in which place. Under **For sale**: **Sell it in the Shop**, what it is (Prints, Original art...), a tag (New, On sale, Sold out), a price and a sale price |
-| Shop | Everything for sale, with **+ Item for sale** to add something new: picture, price, sale price, what it is, tag, category, and **Only in the Shop** (on to start with) to keep it off the Work page |
+| Shop → Items for sale | Everything for sale, with **+ Item for sale** to add something new: picture, price, sale price, what it is, tag, category, and **Only in the Shop** (on to start with) to keep it off the Work page |
 | Gallery | Sections of the gallery page and the pictures in each. A section can also fill itself from Work, so a finished piece is only uploaded once. Tick "Show on the home page" on up to 6 pictures |
 | Step by step | Sets of one piece at each stage (pencils, inks, colours), or an old drawing next to its redraw: a name and a picture for each stage |
 | Conventions | Events, with dates and where to find the table |
 | Home page, Work and Gallery pages, Commissions page, About page, Contact page | The words on each page, one short form per page: headings, introductions, buttons. The Home page form also holds the drawing beside the name and the current project (title, cover, where to read it, and a second button, for example to the publisher); the About form holds the story, one panel at a time, each with its words and picture; the Commissions form holds open or closed, the offers and prices, where "Get a quote" goes, and the picture used in the steps |
 | Name, colour and contact | Site name, tagline, brand colour, logo, email, social links, footer text |
-| Shop and payments | Online purchases on or off, the Shop page's words, currency, the kinds of thing sold (each with what the buyer gets), signed pieces and their extra cost, where prices and tags sit on the cards, delivery countries, the thank-you message |
+| Shop → Settings & payments | Online purchases on or off, the Shop page's words, currency, the kinds of thing sold (each with what the buyer gets), signed pieces and their extra cost, where prices and tags sit on the cards, delivery countries, the thank-you message |
 | Show or hide | Switch whole pages, dark or light mode, or parts of the home page, on and off |
 
 Pictures upload straight from the panel into `public/uploads/`. A piece without a picture gets a
@@ -63,7 +63,7 @@ replaced by a button to Instagram as well.
 
 ### Selling online
 
-Everything for sale is under **Shop** in the admin. **+ Item for sale** adds a new one (a print, an
+Everything for sale is in the admin's own **Shop** group: **Items for sale** and **Settings & payments**. **+ Item for sale** adds a new one (a print, an
 original, a book): give it a picture and a price and it is on the Shop page. It stays off the Work
 page unless you switch off **Only in the Shop**. A piece already under **Work** goes on sale by
 switching on **Sell it in the Shop** in its *For sale* group and giving it a price; it then shows

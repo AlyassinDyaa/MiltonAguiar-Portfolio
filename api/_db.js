@@ -35,7 +35,7 @@ export const db = async () => {
         d.collection('orders').createIndex({ userId: 1, createdAt: -1 }),
         d.collection('orders').createIndex({ email: 1, createdAt: -1 }),
         d.collection('orders').createIndex({ pi: 1 }),
-        d.collection('users').createIndex({ memberNo: 1 }),
+        d.collection('users').createIndex({ memberNo: 1 }, { unique: true, partialFilterExpression: { memberNo: { $type: 'number' } } }),
       ])
       return d
     })().catch((e) => { globalThis.__maMongo = null; throw e })

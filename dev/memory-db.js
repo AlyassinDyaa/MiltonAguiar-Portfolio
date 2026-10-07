@@ -23,7 +23,7 @@ const apply = (doc, update, inserting) => {
   for (const [k, v] of Object.entries(update.$inc || {})) doc[k] = (doc[k] || 0) + v
   return doc
 }
-const unique = { users: ['email'], sessions: ['hash'], tokens: ['hash'], orders: ['ref'] }
+const unique = { users: ['email', 'memberNo'], sessions: ['hash'], tokens: ['hash'], orders: ['ref'] }
 
 function collection(name) {
   const rows = []

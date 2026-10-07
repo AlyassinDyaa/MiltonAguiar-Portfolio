@@ -146,7 +146,7 @@ under **Shop → Customer accounts**: Off (everyone buys as a guest), Optional, 
 account is needed to buy). A logged-in customer gets:
 
 - **the membership card**: a red card with their name, the year they joined, their member number
-  (`#0001` for the first customer, in sign-up order, never given out twice) and how many pieces
+  (`#0001` for the first customer, then in sign-up order; one more than the highest number held now, so deleting the newest account frees its number) and how many pieces
   they have collected. The word in its corner is set in the admin (Collector, Member...). A
   visitor sees the card fill in with their name as they make an account;
 - **their orders**, each with where it is up to (the stage and tracking number set in Sales →

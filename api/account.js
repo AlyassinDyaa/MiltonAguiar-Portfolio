@@ -36,18 +36,24 @@ const VERIFY_HOURS = 48
 
 const say = (res, status, body) => res.status(status).json(body)
 
-// ---------- member numbers: 1 for the first customer, 2 for the next... never handed out twice
+// ---------- member numbers: 1 for the first customer, 2 for the next... One more than the highest
+// number an account holds now, so a deleted account takes nothing with it: delete the newest
+// account and the next one to sign up gets its number. Two accounts never hold the same number
+// at once (the database refuses it, and the signup simply takes the next).
 const nextMemberNo = async (d) => {
-  const c = await d.collection('counters').findOneAndUpdate({ _id: 'members' }, { $inc: { seq: 1 } }, { upsert: true, returnDocument: 'after' })
-  const doc = c && c.value !== undefined && c.ok !== undefined ? c.value : c // older drivers wrap the document
-  return doc && doc.seq
+  const top = await d.collection('users').find({ memberNo: { $gt: 0 } }).sort({ memberNo: -1 }).limit(1).toArray()
+  return ((top[0] && Number(top[0].memberNo)) || 0) + 1
 }
 // a customer from before member numbers gets the next one the first time they come back
 const withMemberNo = async (d, user) => {
   if (!user || user.memberNo) return user
-  const memberNo = await nextMemberNo(d)
-  await d.collection('users').updateOne({ _id: user._id }, { $set: { memberNo } })
-  return { ...user, memberNo }
+  for (let tries = 0; ; tries++) {
+    const memberNo = await nextMemberNo(d)
+    try {
+      await d.collection('users').updateOne({ _id: user._id }, { $set: { memberNo } })
+      return { ...user, memberNo }
+    } catch (e) { if (!(e && e.code === 11000) || tries >= 4) throw e }
+  }
 }
 
 // ---------- which profile pictures a customer may use
@@ -116,10 +122,15 @@ export default async function handler(req, res) {
       if (await tooMany(`signup:${ip}`, 10, 60)) return say(res, 429, { message: 'Too many new accounts from here. Try again in an hour.' })
       await noteTry(`signup:${ip}`)
       if (await users.findOne({ email })) return say(res, 409, { message: 'There is already an account with that email. Log in, or reset the password.', field: 'email' })
-      const user = { _id: newId('u'), memberNo: await nextMemberNo(d), email, name, phone: '', password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date() }
-      try { await users.insertOne(user) } catch (e) {
-        if (e && e.code === 11000) return say(res, 409, { message: 'There is already an account with that email. Log in, or reset the password.', field: 'email' })
-        throw e
+      const user = { _id: newId('u'), memberNo: 0, email, name, phone: '', password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date() }
+      // the next member number; should someone else sign up in the same instant and take it, the one after
+      for (let tries = 0; ; tries++) {
+        user.memberNo = await nextMemberNo(d)
+        try { await users.insertOne(user); break } catch (e) {
+          if (!(e && e.code === 11000)) throw e
+          if (await users.findOne({ email })) return say(res, 409, { message: 'There is already an account with that email. Log in, or reset the password.', field: 'email' })
+          if (tries >= 4) throw e
+        }
       }
       await startSession(req, res, user._id)
       const mailed = await sendVerify(req, user)

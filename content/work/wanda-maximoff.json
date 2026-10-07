@@ -1,0 +1,22 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/scarlet-witch-frame.png",
+  "universe": "Marvel",
+  "hidden": false,
+  "date": "2021-03-28",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Wanda Maximoff",
+  "inShop": true,
+  "category": "Fan art",
+  "look": "default"
+}

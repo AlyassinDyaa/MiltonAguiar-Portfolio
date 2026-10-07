@@ -6,6 +6,17 @@
   "featured": true,
   "date": "2026-09-19",
   "homeOrder": 4,
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20,
+      "salePrice": 10
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
   "note": "Drawn for Batman Day. Batman is the character that made me want to draw comics.",
   "status": "new",
   "title": "Batman and Robin",

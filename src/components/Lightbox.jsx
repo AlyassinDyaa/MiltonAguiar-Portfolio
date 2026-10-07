@@ -9,7 +9,7 @@ import Buy from './Buy'
 /* One piece, large and uncropped, with its details beside it. Browse with a sideways swipe, the arrow buttons or the arrow keys; a tap outside the
    picture, the × or Escape closes it. `sel` is the index of the open piece in `items`, or null. */
 export default function Lightbox({ items, sel, setSel }) {
-  const [firstOf, setFirstOf] = useState(null) // the piece showing its first picture rather than its second
+  const [secondOf, setSecondOf] = useState(null) // the piece showing its second picture rather than its first
   const [dx, setDx] = useState(0) // how far a finger has pulled the open picture sideways
   const box = useRef(null)
   const mouse = useFinePointer()
@@ -17,12 +17,12 @@ export default function Lightbox({ items, sel, setSel }) {
   const count = items.length
   const many = count > 1
   const piece = open ? items[sel] : null
-  const step = useCallback((by) => { setFirstOf(null); setSel((s) => (s == null ? s : (s + by + count) % count)) }, [count, setSel])
-  if (!open && firstOf !== null) setFirstOf(null) // closed: the next piece opened starts on its second picture again
-  // a piece with a second picture (set in the admin) opens on it; the first is a tap away
-  const first = Boolean(piece) && firstOf === (piece.slug || sel)
-  const setFirst = (v) => setFirstOf(v ? piece.slug || sel : null)
-  const shown = piece && piece.hover && !first ? piece.hover : piece && piece.src
+  const step = useCallback((by) => { setSecondOf(null); setSel((s) => (s == null ? s : (s + by + count) % count)) }, [count, setSel])
+  if (!open && secondOf !== null) setSecondOf(null) // closed: the next piece opened starts on its first picture again
+  // a piece opens on its first picture; its second (set in the admin) is a tap away
+  const second = Boolean(piece && piece.hover) && secondOf === (piece.slug || sel)
+  const setSecond = (v) => setSecondOf(v ? piece.slug || sel : null)
+  const shown = second ? piece.hover : piece && (piece.src || piece.hover)
 
   useEffect(() => {
     if (!open) return
@@ -93,8 +93,8 @@ export default function Lightbox({ items, sel, setSel }) {
               {piece.title && <h2 className="display h-md">{piece.title}</h2>}
               {piece.hover && piece.src && (
                 <div className="lightbox-pics" role="group" aria-label="Pictures">
-                  {[[false, piece.hover, 'Second picture'], [true, piece.src, 'First picture']].map(([isFirst, src, label]) => (
-                    <button key={src} type="button" className={first === isFirst ? 'on' : ''} aria-pressed={first === isFirst} aria-label={label} onClick={() => setFirst(isFirst)}>
+                  {[[false, piece.src, 'First picture'], [true, piece.hover, 'Second picture']].map(([isSecond, src, label]) => (
+                    <button key={src} type="button" className={second === isSecond ? 'on' : ''} aria-pressed={second === isSecond} aria-label={label} onClick={() => setSecond(isSecond)}>
                       <img src={asset(src)} alt="" draggable="false" />
                     </button>
                   ))}

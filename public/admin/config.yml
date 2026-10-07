@@ -76,7 +76,7 @@ collections:
           - { label: 'Comic book: a cover with its spine and pages', value: comic }
           - { label: 'Just the art, filling the top of the card', value: plain }
         hint: 'How it looks on its card in the Shop: as the thing the buyer gets.'
-      - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece, and it is what an opened piece shows first (the first picture is a tap away). Same shape as the first works best.' }
+      - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece; an opened piece starts on the first picture, with this one a tap away. Same shape as the first works best.' }
       - name: status
         label: Tag
         widget: select
@@ -122,7 +122,7 @@ collections:
       - { name: inShop, widget: hidden, default: true }
       - { name: title, label: Title, widget: string }
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
-      - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece, and it is what an opened piece shows first (the first picture is a tap away). Same shape as the first works best.' }
+      - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece; an opened piece starts on the first picture, with this one a tap away. Same shape as the first works best.' }
       - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. For a piece sold in several sizes, leave it empty and add the sizes at the bottom.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }

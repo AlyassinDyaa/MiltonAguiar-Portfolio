@@ -87,7 +87,7 @@ the same ones the Work page uses.)
 
 **A second picture.** Each item can have a **Second picture** (the print framed, on a wall, a
 close-up...), uploaded under the first one. On its Shop card it fades in over the first when the
-card is pointed at, and an opened piece shows it first, with both pictures as thumbnails to
+card is pointed at; an opened piece starts on the first picture, with both as thumbnails to
 switch between.
 
 On its Shop card each piece is shown as the thing the buyer gets: a **printed poster** (the art

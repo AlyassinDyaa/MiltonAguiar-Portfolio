@@ -41,10 +41,28 @@
   ],
   "sizes": [
     {
-      "name": "A4"
+      "name": "A5",
+      "note": "14.8 × 21 cm"
     },
     {
-      "name": "A4"
+      "name": "A4",
+      "note": "21 × 29.7 cm"
+    },
+    {
+      "name": "A3",
+      "note": "29.7 × 42 cm"
+    },
+    {
+      "name": "A2",
+      "note": "42 × 59.4 cm"
+    },
+    {
+      "name": "30 × 40 cm",
+      "note": "Canvas"
+    },
+    {
+      "name": "50 × 70 cm",
+      "note": "Canvas"
     }
   ]
 }

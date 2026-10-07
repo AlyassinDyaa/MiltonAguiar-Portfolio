@@ -1059,3 +1059,9 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
   .sl-stats { gap: 8px; }
   .sl-chip { min-height: 34px; padding: 0 10px; font-size: 0.78rem; }
 }
+
+/* A drop-down inside a list row (the size of a print, a category) opens below its box. The rows,
+   and the box round them, hide whatever spills out of them, which cut the open list off and left
+   the drop-down looking empty. They let it show now. */
+#nc-root [class*='-listControlItem'], #nc-root div:has(> [class*='-listControlItem']), #nc-root [class*='ControlContainer'] > div:has(> [class*='TopBarContainer']) { overflow: visible !important; }
+#nc-root [class*='-listControlItem']:has([class*='-menu']) { position: relative; z-index: 20; }

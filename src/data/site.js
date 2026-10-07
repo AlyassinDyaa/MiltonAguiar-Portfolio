@@ -36,9 +36,10 @@ export let shop, forSale, everything
 /* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
    the admin lists them; only the ones in use. */
 export let types
-/* The shop's own lists, kept under Shop → Categories: categories and sub categories (DC,
-   Marvel...), in the admin's order. `shopCats` and `subCats` are the ones in use. */
-export let shopCats, subCats
+/* The shop's own lists, kept under Shop → Categories & sizes: categories and sub categories (DC,
+   Marvel...), in the admin's order (`shopCats` and `subCats` are the ones in use), and the print
+   sizes with their measurements (`sizeNotes`: "A4" -> "21 × 29.7 cm"). */
+export let shopCats, subCats, sizeNotes
 /* The categories that have at least one piece, in the order they first appear. */
 export let categories
 /* The pieces ticked "Show on the home page", in the order given to them (or simply the newest). */
@@ -163,6 +164,7 @@ function assemble(content) {
   // a category or sub category switched to "Hide" in the list: not offered as a filter, not named on cards
   const hiddenIn = (list) => new Set((Array.isArray(list) ? list : []).filter((x) => x && x.hidden).map((x) => String(x.name || '').trim()))
   hiddenCats = hiddenIn(shopLists.categories)
+  sizeNotes = Object.fromEntries((Array.isArray(shopLists.sizes) ? shopLists.sizes : []).filter((x) => x && x.name).map((x) => [String(x.name).trim(), String(x.note || '').trim()]))
   hiddenSubs = hiddenIn(shopLists.subcategories)
   // the admin's order first, then anything in use that the lists do not name; hidden ones left out
   const inUse = (listed, field, hidden) => {
@@ -234,8 +236,8 @@ export const filedUnder = (p) => [p.universe, p.category].map((x) => String(x ||
    the Shop" in the admin, or added under Shop) and it has a price. */
 export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && (Number(piece.price) > 0 || sizesOf(piece).length > 0)) } // a declaration, so assemble() above can use it
 /* A piece's print sizes, each with its price and, when it is discounted, its lower price
-   ({ name, price, sale, now }), in the order the admin put the rows in. Each size is typed on the
-   piece itself. Rows without a size or a price are left out. With none, the piece has the one
+   ({ name, price, sale, now }), in the order the admin put the rows in. Each size is picked from
+   the list under Shop → Categories & sizes; its price is set on the piece. Rows without a size or a price are left out. With none, the piece has the one
    price of its own. */
 export function sizesOf(piece) {
   const rows = (Array.isArray(piece?.sizes) ? piece.sizes : [])

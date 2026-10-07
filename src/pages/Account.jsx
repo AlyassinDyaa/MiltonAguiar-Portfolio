@@ -682,7 +682,7 @@ function Home() {
   const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) : null
   const savedPieces = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug))
   const newest = everything.filter((p) => !p.rough).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-  const strip = [...new Map([chosen, ...owned, ...savedPieces, ...newest].filter((p) => p && p.src).map((p) => [p.slug, p])).values()].slice(0, 6)
+  const strip = [...new Map([chosen, ...owned, ...savedPieces, ...newest].filter((p) => p && p.src).map((p) => [p.slug, p])).values()].slice(0, 12)
   const LEADS = {
     orders: 'Every piece you have ordered, and where it is now.',
     saved: 'The pieces you are keeping an eye on.',
@@ -698,11 +698,14 @@ function Home() {
         <header className="acct2-hero">
           <div className="acct2-banner" aria-hidden="true">
             <div className="acct2-issue">
-              <small>{accountPage.cardLabel} no.</small>
+              <small>Member no.</small>
               <b>{memberNumber(user.memberNo)}</b>
             </div>
+            {/* a carousel: the panels run past, twice over, so the loop has no seam */}
             <div className="acct2-strip">
-              {strip.map((p, i) => <span key={p.slug} className="acct2-panel" style={{ '--i': i }}><img src={asset(p.src)} alt="" /></span>)}
+              <div className="acct2-track" style={{ '--n': strip.length }}>
+                {[...strip, ...strip].map((p, i) => <span key={`${p.slug}-${i}`} className="acct2-panel"><img src={asset(p.src)} alt="" loading={i < strip.length ? 'eager' : 'lazy'} /></span>)}
+              </div>
             </div>
           </div>
           <div className="acct2-id">

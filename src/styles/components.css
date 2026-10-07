@@ -1433,27 +1433,37 @@ a.buy-btn { text-decoration: none; }
 .buy-heart { border-radius: 0; background: var(--panel-2); border-color: transparent; }
 @media (max-width: 799px) { .acct2-who .label { margin-inline: auto; } }
 .acc-note.is-ok { color: var(--open); }
-/* ---------- the banner over the account: a strip of comic panels ----------
+/* ---------- the banner over the account: a carousel of comic panels ----------
    On the red, the member number set like the issue number on a cover; across the right, slanted
-   panels of art in ink frames (the customer's own pieces first, then the newest work), dealt in
-   one after another and fading into the red toward the name */
+   panels of art in ink frames (the customer's own pieces first, then the newest work) running
+   slowly past, fading into the red toward the name. Pointing at the banner stops them. */
 .acct2-banner::before { -webkit-mask-image: linear-gradient(100deg, #000 0%, transparent 60%); mask-image: linear-gradient(100deg, #000 0%, transparent 60%); }
 .acct2-banner::after { z-index: 3; pointer-events: none; background: linear-gradient(180deg, transparent 55%, rgba(11, 11, 12, 0.3)); }
-.acct2-issue { position: absolute; z-index: 2; top: clamp(14px, 2vw, 24px); left: clamp(18px, 2.4vw, 34px); display: grid; justify-items: start; gap: 4px; }
+.acct2-issue { position: absolute; z-index: 4; top: clamp(14px, 2vw, 24px); left: clamp(18px, 2.4vw, 34px); display: grid; justify-items: start; gap: 4px; }
 .acct2-issue small { padding: 4px 9px 3px; font-family: var(--display); font-size: 0.7rem; font-weight: 800; font-style: italic; letter-spacing: 0.16em; text-transform: uppercase; background: #0b0b0c; color: #fff; transform: skewX(-8deg); }
 .acct2-issue b { font-family: var(--display); font-size: clamp(3rem, 6.4vw, 5.8rem); font-weight: 900; font-style: italic; line-height: 0.9; letter-spacing: -0.01em; color: #fff; text-shadow: 0.05em 0.05em 0 #0b0b0c; }
-.acct2-strip { position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; display: flex; gap: clamp(8px, 0.9vw, 12px); width: min(66%, 980px); padding: clamp(12px, 1.4vw, 18px) clamp(16px, 2vw, 26px) clamp(12px, 1.4vw, 18px) 0;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%); mask-image: linear-gradient(90deg, transparent 0, #000 22%); }
-.acct2-panel { position: relative; flex: 1 1 0; min-width: 0; overflow: hidden; border: 3px solid #0b0b0c; background: #0b0b0c; transform: skewX(-9deg); box-shadow: 6px 6px 0 rgba(11, 11, 12, 0.55); animation: panel-in 0.7s var(--ease-out) both; animation-delay: calc(0.15s + var(--i) * 0.08s); }
+.acct2-strip { --pw: clamp(104px, 10vw, 156px); --gap: clamp(10px, 1vw, 14px); position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; width: min(68%, 1000px); overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%); mask-image: linear-gradient(90deg, transparent 0, #000 24%); }
+.acct2-track { display: flex; gap: var(--gap); width: max-content; height: 100%; padding: clamp(12px, 1.4vw, 18px) 0; animation: strip-run calc(var(--n) * 4.5s) linear infinite, strip-in 0.8s var(--ease-out) both; }
+.acct2-hero:hover .acct2-track { animation-play-state: paused; }
+/* one set of panels and its gaps: then the second set stands exactly where the first began */
+@keyframes strip-run { to { transform: translateX(calc(-1 * var(--n) * (var(--pw) + var(--gap)))); } }
+@keyframes strip-in { from { opacity: 0; } }
+.acct2-panel { position: relative; flex: 0 0 var(--pw); overflow: hidden; border: 3px solid #0b0b0c; background: #0b0b0c; transform: skewX(-9deg); box-shadow: 6px 6px 0 rgba(11, 11, 12, 0.55); }
 .acct2-panel img { filter: none; opacity: 1; mix-blend-mode: normal; position: absolute; inset: 0 -22%; width: 144%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 22%; transform: skewX(9deg) scale(1.02); transition: transform 1.2s var(--ease-out); }
-.acct2-hero:hover .acct2-panel img { transform: skewX(9deg) scale(1.08); }
-@keyframes panel-in { from { opacity: 0; transform: skewX(-9deg) translateY(28%); } }
+.acct2-panel:hover img { transform: skewX(9deg) scale(1.1); }
 @media (max-width: 799px) {
-  .acct2-strip { width: 70%; padding: 10px 12px 10px 0; gap: 7px; }
-  .acct2-panel:nth-child(n + 4) { display: none; }
   .acct2-banner { height: 150px; }
+  .acct2-strip { --pw: 78px; --gap: 8px; width: 72%; }
+  .acct2-track { padding: 10px 0; }
   .acct2-issue { top: 12px; left: 14px; }
   .acct2-issue b { font-size: 2rem; }
   .acct2-issue small { font-size: 0.6rem; }
 }
-@media (prefers-reduced-motion: reduce) { .acct2-panel { animation: none; } .acct2-panel img { transition: none; } }
+/* without motion: the panels stand still */
+@media (prefers-reduced-motion: reduce) { .acct2-track { animation: none; } .acct2-panel img { transition: none; } }
+/* the profile row (picture, name, buttons) stands clear of the banner, with room above it */
+.acct2-id { align-items: center; margin-top: 0; padding-top: clamp(26px, 3.2vw, 40px); }
+.acct2-id > .acct-avatar { margin-top: 0; }
+.acct2-actions { padding-bottom: 0; }
+@media (max-width: 799px) { .acct2-id { padding-top: 24px; gap: 12px; } .acct2-id > .acct-avatar { margin-top: 0; } }

@@ -95,7 +95,8 @@ window.IASales = (() => {
   /* Read from content/site/visibility.json as it is now: on the live site through the admin's
      own GitHub access (so a change shows before the site is rebuilt), on this computer from the
      file itself. Read again each time the Sales screens open. */
-  let showTest = true
+  // test data, screen by screen (Show or hide → Sales screens): orders, customers, discount codes
+  let showTest = { orders: true, customers: true, codes: true }
   const readSwitch = async () => {
     try {
       let text = ''
@@ -108,11 +109,13 @@ window.IASales = (() => {
         if (r.ok) text = await r.text()
       }
       const v = text ? JSON.parse(text) : {}
-      showTest = !(v.sales && v.sales.testData === false)
-    } catch { showTest = true }
+      const s = v.sales || {}
+      const all = s.testData !== false // the single switch there was before
+      showTest = { orders: s.testOrders ?? all, customers: s.testCustomers ?? all, codes: s.testCodes ?? all }
+    } catch { showTest = { orders: true, customers: true, codes: true } }
   }
-  const visible = (list) => (showTest ? list : list.filter((x) => !x.test))
-  const hiddenNote = (all, what) => (!showTest && all.some((x) => x.test) ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Test data is hidden' }), el('p', { textContent: `${all.filter((x) => x.test).length} test ${what} left out. Show them again under Show or hide → Sales screens.` })]) : null)
+  const visible = (list, kind) => (showTest[kind] ? list : list.filter((x) => !x.test))
+  const hiddenNote = (all, what, kind) => (!showTest[kind] && all.some((x) => x.test) ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Test data is hidden' }), el('p', { textContent: `${all.filter((x) => x.test).length} test ${what} left out. Show them again under Show or hide → Sales screens.` })]) : null)
 
   // ---------- the screen ----------
   let root = null
@@ -141,7 +144,7 @@ window.IASales = (() => {
         p.code === 'no-stripe' ? el('p', { textContent: 'In Stripe: Developers → API keys, copy the Secret key. In Vercel: the project’s Settings → Environment Variables, add STRIPE_SECRET_KEY with it, then redeploy.' }) : null,
       ])
     }
-    if (state.sample && showTest) return el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample orders' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these orders are made up to show how the screen works. On the live site this shows the real orders from Stripe.' })])
+    if (state.sample && showTest.orders) return el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample orders' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these orders are made up to show how the screen works. On the live site this shows the real orders from Stripe.' })])
     return null
   }
   const stat = (label, value, note) => el('div', { className: 'sl-stat' }, [el('span', { textContent: label }), el('strong', { textContent: value }), note ? el('small', { textContent: note }) : null])
@@ -319,7 +322,7 @@ window.IASales = (() => {
     const f = state.o
     const chip = ORDER_CHIPS.find((c) => c[0] === f.stage) || ORDER_CHIPS[0]
     const q = f.q.trim().toLowerCase()
-    const list = visible(state.orders).filter((o) => chip[2](o) && inPeriod(o.created, f.period)
+    const list = visible(state.orders, 'orders').filter((o) => chip[2](o) && inPeriod(o.created, f.period)
       && (!f.customer || (o.email || o.name).toLowerCase() === f.customer.toLowerCase())
       && (!q || [o.number, o.name, o.email, o.country, country(o.country), o.tracking, o.note, o.discountCode, ...o.items.map((i) => i.name)].join(' ').toLowerCase().includes(q)))
     const by = { new: (a, b) => b.created - a.created, old: (a, b) => a.created - b.created, high: (a, b) => b.total - a.total, low: (a, b) => a.total - b.total, name: (a, b) => (a.name || a.email).localeCompare(b.name || b.email) }
@@ -327,7 +330,7 @@ window.IASales = (() => {
   }
   const ordersView = () => {
     const f = state.o
-    const inRange = visible(state.orders).filter((o) => inPeriod(o.created, f.period))
+    const inRange = visible(state.orders, 'orders').filter((o) => inPeriod(o.created, f.period))
     const sold = inRange.filter(done)
     const cur = currency()
     const income = sold.reduce((t, o) => t + kept(o), 0)
@@ -345,7 +348,7 @@ window.IASales = (() => {
         el('a', { className: 'ia-btn ghost', href: 'https://dashboard.stripe.com/payments', target: '_blank', rel: 'noopener', textContent: 'Stripe ↗' }),
       ]),
       notices(),
-      hiddenNote(state.orders, 'orders'),
+      hiddenNote(state.orders, 'orders', 'orders'),
       el('div', { className: 'sl-stats' }, [
         stat('Sales', money(income, cur), PERIODS.find((p) => p[0] === f.period)[1]),
         stat('Orders', String(sold.length), sold.length ? `${sold.reduce((n, o) => n + o.items.reduce((m, i) => m + i.qty, 0), 0)} pieces` : ''),
@@ -464,7 +467,7 @@ window.IASales = (() => {
   // ---------- Customers ----------
   const customers = () => {
     const by = new Map()
-    for (const o of visible(state.orders).filter(done)) {
+    for (const o of visible(state.orders, 'customers').filter(done)) {
       const key = (o.email || o.name || o.id).toLowerCase()
       const c = by.get(key) || { key, email: o.email, name: '', country: '', orders: 0, spent: 0, first: o.created, last: 0, waiting: 0, currency: o.currency }
       c.orders++; c.spent += kept(o)
@@ -492,7 +495,7 @@ window.IASales = (() => {
         button('Export CSV', () => csv([['Name', 'Email', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, country(c.country), c.orders, c.spent, c.currency, date(c.first), date(c.last)])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
       ]),
       notices(),
-      hiddenNote(state.orders, 'orders (and their customers)'),
+      hiddenNote(state.orders, 'customers\' orders', 'customers'),
       el('div', { className: 'sl-stats' }, [
         stat('Customers', String(all.length)),
         stat('Came back', String(all.filter((c) => c.orders > 1).length), 'bought more than once'),
@@ -557,7 +560,7 @@ window.IASales = (() => {
     const kind = kinds.find((k) => k[0] === f.kind) || kinds[0]
     const q = f.q.trim().toLowerCase()
     const sorts = { new: (a, b) => b.created - a.created, ending: (a, b) => (a.ends || Infinity) - (b.ends || Infinity), big: (a, b) => b.percent - a.percent, used: (a, b) => b.used - a.used }
-    const all = visible(f.list)
+    const all = visible(f.list, 'codes')
     const list = all.filter((d) => kind[2](d) && (!q || [d.code, ...d.emails].join(' ').toLowerCase().includes(q))).sort(sorts[f.sort] || sorts.new)
     const set = (k, v) => { dState[k] = v; dState.page = 1; draw() }
     const problem = f.problem && el('div', { className: `sl-notice ${f.problem.code === 'no-stripe' ? '' : 'is-bad'}` }, [
@@ -569,8 +572,8 @@ window.IASales = (() => {
         button(f.loading ? 'Loading…' : 'Refresh', loadDiscounts),
         button('+ New discount', () => { dState.editing = 'new'; dState.said = ''; draw() }, 'ia-btn'),
       ]),
-      problem || (f.sample && showTest ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample codes' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these codes are made up. On the live site the codes are kept in Stripe.' })]) : null),
-      hiddenNote(f.list, 'discount codes'),
+      problem || (f.sample && showTest.codes ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample codes' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these codes are made up. On the live site the codes are kept in Stripe.' })]) : null),
+      hiddenNote(f.list, 'discount codes', 'codes'),
       el('div', { className: 'sl-stats' }, [
         stat('Active now', String(all.filter((d) => d.status === 'active').length)),
         stat('Start later', String(all.filter((d) => d.status === 'scheduled').length)),

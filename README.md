@@ -131,9 +131,9 @@ with their contact, every address they have had things sent to, their orders, to
 codes made for them) and **delete**, which always asks first in a window. Every order says how it
 was paid ("Visa •••• 4242", "Apple Pay · Visa •••• 4242", "PayPal"). Deleting an order erases it
 from the database, so it also leaves the buyer's account; Stripe never deletes a payment, so
-Stripe keeps its own record. A discount code really is deleted. **Show or hide → Sales screens →
-Show test orders, customers and codes** hides test data from the three screens, or shows it
-again: nothing is deleted, and real orders always show.
+Stripe keeps its own record. A discount code really is deleted. **Show or hide → Sales screens** has
+a switch for each screen (test orders, test customers, test discount codes) that hides its test
+data or shows it again: nothing is deleted, and real orders, customers and codes always show.
 
 The three screens need `STRIPE_SECRET_KEY` on Vercel (step 4 below); `api/orders.js` checks the admin's login
 before answering (`api/discounts.js` too; `api/discount.js` is the cart's check of a code). Refunds and receipts are done in the Stripe dashboard (each order links to it).

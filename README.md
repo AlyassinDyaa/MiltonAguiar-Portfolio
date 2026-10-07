@@ -113,6 +113,13 @@ before answering. Refunds and receipts are done in the Stripe dashboard (each or
 On this computer (`npm run dev`) the screens use a `STRIPE_SECRET_KEY` from `.env.local`, or with
 none, sample orders (`dev/sample-orders.js`), labelled as such.
 
+### The buttons under the name
+
+Home page → **Buttons** lists the buttons under the name on the home page: the words on each,
+where it goes (Shop, Work, Commissions, Get a quote on Instagram, About, Contact, Gallery, or
+any web address), red or quiet, and a **Hide** switch. Drag them into order; **Add button** for
+another. A button to a page that is switched off is left out by itself.
+
 ### The panels on the home page
 
 Pieces ticked **Show on the home page** fill the panels. **Place on the home page** orders them:

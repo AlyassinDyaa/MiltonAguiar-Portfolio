@@ -76,7 +76,7 @@ function assemble(content) {
   const page = (name) => content[`content/pages/${name}.json`] || {}
   const site = (name) => content[`content/site/${name}.json`] || {}
   const { social: links, footerLine, footerFine, ...name } = site('brand')
-  const { kicker, text, primaryLabel, secondaryLabel, figure, marquee: words, project: current, ...sections } = page('home')
+  const { kicker, text, primaryLabel, secondaryLabel, buttons, figure, marquee: words, project: current, ...sections } = page('home')
   const lists = page('lists')
   // every file of one folder, each with the name of its file
   const folder = (name) => Object.entries(content)
@@ -86,7 +86,13 @@ function assemble(content) {
   // Every piece of text has a built-in wording, so a content file that predates a field still works.
   visibility = site('visibility')
   brand = { name: 'Milton Aguiar', hue: 25, ...name }
-  hero = { primaryLabel: 'See the work', secondaryLabel: 'Commission a piece', figure: {}, ...given({ kicker, text, primaryLabel, secondaryLabel, figure }) }
+  hero = { figure: {}, ...given({ kicker, text, figure }) }
+  // the buttons under the name, in the admin's order; a home page saved before there was a list
+  // keeps its two old buttons
+  hero.buttons = (Array.isArray(buttons) ? buttons : [
+    { words: primaryLabel || 'See the work', to: 'work', tone: 'red' },
+    { words: secondaryLabel || 'Commission a piece', to: 'quote', tone: 'quiet' },
+  ]).filter((b) => b && String(b.words || '').trim() && !b.off)
   marquee = words || []
   project = { label: 'Current project', buttonLabel: 'Read it', ...given(current || {}) }
   home = {

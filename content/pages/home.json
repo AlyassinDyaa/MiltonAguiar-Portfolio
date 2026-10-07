@@ -1,8 +1,26 @@
 {
   "kicker": "Pencils · Inks · Colours",
   "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",
-  "primaryLabel": "See the work",
-  "secondaryLabel": "Commission a piece",
+  "buttons": [
+    {
+      "words": "Go to the shop",
+      "to": "shop",
+      "tone": "red",
+      "off": false
+    },
+    {
+      "words": "See the work",
+      "to": "work",
+      "tone": "quiet",
+      "off": false
+    },
+    {
+      "words": "Commission a piece",
+      "to": "quote",
+      "tone": "quiet",
+      "off": false
+    }
+  ],
   "figure": {
     "src": "/uploads/raptor-cutout.webp",
     "size": 100,

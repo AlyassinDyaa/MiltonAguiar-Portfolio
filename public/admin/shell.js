@@ -54,9 +54,9 @@
     redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
     'pages/home': {
-      groups: { kicker: 'Top of the page', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
-      half: ['primaryLabel', 'secondaryLabel', 'latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
-      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl'],
+      groups: { kicker: 'Top of the page', buttons: 'Buttons', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
+      half: ['latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
+      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl', 'words', 'to', 'address', 'tone', 'off'],
     },
     'pages/lists': { groups: { workLabel: 'Work page', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {

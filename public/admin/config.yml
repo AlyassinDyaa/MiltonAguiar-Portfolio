@@ -271,8 +271,38 @@ collections:
         fields:
           - { name: kicker, label: Small red tab above the name, widget: string, required: false }
           - { name: text, label: Sentence under the tagline, widget: text, required: false }
-          - { name: primaryLabel, label: First button, widget: string, hint: 'Goes to the Work page.' }
-          - { name: secondaryLabel, label: Second button, widget: string, required: false, hint: 'Asks for a commission: it opens your Instagram (or wherever the quote button on the Commissions page is set to go).' }
+          - name: buttons
+            label: Buttons under the name
+            label_singular: button
+            widget: list
+            collapsed: true
+            required: false
+            summary: '{{fields.words}}'
+            hint: 'Drag to change their order, Add button for another, the cross to remove one, or Hide to keep one here but off the page. A button to a page that is switched off (or to the Shop while it is off) is left out by itself.'
+            fields:
+              - { name: words, label: Words on the button, widget: string }
+              - name: to
+                label: Goes to
+                widget: select
+                default: shop
+                options:
+                  - { label: 'Shop', value: shop }
+                  - { label: 'Work', value: work }
+                  - { label: 'Commissions page', value: commissions }
+                  - { label: 'Get a quote (your Instagram)', value: quote }
+                  - { label: 'About', value: about }
+                  - { label: 'Contact', value: contact }
+                  - { label: 'Gallery', value: gallery }
+                  - { label: 'Another address (below)', value: link }
+              - { name: address, label: Address, widget: string, required: false, hint: 'Only for "Another address": the full address, starting https://' }
+              - name: tone
+                label: Style
+                widget: select
+                default: red
+                options:
+                  - { label: 'Red', value: red }
+                  - { label: 'Quiet', value: quiet }
+              - { name: off, label: Hide, widget: boolean, default: false, required: false }
           - name: figure
             label: Drawing
             widget: object

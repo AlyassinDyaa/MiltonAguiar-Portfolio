@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { asset, brand, commissions, day, events, fresh, hero, heroPanels, home, marquee, nameParts, project, quote, redraws, shows, work } from '../data/site'
+import { asset, brand, commissions, day, events, fresh, hero, heroPanels, home, marquee, nameParts, project, quote, redraws, shop, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
@@ -23,6 +23,22 @@ const EASE = [0.16, 1, 0.3, 1]
    With a mouse, the drawing and the pictures inside their frames drift a little against each
    other as the pointer moves, the way near and far things do. Without one, or with reduced
    motion, everything holds still. */
+/* One of the buttons under the name, as set in the admin (Home page → Buttons): its words, where it
+   goes and its style. A button to a page that is switched off, or to the Shop while it is off,
+   or to an address that is not a web address, is left out. */
+const PAGE_OF = { shop: '/shop', work: '/work', commissions: '/commissions', about: '/about', contact: '/contact', gallery: '/gallery' }
+function HeroButton({ b }) {
+  const cls = `btn ${b.tone === 'quiet' ? 'ghost' : ''}`
+  if (b.to === 'quote') return <Magnetic><QuoteLink className={cls}>{b.words}</QuoteLink></Magnetic>
+  if (b.to === 'link') {
+    const url = String(b.address || '').trim()
+    return /^https?:\/\//i.test(url) ? <Magnetic><a className={cls} href={url} target="_blank" rel="noreferrer">{b.words} <span className="arrow">↗</span></a></Magnetic> : null
+  }
+  const path = PAGE_OF[b.to]
+  const on = b.to === 'shop' ? shop.enabled && shows('pages', 'shop') : shows('pages', b.to)
+  return path && on ? <Magnetic><Link className={cls} to={path}>{b.words} <span className="arrow">→</span></Link></Magnetic> : null
+}
+
 function Hero({ onOpen }) {
   const ref = useRef(null)
   const [a, b] = nameParts(brand.name)
@@ -80,8 +96,7 @@ function Hero({ onOpen }) {
                 <motion.p className="hero-tag" {...rise(1.35)}>{brand.tagline}</motion.p>
                 <motion.p className="lead" {...rise(1.45)}>{hero.text}</motion.p>
                 <motion.div className="hero-actions" {...rise(1.55)}>
-                  {shows('pages', 'work') && <Magnetic><Link className="btn" to="/work">{hero.primaryLabel} <span className="arrow">→</span></Link></Magnetic>}
-                  {hero.secondaryLabel && <Magnetic><QuoteLink className="btn ghost">{hero.secondaryLabel}</QuoteLink></Magnetic>}
+                  {hero.buttons.map((b, i) => <HeroButton key={`${b.to}-${i}`} b={b} />)}
                 </motion.div>
               </div>
             </div>

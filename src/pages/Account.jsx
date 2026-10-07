@@ -14,7 +14,7 @@ import { useCart } from '../hooks/useCart'
 const EASE = [0.16, 1, 0.3, 1]
 
 /* ---------- small parts ---------- */
-function Field({ label, type = 'text', value, onChange, autoComplete, error, hint, required = true, maxLength = 200 }) {
+function Field({ label, type = 'text', value, onChange, autoComplete, error, hint, ok = false, required = true, maxLength = 200 }) {
   const id = useId()
   const [shown, setShown] = useState(false)
   const secret = type === 'password'
@@ -24,7 +24,7 @@ function Field({ label, type = 'text', value, onChange, autoComplete, error, hin
       <label htmlFor={id}>{label}</label>
       <span className="bar" />
       {secret && <button type="button" className="acc-eye" onClick={() => setShown(!shown)} aria-label={shown ? 'Hide the password' : 'Show the password'} aria-pressed={shown}>{shown ? 'Hide' : 'Show'}</button>}
-      {(error || hint) && <p id={`${id}-note`} className={`acc-note ${error ? 'is-error' : ''}`}>{error || hint}</p>}
+      {(error || hint) && <p id={`${id}-note`} className={`acc-note ${error ? 'is-error' : ok ? 'is-ok' : ''}`}>{error || hint}</p>}
     </div>
   )
 }
@@ -137,6 +137,19 @@ function useForm(initial) {
   return { values, set, problem, busy, run, setProblem }
 }
 const errorFor = (problem, field) => (problem.field === field ? problem.text : '')
+/* A new password is typed twice, and the two must be the same: the second box says so as it is
+   typed, and the form is not sent until they match. */
+const mustMatch = (password, again) => {
+  if (password !== again) { const p = new Error(again ? 'The two passwords are not the same.' : 'Type the password a second time.'); p.field = 'again'; throw p }
+}
+function PasswordAgain({ form, label = 'Password again' }) {
+  const { password, again } = form.values
+  const typed = again.length > 0
+  const same = typed && again === password
+  // a mismatch shows once the second can no longer turn into the first
+  const off = typed && !same && (again.length >= password.length || !password.startsWith(again))
+  return <Field label={label} type="password" autoComplete="new-password" value={again} onChange={form.set('again')} error={errorFor(form.problem, 'again') || (off ? 'Not the same as the password above.' : '')} hint={same ? 'They match.' : ''} ok={same} />
+}
 const safeNext = (next) => (next && next.startsWith('/') && !next.startsWith('//') ? next : '/account')
 
 /* ---------- log in ---------- */
@@ -171,15 +184,16 @@ function Signup() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))
-  const f = useForm({ name: '', email: '', password: '', marketing: false })
+  const f = useForm({ name: '', email: '', password: '', again: '', marketing: false })
   const made = useRef(false) // just made here: the account page greets them
   if (user) return <Navigate to={made.current && next === '/account' ? '/account?welcome=1' : next} replace />
   return (
     <Shell title="Make an account" label="Your account" lead="Keep your cart, follow your orders, and buy faster next time." cardName={f.values.name}>
-      <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { made.current = true; await call('signup', { ...f.values, cart: cart.stored }); navigate(next === '/account' ? '/account?welcome=1' : next, { replace: true }) })} noValidate>
+      <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { const { again, ...values } = f.values; mustMatch(values.password, again); made.current = true; await call('signup', { ...values, cart: cart.stored }); navigate(next === '/account' ? '/account?welcome=1' : next, { replace: true }) })} noValidate>
         <Field label="Your name" autoComplete="name" value={f.values.name} onChange={f.set('name')} required={false} maxLength={80} />
         <Field label="Email" type="email" autoComplete="email" value={f.values.email} onChange={f.set('email')} error={errorFor(f.problem, 'email')} />
         <Field label="Password" type="password" autoComplete="new-password" value={f.values.password} onChange={f.set('password')} error={errorFor(f.problem, 'password')} hint="At least 8 characters." />
+        <PasswordAgain form={f} />
         <label className="acc-check">
           <input type="checkbox" checked={f.values.marketing} onChange={(e) => f.set('marketing')(e.target.checked)} />
           <span>Email me about new pieces, prints and conventions. (Now and then; never shared.)</span>
@@ -228,12 +242,12 @@ function Reset() {
   return (
     <Shell title="Choose a new password" label="Your account">
       <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => {
-        if (f.values.password !== f.values.again) { const p = new Error('The two passwords are not the same.'); p.field = 'again'; throw p }
+        mustMatch(f.values.password, f.values.again)
         await call('reset', { token, password: f.values.password })
         navigate('/account?reset=1', { replace: true })
       })} noValidate>
         <Field label="New password" type="password" autoComplete="new-password" value={f.values.password} onChange={f.set('password')} error={errorFor(f.problem, 'password')} hint="At least 8 characters." />
-        <Field label="The same again" type="password" autoComplete="new-password" value={f.values.again} onChange={f.set('again')} error={errorFor(f.problem, 'again')} />
+        <PasswordAgain form={f} label="New password again" />
         <Problem text={f.problem.field ? '' : f.problem.text} />
         <Submit busy={f.busy}>Save it and log in</Submit>
         {f.problem.text && !f.problem.field && <div className="acc-links"><Link to="/account/forgot">Ask for a new link</Link></div>}
@@ -489,18 +503,21 @@ function Details({ owned = [] }) {
 function Security() {
   const { call } = useAccount()
   const navigate = useNavigate()
-  const pw = useForm({ current: '', password: '' })
+  const pw = useForm({ current: '', password: '', again: '' })
   const [changed, setChanged] = useState(false)
   const del = useForm({ password: '' })
   const [deleting, setDeleting] = useState(false)
   const [askAll, setAskAll] = useState(false)
   return (
     <div className="acc-stack">
-      <form className="acc-card lined" onSubmit={(e) => pw.run(e, async () => { await call('password', pw.values); setChanged(true); pw.set('current')(''); pw.set('password')('') })} noValidate>
+      <form className="acc-card lined" onSubmit={(e) => pw.run(e, async () => { setChanged(false); mustMatch(pw.values.password, pw.values.again); await call('password', { current: pw.values.current, password: pw.values.password }); setChanged(true); pw.set('current')(''); pw.set('password')(''); pw.set('again')('') })} noValidate>
         <h3 className="acc-h3">Change the password</h3>
         <div className="acc-grid">
           <Field label="Current password" type="password" autoComplete="current-password" value={pw.values.current} onChange={pw.set('current')} error={errorFor(pw.problem, 'current')} />
+        </div>
+        <div className="acc-grid">
           <Field label="New password" type="password" autoComplete="new-password" value={pw.values.password} onChange={pw.set('password')} error={errorFor(pw.problem, 'password')} hint="At least 8 characters." />
+          <PasswordAgain form={pw} label="New password again" />
         </div>
         <Problem text={pw.problem.field ? '' : pw.problem.text} />
         <div className="acc-row"><Submit busy={pw.busy}>Change it</Submit>{changed && <span className="acc-saved" role="status">Changed. Any other device was logged out.</span>}</div>

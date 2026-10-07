@@ -1432,3 +1432,4 @@ a.buy-btn { text-decoration: none; }
 /* the heart beside the price of an opened piece */
 .buy-heart { border-radius: 0; background: var(--panel-2); border-color: transparent; }
 @media (max-width: 799px) { .acct2-who .label { margin-inline: auto; } }
+.acc-note.is-ok { color: var(--open); }

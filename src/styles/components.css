@@ -724,7 +724,7 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
    gets: --mat is the edge round the art (the paper of a print, the frame and mat, the margin of a
    board), so the art and the second picture always sit inside it. Under the piece, one line with
    the title and the price, and what it is under that. */
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: clamp(34px, 3.4vw, 52px) clamp(18px, 2vw, 30px); }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: clamp(34px, 3.4vw, 52px) clamp(18px, 2vw, 30px); }
 .shop-grid > li { min-width: 0; }
 .pc { display: flex; flex-direction: column; height: 100%; }
 .pc-art { position: relative; }

@@ -85,6 +85,11 @@ category or sub category to **Hide** (it leaves the drop-downs and the cards; it
 Each drop-down can be switched off whole under **Show or hide → Parts of the Shop page**. (The categories are
 the same ones the Work page uses.)
 
+**A second picture.** Each item can have a **Second picture** (the print framed, on a wall, a
+close-up...), uploaded under the first one. On its Shop card it fades in over the first when the
+card is pointed at, and an opened piece shows it first, with both pictures as thumbnails to
+switch between.
+
 On its Shop card each piece is shown as the thing the buyer gets: a **printed poster** (the art
 on white paper), a **framed print**, an **original art board** (cream board, blue-line border), a
 **comic book** (spine, page edges, gloss), or **just the art**. Choose the look for the whole shop and

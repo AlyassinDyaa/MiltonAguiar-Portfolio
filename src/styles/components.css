@@ -477,6 +477,11 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 .lightbox-art.is-card { height: min(86svh, 920px); aspect-ratio: 3 / 4; }
 .lightbox-art.is-card .poster { width: 100%; height: 100%; aspect-ratio: auto; }
 .lightbox-info .display { margin-bottom: 14px; }
+.lightbox-pics { display: flex; gap: 8px; margin: 4px 0 14px; }
+.lightbox-pics button { width: 56px; height: 70px; padding: 0; overflow: hidden; background: var(--panel); border: 2px solid var(--line-strong); opacity: 0.6; transition: opacity 0.2s, border-color 0.2s; }
+.lightbox-pics button img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lightbox-pics button:hover, .lightbox-pics button.on { opacity: 1; }
+.lightbox-pics button.on { border-color: var(--accent); }
 .lightbox-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 .lightbox-hint { margin: 26px 0 0; font-family: var(--display); font-size: 0.84rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); }
 .lightbox-nav, .lightbox-x { position: fixed; z-index: 2; display: grid; place-items: center; width: 50px; height: 50px; font-size: 1.3rem; background: var(--panel-2); color: var(--fg); transition: background 0.2s, color 0.2s; }
@@ -760,6 +765,12 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .pc-price b { font-size: 1.55rem; font-weight: 900; line-height: 1; color: var(--fg); }
 .pc-price b.is-sale { color: var(--accent); }
 .pc-price s { font-size: 0.95rem; font-weight: 700; color: var(--fg-mute); text-decoration-thickness: 2px; }
+.pc-alt { position: absolute; z-index: 1; inset: 0; overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
+.pc-alt img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease-out); }
+.pc:hover .pc-alt, .pc:focus-within .pc-alt { opacity: 1; }
+.pc:hover .pc-alt img, .pc:focus-within .pc-alt img { transform: scale(1.045); }
+.pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.62); }
+@media (hover: none) { .pc-alt { display: none; } }
 .pc.is-gone .sc-art img { filter: grayscale(1) brightness(0.62); }
 .pc.is-gone .pc-price b { color: var(--fg-mute); text-decoration: line-through; text-decoration-thickness: 2px; }
 /* a finger has no hover: the add button stays at the foot of the wall, Quick view is the wall itself */

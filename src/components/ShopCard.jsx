@@ -9,7 +9,7 @@ const MAX_CHIPS = 3
 /* A piece in the shop, the way a print shop hangs it: on a lit wall, as the thing being sold (its
    "look", chosen in the admin per kind or per piece: a printed poster, a framed print, an original
    art board, a comic book, or the art alone), with only its New / Sale / Sold out tag in the
-   corner. Pointing at it slides up a bar with Quick view and Add to cart (Choose size, for a piece
+   corner; its second picture, when it has one, fades in over it. Pointing at it slides up a bar with Quick view and Add to cart (Choose size, for a piece
    sold in several sizes, which opens it). Under the wall, like a gallery label: what it is, the
    title, its sizes and its price ("from" when the sizes cost different amounts). */
 export default function ShopCard({ p, onOpen, eager = false }) {
@@ -43,6 +43,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
                   </span>
                 </span>
               ) : <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" />}
+            {p.hover && <span className="pc-alt" aria-hidden="true"><img src={asset(p.hover)} alt="" loading="lazy" draggable="false" /></span>}
             {tag && shop.tagPlace !== 'below' && <span className={`sc-tag is-${tag.kind}`}>{tag.text}</span>}
           </span>
         </button>

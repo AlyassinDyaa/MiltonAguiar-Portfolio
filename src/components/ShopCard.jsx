@@ -13,6 +13,7 @@ import CartIcon from './CartIcon'
 export default function ShopCard({ p, onOpen, eager = false }) {
   const cart = useCart()
   const [added, setAdded] = useState(false)
+  const [altReady, setAltReady] = useState(false) // the second picture fades in only once it has fully loaded
   useEffect(() => { if (!added) return; const t = setTimeout(() => setAdded(false), 1600); return () => clearTimeout(t) }, [added])
   const tag = badge(p)
   const gone = soldOut(p)
@@ -33,7 +34,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
         <button type="button" className="pc-open" onClick={onOpen} aria-label={`Open ${p.title}`}>
           <span className="pc-frame">
             {p.src ? <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" /> : <Poster title={p.title} />}
-            {p.hover && <span className="pc-alt" aria-hidden="true"><img src={asset(p.hover)} alt="" loading="lazy" draggable="false" /></span>}
+            {p.hover && <span className={`pc-alt ${altReady ? 'is-ready' : ''}`} aria-hidden="true"><img src={asset(p.hover)} alt="" decoding="async" draggable="false" onLoad={() => setAltReady(true)} /></span>}
             {look === 'board' && <span className="pc-note" aria-hidden="true">{brand.artist || brand.name}</span>}
           </span>
         </button>

@@ -749,9 +749,8 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .look-comic .pc-frame { box-shadow: 3px 3px 0 #d2cfc7, 5px 5px 0 #9d9a93, 0 22px 40px -22px rgba(0, 0, 0, 0.85); }
 /* the second picture fades in over the art when the card is pointed at */
 .pc-alt { position: absolute; z-index: 1; inset: var(--mat) var(--mat) var(--mat-b); overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
-.pc-alt img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s var(--ease-out); }
-.pc:hover .pc-alt, .pc:focus-within .pc-alt { opacity: 1; }
-.pc:hover .pc-alt img, .pc:focus-within .pc-alt img { transform: scale(1.04); }
+.pc-alt img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.pc:hover .pc-alt.is-ready, .pc:focus-within .pc-alt.is-ready { opacity: 1; }
 @media (hover: none) { .pc-alt { display: none; } }
 .pc.is-gone .pc-frame > img, .pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.7); }
 /* the tag, and the cart button that shows when the card is pointed at */

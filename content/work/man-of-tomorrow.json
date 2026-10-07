@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/superman-2025.webp",
+  "universe": "DC",
+  "price": "",
+  "hidden": false,
+  "date": "2025-07-15",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "sale",
+  "title": "Man of Tomorrow",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/superman-frame.png",
+  "category": "Fan art",
+  "look": "default"
+}

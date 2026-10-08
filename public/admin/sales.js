@@ -4,12 +4,14 @@
      the top, chips to narrow them by where they are up to (to ship, shipped...), a search, a
      period and a sort, and a panel per order with what was bought, who bought it, where it goes,
      and where it is up to (status, tracking number and a note, kept on the order in Stripe);
-   - Customers: everyone who has bought, with what they have spent; one opens their orders;
-   - Discounts: codes for money off, for everyone or chosen customers, for as long as the admin says.
-   The orders come from /api/orders (api/orders.js), with the admin's own pass. There is no
-   database and no customer accounts on the site: Stripe holds the orders.
-   shell.js puts the two links in the navigation and shows this screen at #/sales/orders and
-   #/sales/customers. */
+   - Customers: everyone who has bought, and everyone with an account on the site, with what they
+     have spent; one opens everything about them, and the rewards gifted to them;
+   - Discounts: a percentage off, for a while, for chosen customers (a code each) or anyone with
+     a shared code.
+   The orders come from /api/orders, the codes from /api/discounts (both kept in Stripe), the
+   accounts from /api/account, each with the admin's own pass.
+   shell.js puts the links in the navigation and shows this screen at #/sales/orders,
+   #/sales/customers and #/sales/discounts. */
 window.IASales = (() => {
   const el = (tag, props = {}, kids = []) => {
     const n = Object.assign(document.createElement(tag), props)
@@ -208,13 +210,17 @@ window.IASales = (() => {
   const waitDays = (o) => (done(o) && o.payment !== 'refunded' && ['new', 'packed'].includes(o.fulfilment) ? Math.floor((Date.now() - o.created) / 864e5) : 0)
   const headRow = (titles) => el('div', { className: 'sl-row sl-th', role: 'row' }, [...titles.map((t) => el('span', { role: 'columnheader', textContent: t })), el('span', { role: 'columnheader' })])
 
-  // the open modal, if any: { kind: 'confirm', title, text, more, yes, run } or { kind: 'customer', key }
+  /* The open modal, if any: { kind: 'confirm', title, text, more, yes, run, plain, back },
+     { kind: 'customer', key, stub } or { kind: 'gift', email }. A confirm with `back` goes back
+     to that modal when it is done or cancelled. */
   state.modal = null
   const ask = (m) => { state.modal = { kind: 'confirm', ...m }; draw() }
-  const closeModal = () => { state.modal = null; draw() }
+  const closeModal = () => { state.modal = (state.modal && state.modal.back) || null; draw() }
   const keyOf = (o) => (o.email || o.name || o.id).toLowerCase()
+  const many = (n, one, more = `${one}s`) => `${n} ${n === 1 ? one : more}`
 
   const hideOrders = async (list) => {
+    if (!list.length) return ''
     const r = await api('POST', { action: 'hide', orders: list.map((o) => ({ id: o.id, paymentIntent: o.paymentIntent })) })
     if (!r.ok) return r.json.message || 'Not deleted. Try again.'
     const gone = new Set(list.map((o) => o.id))
@@ -229,29 +235,19 @@ window.IASales = (() => {
     yes: 'Delete order',
     run: () => hideOrders([o]),
   })
+  /* Deleting a customer takes their orders off the admin, and deletes the discount codes made
+     for their email (they stop working). An account on the site is not touched. */
   const askCustomer = (c) => {
     const theirs = state.orders.filter((o) => keyOf(o) === c.key)
+    const codes = codesOf(c.email)
     ask({
       title: `Delete ${c.name || c.email}?`,
-      text: `${c.email ? `${c.email} · ` : ''}${theirs.length} ${theirs.length === 1 ? 'order' : 'orders'} · ${money(c.spent, c.currency)}`,
-      more: 'Their orders are taken off Orders and Customers for good. Stripe keeps its own record of the payments.',
+      text: [c.email, many(theirs.length, 'order'), money(c.spent, c.currency), codes.length ? many(codes.length, 'discount code') : ''].filter(Boolean).join(' · '),
+      more: `Their orders${codes.length ? ' and discount codes' : ''} are taken off the admin for good${codes.length ? '; the codes stop working' : ''}. Stripe keeps its own record of the payments.${c.member ? ' Their account on the site stays.' : ''}`,
       yes: 'Delete customer',
-      run: () => hideOrders(theirs),
+      run: async () => (await hideOrders(theirs)) || (await dropCodes(codes)),
     })
   }
-  const askDiscount = (d) => ask({
-    title: `Delete ${d.code}?`,
-    text: `${d.percent}% off · ${who(d)} · used ${d.used} ${d.used === 1 ? 'time' : 'times'}`,
-    more: 'It stops working at once. Orders that already used it keep their discount.',
-    yes: 'Delete code',
-    run: async () => {
-      const r = await dApi('DELETE', { code: d.code })
-      if (!r.ok) return r.json.message || 'Not deleted. Try again.'
-      dState.list = dState.list.filter((x) => x.code !== d.code)
-      if (dState.editing === d.code) dState.editing = null
-      return ''
-    },
-  })
   const confirmModal = (m) => {
     const said = el('p', { className: 'sl-said is-bad' })
     const yes = button(m.yes, async () => {
@@ -260,73 +256,87 @@ window.IASales = (() => {
       const problem = await m.run()
       if (problem) { said.textContent = problem; yes.disabled = false; no.disabled = false; yes.textContent = m.yes; return }
       closeModal()
-    }, 'ia-btn sl-danger-solid')
+    }, m.plain ? 'ia-btn' : 'ia-btn sl-danger-solid')
     const no = button('Cancel', closeModal, 'ia-btn ghost')
     return [
-      el('div', { className: 'sl-modal-head is-danger' }, [el('div', { className: 'ia-kicker', textContent: 'Are you sure?' }), el('h2', { textContent: m.title })]),
+      el('div', { className: `sl-modal-head ${m.plain ? '' : 'is-danger'}` }, [el('div', { className: 'ia-kicker', textContent: m.plain ? 'Check first' : 'Are you sure?' }), el('h2', { textContent: m.title })]),
       el('div', { className: 'sl-modal-body' }, [el('p', { className: 'sl-modal-what', textContent: m.text }), el('p', { textContent: m.more }), said]),
       el('div', { className: 'sl-modal-foot' }, [no, yes]),
     ]
   }
 
-  /* Everything about one customer: contact, every address they have had things sent to, what
-     they have bought, and the discount codes made for them. */
-  const customerModal = (key) => {
-    const c = customers().find((x) => x.key === key)
+  /* Everything about one customer: their account (picture, member number, gifts), contact, every
+     address they have had things sent to, what they have bought, and their discount codes. */
+  const customerModal = (m) => {
+    const key = m.key
     const theirs = state.orders.filter((o) => keyOf(o) === key).sort((a, b) => b.created - a.created)
+    const c = customers().find((x) => x.key === key)
+      || (m.stub ? { key, email: m.stub.email, name: m.stub.name || '', country: '', orders: theirs.filter(done).length, spent: 0, first: 0, last: 0, waiting: 0, currency: 'EUR', member: memberOf(m.stub.email), joined: 0 } : null)
     if (!c && !theirs.length) return null
     const first = theirs[0] || {}
+    const email = (c && c.email) || first.email || ''
+    const name = (c && c.name) || first.name || email || '—'
+    const mem = c ? c.member : null
     const phone = (theirs.find((o) => o.phone) || {}).phone || ''
     const places = new Map()
     for (const o of theirs) if (o.shipTo.length) { const k = o.shipTo.join('|'); places.set(k, { lines: [o.name, ...o.shipTo.slice(0, -1), country(o.shipTo[o.shipTo.length - 1])].filter(Boolean), n: (places.get(k)?.n || 0) + 1, last: Math.max(places.get(k)?.last || 0, o.created) }) }
-    const codes = c && c.email ? dState.list.filter((d) => d.emails.includes(c.email.toLowerCase())) : []
+    const codes = codesOf(email)
     const block = (title, kids) => el('section', { className: 'sl-block' }, [el('h3', { textContent: title }), ...kids])
+    const bought = c && c.orders
     return [
-      el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Customer' }), el('h2', { textContent: (c && c.name) || first.name || (c && c.email) || '—' })]),
+      el('div', { className: 'sl-modal-head sl-profile' }, [
+        avatar({ name, email, member: mem }, 'lg'),
+        el('div', { className: 'sl-profile-who' }, [
+          el('div', { className: 'ia-kicker', textContent: 'Customer' }),
+          el('h2', { textContent: name }),
+          email && email !== name ? el('span', { className: 'sl-profile-mail', textContent: email }) : null,
+          el('span', { className: 'sl-profile-tags' }, [
+            mState.loaded && !mState.problem ? (mem ? badge('member', `Member ${memberNo(mem.memberNo)}`) : badge('noacc', 'No account')) : null,
+            mem ? badge(mem.verified ? 'verified' : 'unverified', mem.verified ? 'Email confirmed' : 'Email not confirmed') : null,
+          ]),
+        ]),
+      ]),
       el('div', { className: 'sl-modal-body' }, [
         el('div', { className: 'sl-mini-stats' }, [
-          stat('Orders', String(c ? c.orders : theirs.length)),
+          stat('Orders', String(bought || 0)),
           stat('Spent', money(c ? c.spent : 0, (c && c.currency) || first.currency)),
-          stat('First order', c ? date(c.first) : '—'),
-          stat('Last order', c ? date(c.last) : '—'),
+          bought ? stat('First order', date(c.first)) : stat('Member since', mem && mem.createdAt ? date(mem.createdAt) : '—'),
+          stat('Last order', bought ? date(c.last) : '—'),
         ]),
+        email ? block('Rewards gifted', [giftsFor(m, email)]) : null,
         block('Contact', [el('p', { className: 'sl-who' }, [
-          c && c.email ? el('a', { href: `mailto:${c.email}`, textContent: c.email }) : el('span', { textContent: 'No email' }),
+          email ? el('span', { className: 'sl-mail' }, [el('span', { textContent: email }), copyBtn(email, 'email')]) : el('span', { textContent: 'No email' }),
           phone ? el('a', { href: `tel:${phone.replace(/[^+\d]/g, '')}`, textContent: phone }) : el('span', { className: 'sl-dim', textContent: 'No phone number given' }),
           c && c.country ? el('span', { textContent: country(c.country) }) : null,
         ])]),
-        block(places.size === 1 ? 'Address' : 'Addresses', places.size ? [el('div', { className: 'sl-addresses' }, [...places.values()].sort((a, b) => b.last - a.last).map((p) => el('p', { className: 'sl-address' }, [...p.lines.flatMap((line, i) => (i ? [el('br'), line] : [line])), el('small', { className: 'sl-hint', textContent: `Used on ${p.n} ${p.n === 1 ? 'order' : 'orders'}, last ${date(p.last)}` })])))] : [el('p', { className: 'sl-dim', textContent: 'No delivery address on their orders.' })]),
-        block('Orders', [el('ul', { className: 'sl-items sl-their-orders' }, theirs.map((o) => {
+        block(places.size === 1 ? 'Address' : 'Addresses', places.size ? [el('div', { className: 'sl-addresses' }, [...places.values()].sort((a, b) => b.last - a.last).map((p) => el('p', { className: 'sl-address' }, [...p.lines.flatMap((line, i) => (i ? [el('br'), line] : [line])), el('small', { className: 'sl-hint', textContent: `Used on ${many(p.n, 'order')}, last ${date(p.last)}` })])))] : [el('p', { className: 'sl-dim', textContent: 'No delivery address on their orders.' })]),
+        theirs.length ? block('Orders', [el('ul', { className: 'sl-items sl-their-orders' }, theirs.map((o) => {
           const li = el('li', {}, [el('span', { textContent: `#${o.number} · ${date(o.created)}` }), done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : badge(o.payment, PAYMENT[o.payment]), el('strong', { textContent: money(o.total, o.currency) })])
           li.addEventListener('click', () => { state.modal = null; state.open = o.id; if (state.view !== 'orders') location.hash = '#/sales/orders'; else draw() })
           return li
-        }))]),
-        codes.length ? block('Discount codes for them', [el('ul', { className: 'sl-items' }, codes.map((d) => el('li', {}, [el('span', { textContent: d.code }), badge(`d-${d.status}`, D_STATUS[d.status]), el('strong', { textContent: `${d.percent}% off` })])))]) : null,
-        (() => {
-          const mem = c && c.email ? memberOf(c.email) : null
-          if (!mState.loaded || mState.problem) return null
-          if (!mem) return block('Gifts', [el('p', { className: 'sl-dim', textContent: 'They have no account on the site, so they cannot be given a reward. Rewards go to members.' })])
-          return block(`Gifts · member ${memberNo(mem.memberNo)}`, mem.gifts.length ? [el('ul', { className: 'sl-items' }, mem.gifts.map((g) => {
-            const r = rewardOf(g.id)
-            const back = button('Take back', () => askUngift(mem, g), 'sl-link')
-            return el('li', { className: 'is-static' }, [el('span', { textContent: `${r ? r.name : g.id} · ${date(g.at)}` }), r ? badge('new', KIND_NAME[r.kind]) : null, back])
-          }))] : [el('p', { className: 'sl-dim', textContent: 'No gifts given yet.' })])
-        })(),
+        }))]) : null,
+        email ? block('Discount codes', codes.length ? [el('ul', { className: 'sl-items sl-their-codes' }, codes.map((d) => {
+          const [k, t] = statusOf(d)
+          return el('li', { className: 'is-static' }, [el('span', {}, [el('code', { className: 'sl-code', textContent: d.code }), el('small', { textContent: ` · ${d.until ? `${d.until < now() ? 'ended' : 'until'} ${date(d.until * 1000)}` : 'no end'}` })]), badge(`d-${k}`, t), el('strong', { textContent: `${d.percent}% off` })])
+        }))] : [el('p', { className: 'sl-dim', textContent: dState.problem ? 'The codes could not be loaded just now.' : dState.loaded ? 'None yet.' : 'Loading the codes…' })]) : null,
       ]),
       el('div', { className: 'sl-modal-foot' }, [
-        c && c.email && memberOf(c.email) ? button('Gift a reward', () => { state.modal = { kind: 'gift', email: c.email.toLowerCase(), fixed: true, back: key }; draw() }, 'ia-btn ghost') : null,
-        c && c.email ? el('a', { className: 'ia-btn ghost', href: `mailto:${c.email}`, textContent: 'Email them' }) : null,
-        button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent((c && c.email) || first.email || first.name)}`; draw() }, 'ia-btn ghost'),
-        button('Close', closeModal, 'ia-btn'),
+        email ? button('Give them a discount', () => discountFor([c ? c.key : email.toLowerCase()], email, name), 'ia-btn ghost') : null,
+        email ? copyBtn(email, 'email', 'ia-btn ghost') : null,
+        theirs.length ? button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(email || first.name)}`; draw() }, 'ia-btn ghost') : null,
+        button('Close', () => { state.modal = null; draw() }, 'ia-btn'),
       ]),
     ]
   }
   const modalLayer = () => {
     const m = state.modal
     if (!m) return []
-    const inside = m.kind === 'customer' ? customerModal(m.key) : m.kind === 'gift' ? giftModal(m) : confirmModal(m)
+    const inside = m.kind === 'customer' ? customerModal(m) : m.kind === 'gift' ? giftModal(m) : confirmModal(m)
     if (!inside) { state.modal = null; return [] }
-    const shade = el('div', { className: 'sl-modal-shade' }, [el('div', { className: `sl-modal ${m.kind === 'confirm' ? 'is-small' : ''}`, role: m.kind === 'confirm' ? 'alertdialog' : 'dialog', ariaModal: 'true' }, inside)])
+    // the window keeps its place when it is drawn again (picking a reward, say)
+    const body = inside.find((n) => n && n.classList && n.classList.contains('sl-modal-body'))
+    if (body) body.dataset.keepScroll = `modal-${m.kind}-${m.key || m.email || ''}`
+    const shade = el('div', { className: 'sl-modal-shade' }, [el('div', { className: `sl-modal ${m.kind === 'confirm' ? 'is-small' : m.kind === 'customer' ? 'is-wide' : ''}`, role: m.kind === 'confirm' ? 'alertdialog' : 'dialog', ariaModal: 'true' }, inside)])
     shade.addEventListener('click', (e) => { if (e.target === shade) closeModal() })
     return [shade]
   }
@@ -469,7 +479,7 @@ window.IASales = (() => {
           o.refunded ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: 'Refunded' }), el('strong', { textContent: `− ${money(o.refunded, o.currency)}` })]) : null,
         ]),
         block('Customer', [
-          el('p', { className: 'sl-who' }, [el('strong', { textContent: o.name || '—' }), o.email ? el('a', { href: `mailto:${o.email}?subject=${encodeURIComponent(`Your order #${o.number}`)}`, textContent: o.email }) : null, o.phone ? el('span', { textContent: o.phone }) : null]),
+          el('p', { className: 'sl-who' }, [el('strong', { textContent: o.name || '—' }), o.email ? el('span', { className: 'sl-mail' }, [el('span', { textContent: o.email }), copyBtn(o.email, 'email')]) : null, o.phone ? el('span', { textContent: o.phone }) : null]),
           o.email ? button('All orders from this customer', () => { state.open = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(o.email)}` }, 'sl-link') : null,
         ]),
         o.shipTo.length ? block('Ship to', [el('p', { className: 'sl-address' }, [o.name, ...o.shipTo.slice(0, -1), country(o.shipTo[o.shipTo.length - 1])].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line])))]) : null,
@@ -483,9 +493,9 @@ window.IASales = (() => {
 
 
   // ---------- Members and gifts ----------
-  /* The site's member accounts (api/account.js), and the rewards the admin gives them as gifts
-     (Sales → Customers → Gift a reward). A gift is theirs at once, whatever their progress; they
-     get an email about it, and a discount gets its personal code. */
+  /* The site's member accounts (api/account.js), and the rewards the admin gives them as gifts.
+     A gift is theirs at once, whatever their progress, and they can be emailed about it. A
+     discount gift gets its own code when they next open Rewards. */
   const mState = { loaded: false, loading: false, list: [], rewards: [], problem: '' }
   const mApi = async (body) => {
     try {
@@ -497,30 +507,122 @@ window.IASales = (() => {
     mState.loading = true
     const r = await mApi({ action: 'adminMembers' })
     mState.loading = false; mState.loaded = true
-    if (r.ok) { mState.list = r.json.members || []; mState.rewards = r.json.rewards || []; mState.problem = '' }
+    if (r.ok) { mState.list = (r.json.members || []).map((m) => ({ ...m, gifts: m.gifts || [], newGifts: m.newGifts || [] })); mState.rewards = r.json.rewards || []; mState.problem = '' }
     else mState.problem = r.status === 503 || r.status === 403 ? 'Member accounts are not set up on this site, so there is nobody to give a gift to.' : (r.json.message || 'The members could not be loaded.')
     draw()
   }
-  const memberOf = (email) => mState.list.find((m) => m.email === String(email || '').toLowerCase())
+  const memberOf = (email) => { const e = String(email || '').toLowerCase(); return e ? mState.list.find((m) => String(m.email).toLowerCase() === e) : undefined }
   const rewardOf = (id) => mState.rewards.find((r) => r.id === id)
   const KIND_NAME = { picture: 'Profile picture', card: 'Card design', discount: 'Discount' }
   const memberNo = (n) => (n ? `#${String(n).padStart(4, '0')}` : '')
-  const askUngift = (m, g) => {
-    const r = rewardOf(g.id)
-    ask({
-      title: `Take back "${r ? r.name : g.id}"?`,
-      text: `${m.name || m.email} · given ${date(g.at)}`,
-      more: 'It leaves their account (unless they have earned it on their own since). A discount code already sent to them keeps working until it runs out.',
-      yes: 'Take it back',
-      run: async () => {
-        const res = await mApi({ action: 'adminUngift', email: m.email, reward: g.id })
-        if (!res.ok) return res.json.message || 'Not taken back. Try again.'
-        m.gifts = m.gifts.filter((x) => x.id !== g.id)
-        return ''
-      },
-    })
+  // a member's answer from the server replaces what is held, so every screen sees it
+  const keepMember = (mem, fresh) => { if (fresh && fresh.email) Object.assign(mem, fresh, { gifts: fresh.gifts || [], newGifts: fresh.newGifts || [] }) }
+
+  /* A picture shown the way the account crops it: "x,y,zoom" in percent. */
+  const faceStyle = (face) => {
+    const [x, y, z] = String(face || '').split(',').map((n) => (n.trim() === '' ? NaN : Number(n)))
+    const fx = Number.isFinite(x) ? x : 50, fy = Number.isFinite(y) ? y : 22, zoom = Number.isFinite(z) && z >= 100 ? z : 100
+    return `object-position:${fx}% ${fy}%;transform:scale(${zoom / 100});transform-origin:${fx}% ${fy}%`
   }
-  // the gift window: who, which reward, a note, and Send
+  // a customer's picture from their account, or their initials
+  const avatar = (p, size = '') => {
+    const pic = p.member && p.member.picture && p.member.picture.src ? p.member.picture : null
+    return el('i', { className: `sl-initials ${pic ? 'has-pic' : ''} ${size ? `is-${size}` : ''}`, ariaHidden: 'true' }, [
+      pic ? el('img', { src: pic.src, alt: '', loading: 'lazy', style: faceStyle(pic.face) }) : initials(p.name || p.email),
+    ])
+  }
+  // a reward, small: the picture as cropped, a mini card in its look, or the percentage
+  const rewardThumb = (r) => {
+    if (r.kind === 'picture' && r.picture) return el('span', { className: 'sl-rthumb is-pic' }, [el('img', { src: r.picture, alt: '', loading: 'lazy', style: faceStyle(r.face) })])
+    if (r.kind === 'card') {
+      const art = r.cardArt && (r.cardLook === 'art' || !r.cardLook)
+      const t = el('span', { className: `sl-rthumb is-design is-${r.cardLook || 'ink'} ${art ? 'has-art' : ''}` })
+      if (art) t.style.setProperty('--card-art', `url("${r.cardArt}")`)
+      return t
+    }
+    return el('span', { className: 'sl-rthumb is-off', textContent: `${r.percent || '?'}%` })
+  }
+
+  const askUngift = (mem, r, back) => ask({
+    title: `Take back "${r ? r.name : 'this reward'}"?`,
+    text: `${mem.name || mem.email}${memberNo(mem.memberNo) ? ` · member ${memberNo(mem.memberNo)}` : ''}`,
+    more: 'It leaves their account (unless they have earned it on their own since). A discount code already made for them keeps working until it runs out.',
+    yes: 'Take it back',
+    back,
+    run: async () => {
+      const res = await mApi({ action: 'adminUngift', email: mem.email, reward: r.id })
+      if (!res.ok) return res.json.message || 'Not taken back. Try again.'
+      if (res.json.member) keepMember(mem, res.json.member)
+      else { mem.gifts = mem.gifts.filter((x) => x.id !== r.id); mem.newGifts = mem.newGifts.filter((x) => x !== r.id) }
+      if (back) { back.said = `"${r.name}" taken back`; back.bad = false }
+      return ''
+    },
+  })
+  // what the gift did, in a line
+  const giftSaid = (rw, mem, tell, json) => `"${rw ? rw.name : 'The reward'}" gifted to ${mem.name || mem.email}${tell ? (json.mailed ? ' · they have been emailed' : ' · the email could not be sent, so tell them yourself') : ''}${rw && rw.kind === 'discount' ? ' · its code is made when they open Rewards' : ''}`
+  const giveGift = async (m, mem, rw) => {
+    m.busy = true; m.said = ''; draw()
+    const r = await mApi({ action: 'adminGift', email: mem.email, reward: rw.id, note: (m.note || '').trim(), tell: m.tell !== false })
+    m.busy = false
+    if (!r.ok) { m.said = r.json.message || 'The gift was not given. Try again.'; m.bad = true; return draw() }
+    if (r.json.member) keepMember(mem, r.json.member)
+    else mem.gifts = [...mem.gifts, { id: rw.id, at: Date.now(), note: m.note || '' }]
+    m.said = giftSaid(rw, mem, m.tell !== false, r.json)
+    m.bad = m.tell !== false && !r.json.mailed
+    m.reward = ''; m.chosen = ''; m.note = ''; m.picking = false
+    draw()
+  }
+
+  /* The rewards in a customer's window: what they have been gifted (× takes one back), and
+     "+ Gift a reward", which opens the rewards not yet theirs as tiles, a note and Gift it. */
+  const giftsFor = (m, email) => {
+    if (!mState.loaded) return el('p', { className: 'sl-dim', textContent: 'Loading their account…' })
+    if (mState.problem) return el('p', { className: 'sl-dim', textContent: mState.problem })
+    const mem = memberOf(email)
+    if (!mem) return el('p', { className: 'sl-dim', textContent: 'No account on the site with this email, so nothing can be gifted. Rewards go to members.' })
+    if (m.tell === undefined) m.tell = true
+    const has = new Set(mem.gifts.map((g) => g.id))
+    const unseen = new Set(mem.newGifts || [])
+    const gifted = mem.gifts.map((g) => ({ g, r: rewardOf(g.id) }))
+    const open = mState.rewards.filter((r) => !has.has(r.id))
+    const chips = gifted.length
+      ? el('div', { className: 'sl-gift-chips' }, gifted.map(({ g, r }) => {
+        const rw = r || { id: g.id, name: g.id, kind: 'discount' }
+        const x = el('button', { type: 'button', className: 'sl-gift-x', ariaLabel: `Take back ${rw.name}`, title: 'Take back', disabled: Boolean(m.busy), textContent: '×' })
+        x.addEventListener('click', () => askUngift(mem, rw, m))
+        return el('span', { className: `sl-gift-chip ${unseen.has(g.id) ? 'is-unseen' : ''}`, title: `${KIND_NAME[rw.kind] || 'Reward'} · gifted ${g.at ? date(g.at) : ''}${g.note ? ` · "${g.note}"` : ''}${unseen.has(g.id) ? ' · not seen by them yet' : ''}` }, [rewardThumb(rw), el('span', { textContent: rw.name }), x])
+      }))
+      : el('p', { className: 'sl-dim', textContent: 'Nothing gifted yet.' })
+    const kids = [chips]
+    if (m.picking) {
+      const tiles = open.length ? el('div', { className: 'sl-rpick', role: 'radiogroup', ariaLabel: 'Reward to gift' }, open.map((r) => {
+        const t = el('button', { type: 'button', role: 'radio', ariaChecked: String(m.chosen === r.id), className: `sl-rtile ${m.chosen === r.id ? 'on' : ''}` }, [rewardThumb(r), el('strong', { textContent: r.name }), el('small', { textContent: r.kind === 'discount' ? `${r.percent}% off${r.days ? ` · ${r.days} days` : ''}` : KIND_NAME[r.kind] })])
+        t.addEventListener('click', () => { m.chosen = r.id; m.said = ''; draw() })
+        return t
+      })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Shop → Rewards.' })
+      const note = el('textarea', { className: 'sl-input', rows: 2, maxLength: 300, placeholder: 'A line from you, in the email (optional)', value: m.note || '' })
+      note.addEventListener('input', () => { m.note = note.value })
+      const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
+      tell.addEventListener('change', () => { m.tell = tell.checked })
+      const cancel = button('Cancel', () => { m.picking = false; m.chosen = ''; draw() }, 'ia-btn ghost')
+      cancel.disabled = Boolean(m.busy)
+      const give = button(m.busy ? 'Gifting…' : 'Gift it', () => { const rw = rewardOf(m.chosen); if (rw) giveGift(m, mem, rw) }, 'ia-btn')
+      give.disabled = Boolean(m.busy) || !m.chosen
+      kids.push(el('div', { className: 'sl-gift-picker' }, [
+        tiles,
+        el('label', { className: 'sl-field sl-gift-notefield' }, [el('span', { textContent: 'Your note' }), note]),
+        el('div', { className: 'sl-gift-foot' }, [el('label', { className: 'sl-gift-tell' }, [tell, el('span', { textContent: 'Email them about it' })]), el('span', { className: 'sl-gift-grow' }), cancel, give]),
+      ]))
+    } else {
+      const add = button(open.length ? '+ Gift a reward' : 'Every reward gifted', () => { m.picking = true; m.chosen = ''; m.said = ''; draw() }, 'ia-btn ghost sl-gift-add')
+      add.disabled = Boolean(m.busy) || !open.length
+      kids.push(add)
+    }
+    if (m.said) kids.push(el('p', { className: `sl-gift-note ${m.bad ? 'is-bad' : ''}`, role: 'status', textContent: m.said }))
+    return el('div', { className: 'sl-gifts' }, kids)
+  }
+
+  // the gift window (Customers → Gift a reward): any member, which reward, a note, and Send
   const giftModal = (m) => {
     const said = el('p', { className: `sl-said ${m.bad ? 'is-bad' : ''}`, textContent: m.said || '' })
     if (!mState.loaded) return [el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: 'Loading the members…' })])]
@@ -529,50 +631,43 @@ window.IASales = (() => {
       el('div', { className: 'sl-modal-body' }, [el('p', { textContent: mState.problem })]),
       el('div', { className: 'sl-modal-foot' }, [button('Close', closeModal, 'ia-btn')]),
     ]
+    if (m.tell === undefined) m.tell = true
     const member = memberOf(m.email)
     const has = new Set(member ? member.gifts.map((g) => g.id) : [])
-    // who: one member, or a choice of every member
-    const who = m.fixed && member
-      ? el('div', { className: 'sl-gift-who' }, [el('i', { className: 'sl-initials', ariaHidden: 'true', textContent: initials(member.name || member.email) }), el('span', {}, [el('strong', { textContent: member.name || member.email }), el('small', { textContent: `${memberNo(member.memberNo)} · ${member.email}` })])])
-      : (() => {
-        const pick = el('select', { className: 'sl-select', ariaLabel: 'Member' }, [el('option', { value: '', textContent: mState.list.length ? 'Choose a member…' : 'No members yet' }), ...mState.list.map((x) => el('option', { value: x.email, selected: x.email === m.email, textContent: `${memberNo(x.memberNo)}  ${x.name || '(no name)'} · ${x.email}` }))])
-        pick.addEventListener('change', () => { m.email = pick.value; m.reward = ''; m.said = ''; draw() })
-        return el('label', { className: 'sl-field' }, [el('span', { textContent: 'Member' }), pick])
-      })()
-    // which reward: a tile for each, its picture, kind and name
+    const pick = el('select', { className: 'sl-select', ariaLabel: 'Member' }, [el('option', { value: '', textContent: mState.list.length ? 'Choose a member…' : 'No members yet' }), ...[...mState.list].sort((a, b) => (a.memberNo || 0) - (b.memberNo || 0)).map((x) => el('option', { value: x.email, selected: x.email === m.email, textContent: `${memberNo(x.memberNo)}  ${x.name || '(no name)'} · ${x.email}` }))])
+    pick.addEventListener('change', () => { m.email = pick.value; m.reward = ''; m.said = ''; draw() })
+    const who = el('label', { className: 'sl-field' }, [el('span', { textContent: 'Member' }), pick])
+    const whoCard = member ? el('div', { className: 'sl-gift-who' }, [avatar({ name: member.name, email: member.email, member }), el('span', {}, [el('strong', { textContent: member.name || member.email }), el('small', { textContent: `${memberNo(member.memberNo)} · ${member.email}` })])]) : null
+    // which reward: a tile for each, its thumbnail, kind and name
     const tiles = mState.rewards.length ? el('div', { className: 'sl-gift-grid', role: 'radiogroup', ariaLabel: 'Reward' }, mState.rewards.map((r) => {
       const given = has.has(r.id)
-      const b = el('button', { type: 'button', className: `sl-gift is-${r.kind} ${m.reward === r.id ? 'on' : ''}`, role: 'radio', ariaChecked: String(m.reward === r.id), disabled: given || !member }, [
-        r.kind === 'discount' ? el('b', { className: 'sl-gift-pic is-off', textContent: `${r.percent}%` }) : el('img', { className: 'sl-gift-pic', src: r.kind === 'card' ? (r.cardArt || '') : r.picture, alt: '' }),
+      const b = el('button', { type: 'button', className: `sl-gift is-${r.kind === 'card' ? 'design' : r.kind} ${m.reward === r.id ? 'on' : ''}`, role: 'radio', ariaChecked: String(m.reward === r.id), disabled: given || !member }, [
+        rewardThumb(r),
         el('span', {}, [el('small', { textContent: given ? 'Already given' : KIND_NAME[r.kind] }), el('strong', { textContent: r.name })]),
       ])
-      if (r.kind === 'card' && !r.cardArt) b.querySelector('img').replaceWith(el('b', { className: 'sl-gift-pic is-card', textContent: 'Card' }))
       b.addEventListener('click', () => { m.reward = r.id; m.said = ''; draw() })
       return b
     })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Shop → Rewards.' })
     const note = el('textarea', { className: 'sl-input', rows: 3, maxLength: 300, placeholder: 'A line from you, in the email (optional). E.g. "Thank you for the kind words at the convention."', value: m.note || '' })
     note.addEventListener('input', () => { m.note = note.value })
-    const send = button(m.busy ? 'Sending…' : 'Send the gift', async () => {
+    const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
+    tell.addEventListener('change', () => { m.tell = tell.checked })
+    const send = button(m.busy ? 'Sending…' : 'Gift it', async () => {
       if (!member) { m.said = 'Choose a member first.'; m.bad = true; return draw() }
-      if (!m.reward) { m.said = 'Choose a reward to give.'; m.bad = true; return draw() }
-      m.busy = true; m.said = ''; draw()
-      const r = await mApi({ action: 'adminGift', email: member.email, reward: m.reward, note: m.note || '' })
-      m.busy = false
-      if (!r.ok) { m.said = r.json.message || 'The gift was not given. Try again.'; m.bad = true; return draw() }
-      member.gifts = [...member.gifts, { id: m.reward, at: Date.now(), note: m.note || '' }]
       const rw = rewardOf(m.reward)
-      m.said = `"${rw ? rw.name : 'The reward'}" is in ${member.name || member.email}'s account${r.json.code ? `, with the code ${r.json.code}` : ''}. ${r.json.mailed ? 'They have been emailed about it.' : 'The email to them could not be sent, so tell them yourself.'}`
-      m.bad = !r.json.mailed; m.reward = ''; m.note = ''
-      draw()
+      if (!rw) { m.said = 'Choose a reward to give.'; m.bad = true; return draw() }
+      giveGift(m, member, rw)
     }, 'ia-btn')
     send.disabled = Boolean(m.busy)
     return [
-      el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: member && m.fixed ? `A gift for ${member.name || member.email}` : 'Give a member a reward' })]),
+      el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: 'Give a member a reward' })]),
       el('div', { className: 'sl-modal-body sl-gift-body' }, [
         who,
+        whoCard,
         el('div', { className: 'sl-field' }, [el('span', { textContent: 'Reward' }), tiles]),
         el('label', { className: 'sl-field' }, [el('span', { textContent: 'Your note' }), note]),
-        el('p', { className: 'sl-hint', textContent: 'It is theirs at once, whatever they have bought, and they get an email about it. A discount gets its own code, for their email only.' }),
+        el('label', { className: 'sl-gift-tell' }, [tell, el('span', { textContent: 'Email them about it' })]),
+        el('p', { className: 'sl-hint', textContent: 'It is theirs at once, whatever they have bought. A discount gets its own code, for their email only, when they next open Rewards.' }),
         said,
       ]),
       el('div', { className: 'sl-modal-foot' }, [button('Close', closeModal, 'ia-btn ghost'), send]),
@@ -580,6 +675,8 @@ window.IASales = (() => {
   }
 
   // ---------- Customers ----------
+  /* Everyone who has bought (by email, or by name when there is none), and everyone with an
+     account on the site, who may not have bought yet. */
   const customers = () => {
     const by = new Map()
     for (const o of visible(state.orders, 'customers').filter(done)) {
@@ -591,31 +688,49 @@ window.IASales = (() => {
       if (ORDER_CHIPS[1][2](o)) c.waiting++
       by.set(key, c)
     }
+    for (const c of by.values()) c.member = c.email ? memberOf(c.email) || null : null
+    for (const m of mState.list) {
+      const key = String(m.email || '').toLowerCase()
+      if (!key) continue
+      const joined = new Date(m.createdAt).getTime() || 0
+      const c = by.get(key)
+      if (c) { c.joined = joined; c.name = c.name || m.name; continue }
+      by.set(key, { key, email: m.email, name: m.name || '', country: '', orders: 0, spent: 0, first: joined, last: joined, waiting: 0, currency: currency(), member: m, joined })
+    }
     return [...by.values()]
   }
   const customersView = () => {
     const f = state.c
     const all = customers()
-    const kinds = [['all', 'Everyone', () => true], ['repeat', 'Bought more than once', (c) => c.orders > 1], ['waiting', 'Waiting for an order', (c) => c.waiting > 0]]
+    const kinds = [
+      ['all', 'Everyone', () => true],
+      ['members', 'Members', (c) => Boolean(c.member)],
+      ['buyers', 'Buyers', (c) => c.orders > 0],
+      ['repeat', 'Bought more than once', (c) => c.orders > 1],
+      ['waiting', 'Waiting for an order', (c) => c.waiting > 0],
+    ]
     const kind = kinds.find((k) => k[0] === f.kind) || kinds[0]
     const q = f.q.trim().toLowerCase()
-    const sorts = { spent: (a, b) => b.spent - a.spent, orders: (a, b) => b.orders - a.orders || b.spent - a.spent, last: (a, b) => b.last - a.last, name: (a, b) => (a.name || a.email).localeCompare(b.name || b.email) }
-    const list = all.filter((c) => kind[2](c) && (!q || [c.name, c.email, country(c.country)].join(' ').toLowerCase().includes(q))).sort(sorts[f.sort] || sorts.spent)
+    const sorts = { spent: (a, b) => b.spent - a.spent || b.last - a.last, orders: (a, b) => b.orders - a.orders || b.spent - a.spent, last: (a, b) => b.last - a.last, name: (a, b) => (a.name || a.email).localeCompare(b.name || b.email), member: (a, b) => ((a.member && a.member.memberNo) || 9e9) - ((b.member && b.member.memberNo) || 9e9) }
+    const list = all.filter((c) => kind[2](c) && (!q || [c.name, c.email, country(c.country), c.member ? memberNo(c.member.memberNo) : ''].join(' ').toLowerCase().includes(q))).sort(sorts[f.sort] || sorts.spent)
     const set = (k, v) => { state.c[k] = v; state.c.page = 1; draw() }
     const cur = currency()
-    const total = all.reduce((t, c) => t + c.spent, 0)
+    const buyers = all.filter((c) => c.orders > 0)
+    const total = buyers.reduce((t, c) => t + c.spent, 0)
+    const open = (c) => { state.modal = { kind: 'customer', key: c.key }; draw() }
     return [
-      head('Customers', 'Everyone who has bought from the shop, worked out from the orders. Open one to see their orders, or give a member a reward.', [
+      head('Customers', 'Everyone who has bought from the shop, and everyone with an account on the site. Open one to see their orders and codes, give them a discount, or gift them a reward.', [
         button('Gift a reward', () => { state.modal = { kind: 'gift', email: '' }; draw() }, 'ia-btn'),
-        button(state.loading ? 'Loading…' : 'Refresh', () => { load(); loadMembers() }),
-        button('Export CSV', () => csv([['Name', 'Email', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, country(c.country), c.orders, c.spent, c.currency, date(c.first), date(c.last)])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
+        button(state.loading || mState.loading ? 'Loading…' : 'Refresh', () => { load(); loadMembers(); loadDiscounts() }),
+        button('Export CSV', () => csv([['Name', 'Email', 'Member', 'Email confirmed', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, c.member ? memberNo(c.member.memberNo) : '', c.member ? (c.member.verified ? 'Yes' : 'No') : '', country(c.country), c.orders, c.spent, c.currency, c.orders ? date(c.first) : '', c.orders ? date(c.last) : ''])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
       ]),
       notices(),
       hiddenNote(state.orders, 'customers\' orders', 'customers'),
+      mState.problem && mState.loaded ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Accounts not shown' }), el('p', { textContent: mState.problem })]) : null,
       el('div', { className: 'sl-stats' }, [
-        stat('Customers', String(all.length)),
+        stat('Customers', String(all.length), mState.loaded && !mState.problem ? many(all.filter((c) => c.member).length, 'member') : ''),
         stat('Came back', String(all.filter((c) => c.orders > 1).length), 'bought more than once'),
-        stat('Spent on average', money(all.length ? total / all.length : 0, cur)),
+        stat('Spent on average', money(buyers.length ? total / buyers.length : 0, cur), many(buyers.length, 'buyer')),
         stat('Waiting for an order', String(all.filter((c) => c.waiting).length)),
       ]),
       el('div', { className: 'sl-chips', role: 'group', ariaLabel: 'Show' }, kinds.map(([k, label, test]) => {
@@ -624,229 +739,381 @@ window.IASales = (() => {
         return b
       })),
       el('div', { className: 'sl-tools' }, [
-        search(f.q, 'Name, email, country…', (v) => set('q', v)),
-        select(f.sort, [['spent', 'Most spent'], ['orders', 'Most orders'], ['last', 'Latest order'], ['name', 'Name A–Z']], (v) => set('sort', v), 'Sort'),
+        search(f.q, 'Name, email, country, member no.…', (v) => set('q', v)),
+        select(f.sort, [['spent', 'Most spent'], ['orders', 'Most orders'], ['last', 'Latest'], ['name', 'Name A–Z'], ['member', 'Member number']], (v) => set('sort', v), 'Sort'),
       ]),
       el('p', { className: 'sl-count', textContent: `${list.length} ${list.length === 1 ? 'customer' : 'customers'}` }),
       list.length ? el('div', { className: 'sl-table is-customers', role: 'table' }, [
         headRow(['Customer', 'Country', 'Orders', 'Spent', 'Last order']),
         ...pageOf(list, f).map((c) => {
+          const theirs = c.orders || codesOf(c.email).length
           return rowEl(false, [
-            el('span', { className: 'sl-c-who' }, [el('strong', { textContent: c.name || '—' }), el('small', { textContent: c.email })]),
+            el('span', { className: 'sl-c-who' }, [avatar(c), el('span', {}, [
+              el('strong', { textContent: c.name || c.email || '—' }),
+              el('small', { textContent: c.name ? c.email : '' }),
+              c.member ? badge('member', `Member ${memberNo(c.member.memberNo)}`) : null,
+            ])]),
             el('span', {}, [el('small', { textContent: country(c.country) || '—' })]),
             el('span', {}, [el('strong', { textContent: String(c.orders) }), c.waiting ? el('small', { className: 'sl-hot', textContent: `${c.waiting} to ship` }) : null]),
             el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(c.spent, c.currency) })]),
-            el('span', {}, [el('small', { textContent: date(c.last) })]),
-          ], () => { state.modal = { kind: 'customer', key: c.key }; draw() }, [iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: c.key }; draw() }), iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c))])
+            el('span', {}, [el('small', { textContent: c.orders ? date(c.last) : c.joined ? `Joined ${date(c.joined)}` : '—' })]),
+          ], () => open(c), [
+            iconBtn('info', 'Customer details', () => open(c)),
+            theirs ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
+          ])
         }),
-      ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'Nobody matches' : 'No customers yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Everyone who buys from the shop shows up here.' })]) : null),
+      ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'Nobody matches' : 'No customers yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Everyone who buys from the shop, or makes an account, shows up here.' })]) : null),
       pager(list, f, ['customer', 'customers']),
     ]
   }
 
   // ---------- Discounts ----------
-  /* Discount codes, kept in Stripe (api/discounts.js): a percentage, for everyone or for chosen
-     customers, from a start to an end, as many times as allowed. Buyers type the code in the cart. */
-  const DAY = 24 * 60 * 60 * 1000
-  const D_STATUS = { active: 'Active', scheduled: 'Starts later', expired: 'Ended', 'used-up': 'Used up' }
-  const dState = { loaded: false, loading: false, list: [], sample: false, problem: null, q: '', kind: 'all', sort: 'new', editing: null, said: '', page: 1, per: perSaved() }
+  /* Discount codes, kept in Stripe (api/discounts.js): a percentage off, for a while, either a
+     code each for chosen customers or one shared code for anyone given it. Buyers type it in
+     the cart. Codes are made, emailed, switched off and deleted; they are not edited. */
+  const DVIEWS = [['active', 'Active'], ['usedup', 'Used up'], ['ended', 'Ended'], ['off', 'Switched off'], ['all', 'All']]
+  const DSORTS = [['new', 'Newest first'], ['ending', 'Ending soonest'], ['big', 'Biggest discount'], ['used', 'Most used']]
+  const LENGTHS = [['7', '1 week'], ['14', '2 weeks'], ['30', '1 month'], ['90', '3 months'], ['180', '6 months'], ['date', 'Until a date…'], ['none', 'No end date']]
+  const USES = [['1', 'Once'], ['3', '3 times'], ['10', '10 times'], ['', 'No limit']]
+  const PERCENTS = [5, 10, 15, 20, 25, 30, 50]
+  const dState = { loaded: false, loading: false, list: [], mode: '', problem: null, q: '', view: 'active', sort: 'new', page: 1, per: perSaved(), busy: false, result: null, note: null }
+  const draft = { percent: 10, other: '', length: '30', date: '', mode: 'people', picked: new Set(), emails: '', code: '', uses: '1', usesTouched: false, label: '', find: '' }
+  const now = () => Math.floor(Date.now() / 1000)
+  const statusOf = (d) => (!d.active ? ['off', 'Switched off'] : d.until && d.until < now() ? ['ended', 'Ended'] : d.uses && d.used >= d.uses ? ['usedup', 'Used up'] : ['active', 'Active'])
+  const codesOf = (email) => { const e = String(email || '').toLowerCase(); return e ? dState.list.filter((d) => d.email && d.email.toLowerCase() === e) : [] }
   const dApi = async (method, body) => {
     try {
       const r = await fetch('/api/discounts', { method, cache: 'no-store', headers: { Authorization: `token ${pass()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: body ? JSON.stringify(body) : undefined })
       return { ok: r.ok, status: r.status, json: await r.json().catch(() => ({})) }
     } catch { return { ok: false, status: 0, json: { message: 'Could not reach the site. Check the connection and try again.' } } }
   }
+  let discGen = 0 // a newer load makes an older one's answer stale
   const loadDiscounts = async () => {
+    const gen = ++discGen
     dState.loading = true; draw()
     const r = await dApi('GET')
-    dState.loading = false; dState.loaded = true
-    if (r.ok) { dState.list = r.json.discounts || []; dState.sample = Boolean(r.json.sample); dState.mode = r.json.mode || ''; dState.problem = null }
-    else dState.problem = { code: r.json.code || '', status: r.status, message: r.json.message || 'The discount codes could not be loaded.' }
+    if (gen !== discGen) return
+    dState.loading = false
+    if (r.ok) { dState.list = (r.json.discounts || []).sort((a, b) => b.created - a.created); dState.mode = r.json.mode || ''; dState.problem = null; dState.loaded = true }
+    else dState.problem = { setup: r.status === 503 || Boolean(r.json.setup), status: r.status, message: r.json.message || 'The discount codes could not be loaded.' }
     draw()
   }
-  const dayInput = (t) => { if (!t) return ''; const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-  const fromDayInput = (v, endOfDay) => { if (!v) return 0; const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d, endOfDay ? 23 : 0, endOfDay ? 59 : 0).getTime() }
-  const newCode = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 6; i++) s += A[Math.floor(Math.random() * A.length)]; return `MA-${s}` }
-  const who = (d) => (d.emails.length ? `${d.emails.length === 1 ? d.emails[0] : `${d.emails.length} people`}` : 'Everyone')
-  const when = (d) => `${date(d.starts)} – ${d.ends ? date(d.ends) : 'no end'}`
+  // the last moment it works, in seconds: null for no end, undefined while the date is not picked
+  const endOf = () => {
+    if (draft.length === 'none') return null
+    if (draft.length === 'date') return draft.date ? Math.floor(new Date(`${draft.date}T23:59:00`).getTime() / 1000) : undefined
+    return now() + Number(draft.length) * 86400
+  }
+  const typedEmails = () => [...new Set(draft.emails.split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))]
+  // the people chosen: ticked customers with an email, and any typed addresses
+  const chosen = () => {
+    const byKey = new Map(customers().map((c) => [c.key, c]))
+    const list = [...draft.picked].map((k) => byKey.get(k)).filter((c) => c && c.email).map((c) => ({ email: c.email.toLowerCase(), name: c.name || '' }))
+    for (const e of typedEmails()) if (!list.some((p) => p.email === e)) list.push({ email: e, name: '' })
+    return list
+  }
+  // from a customer: the new-discount form with them chosen
+  const discountFor = (keys, email, name) => {
+    draft.mode = 'people'; draft.picked = new Set(keys); draft.find = ''
+    if (email && !customers().some((c) => keys.includes(c.key) && c.email)) draft.emails = email
+    if (!draft.usesTouched) draft.uses = '1'
+    dState.result = null; dState.note = null
+    state.modal = null
+    if (state.view === 'discounts') { draw(); root.scrollTop = 0 } else location.hash = '#/sales/discounts'
+  }
+  const copyBtn = (text, what, cls = 'sl-link') => {
+    const b = button(`Copy ${what}`, async () => {
+      try { await navigator.clipboard.writeText(text); b.textContent = 'Copied' } catch { b.textContent = 'Could not copy' }
+      setTimeout(() => { b.textContent = `Copy ${what}` }, 1600)
+    }, cls)
+    return b
+  }
+  const sentOn = (d) => (d.sent ? date(d.sent) : '')
+  // send a personal code to its person by email, from the site, after asking
+  const emailCode = (d) => ask({
+    title: `Email ${d.code}?`,
+    text: `To ${d.name ? `${d.name} (${d.email})` : d.email}: ${d.percent}% off${d.until ? `, until ${date(d.until * 1000)}` : ''}.`,
+    more: `They get an email from Milton Aguiar with the code and how to use it in the cart. Its button, See your gift, opens the Rewards tab of their account (they log in first, or make an account with this email), where the code waits for them.${d.sent ? ` It was last emailed ${sentOn(d)}.` : ''}`,
+    yes: 'Send it',
+    plain: true,
+    run: async () => {
+      const r = await dApi('POST', { action: 'email', id: d.id })
+      if (!r.ok) return r.json.message || 'Not sent. Try again.'
+      const sent = (r.json.discount && r.json.discount.sent) || new Date().toISOString()
+      for (const x of [...dState.list, ...(dState.result || [])]) if (x.id === d.id) x.sent = sent
+      return ''
+    },
+  })
+  const emailBtn = (d) => { const b = button(d.sent ? 'Email again' : 'Email it', () => emailCode(d), 'sl-link'); b.title = d.sent ? `Emailed ${sentOn(d)}` : 'Send it to them by email'; return b }
+  const askStop = (d) => ask({
+    title: `Switch off ${d.code}?`,
+    text: `${d.percent}% off · ${d.email || 'anyone with the code'} · used ${d.used}${d.uses ? ` of ${d.uses}` : ' times'}`,
+    more: 'It stops working at once and cannot be switched back on. It stays in this list, marked Switched off.',
+    yes: 'Switch off',
+    run: async () => {
+      const r = await dApi('POST', { action: 'stop', id: d.id })
+      if (!r.ok || !r.json.discount) return r.json.message || 'Stripe did not switch it off. Try again.'
+      for (const x of [...dState.list, ...(dState.result || [])]) if (x.id === d.id) Object.assign(x, r.json.discount)
+      return ''
+    },
+  })
+  // deletes codes, a hundred at a time; says what went wrong, or nothing
+  const dropCodes = async (codes) => {
+    if (!codes.length) return ''
+    const ids = codes.map((d) => d.id)
+    const gone = new Set()
+    let problem = ''
+    for (let i = 0; i < ids.length; i += 100) {
+      const r = await dApi('POST', { action: 'delete', ids: ids.slice(i, i + 100) })
+      if (!r.ok) problem = r.json.message || ''
+      ;(r.json.deleted || []).forEach((id) => gone.add(id))
+    }
+    dState.list = dState.list.filter((d) => !gone.has(d.id))
+    if (dState.result) dState.result = dState.result.filter((d) => !gone.has(d.id))
+    return gone.size < ids.length ? (problem || `${ids.length - gone.size} could not be deleted. Try again in a moment.`) : ''
+  }
+  const askDelete = (d) => ask({
+    title: `Delete ${d.code}?`,
+    text: `${d.percent}% off · ${d.email || 'anyone with the code'} · used ${d.used} ${d.used === 1 ? 'time' : 'times'}`,
+    more: 'It stops working at once and leaves this list for good. Orders that already used it keep their discount.',
+    yes: 'Delete code',
+    run: () => dropCodes([d]),
+  })
+
+  const makeDiscount = async () => {
+    const percent = Number(draft.percent)
+    const until = endOf()
+    const fail = (t) => { dState.note = { ok: false, text: t }; draw() }
+    if (!(percent >= 1 && percent <= 100)) return fail('Choose how much off: between 1% and 100%.')
+    if (until === undefined) return fail('Pick the last day the discount works.')
+    const people = draft.mode === 'people' ? chosen() : []
+    if (draft.mode === 'people' && !people.length) return fail('Choose at least one customer, or type an email address.')
+    const bad = people.find((p) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email))
+    if (bad) return fail(`"${bad.email}" is not an email address.`)
+    if (draft.mode === 'anyone' && draft.code.length < 3) return fail('Type the code: at least 3 letters or numbers.')
+    dState.busy = true; dState.note = null; draw()
+    const r = await dApi('POST', { action: 'create', percent, until, uses: draft.uses ? Number(draft.uses) : null, label: draft.label.trim(), ...(draft.mode === 'people' ? { people } : { code: draft.code }) })
+    dState.busy = false
+    if (r.ok && Array.isArray(r.json.discounts)) {
+      const made = r.json.discounts
+      dState.result = made
+      dState.list = [...made, ...dState.list.filter((d) => !made.some((x) => x.id === d.id))]
+      const failed = r.json.failed || []
+      dState.note = failed.length ? { ok: false, text: `No code could be made for ${failed.join(', ')}.` } : { ok: true, text: made.length ? 'Done' : 'Nothing was made.' }
+      if (made.length) { draft.picked.clear(); draft.emails = ''; draft.code = '' }
+      draw()
+      setTimeout(() => root.querySelector('.sl-made')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60)
+    } else fail(r.json.message || 'Not made. Try again.')
+  }
+
+  const step = (n, title, kids) => el('div', { className: 'sl-step' }, [el('div', { className: 'sl-step-n', textContent: String(n) }), el('div', { className: 'sl-step-body' }, [el('h3', { textContent: title }), ...kids])])
+
+  // the form for a new discount: four numbered steps, a sentence saying what it makes, Create
+  const discountForm = () => {
+    const sentence = el('p', { className: 'sl-sentence' })
+    const sayIt = () => {
+      const end = endOf()
+      const n = chosen().length
+      const whom = draft.mode === 'people' ? (n ? `for ${many(n, 'person', 'people')}, a code each` : 'for nobody yet') : `for anyone with ${draft.code || 'the code'}`
+      const usesText = draft.uses ? `, ${draft.mode === 'people' ? 'each code ' : ''}used ${draft.uses === '1' ? 'once' : `up to ${draft.uses} times`}` : ', no limit on uses'
+      sentence.replaceChildren(el('b', { textContent: `${draft.percent || '?'}% off` }), ` ${whom}, ${end === null ? 'with no end date' : end === undefined ? 'until the date you pick' : `until ${date(end * 1000)}`}${usesText}.`)
+    }
+    // 1. how much
+    const pcts = el('div', { className: 'sl-chips is-tight' }, PERCENTS.map((p) => {
+      const b = el('button', { type: 'button', className: `sl-chip ${!draft.other && draft.percent === p ? 'on' : ''}`, ariaPressed: String(!draft.other && draft.percent === p), textContent: `${p}%` })
+      b.addEventListener('click', () => { draft.percent = p; draft.other = ''; draw() })
+      return b
+    }))
+    const other = el('input', { type: 'number', className: 'sl-input sl-other', min: 1, max: 100, step: 1, value: draft.other, placeholder: 'Other %', ariaLabel: 'Another percentage' })
+    other.addEventListener('input', () => { draft.other = other.value; draft.percent = Number(other.value) || 0; pcts.querySelectorAll('.sl-chip').forEach((c) => { c.classList.remove('on'); c.ariaPressed = 'false' }); sayIt() })
+    // 2. how long
+    const length = el('select', { className: 'sl-select sl-length', ariaLabel: 'How long it lasts' }, LENGTHS.map(([v, t]) => el('option', { value: v, textContent: t, selected: draft.length === v })))
+    length.addEventListener('change', () => { draft.length = length.value; draw() })
+    const day = el('input', { type: 'date', className: 'sl-input sl-day', value: draft.date, min: new Date(Date.now() + 864e5).toISOString().slice(0, 10), ariaLabel: 'Last day' })
+    day.addEventListener('input', () => { draft.date = day.value; sayIt() })
+    // 3. for whom
+    const modes = el('div', { className: 'sl-seg is-two', role: 'radiogroup', ariaLabel: 'Who it is for' }, [['people', 'Chosen customers'], ['anyone', 'Anyone with the code']].map(([v, t]) => {
+      const b = el('button', { type: 'button', role: 'radio', ariaChecked: String(draft.mode === v), className: `sl-stage ${draft.mode === v ? 'on' : ''}`, textContent: t })
+      b.addEventListener('click', () => { draft.mode = v; if (!draft.usesTouched) draft.uses = v === 'people' ? '1' : ''; draw() })
+      return b
+    }))
+    let whom
+    if (draft.mode === 'people') {
+      const all = customers().filter((c) => c.email)
+      const q = draft.find.trim().toLowerCase()
+      const list = all.filter((c) => !q || [c.name, c.email, c.member ? memberNo(c.member.memberNo) : ''].join(' ').toLowerCase().includes(q)).sort((a, b) => b.last - a.last)
+      const count = el('span', { className: 'sl-chosen', textContent: `${chosen().length} chosen` })
+      const find = el('input', { type: 'search', className: 'sl-search sl-find', value: draft.find, placeholder: 'Find a customer…', ariaLabel: 'Find a customer' })
+      let t
+      find.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { draft.find = find.value; draw() }, 160) })
+      const allBtn = button('Choose all shown', () => { list.forEach((c) => draft.picked.add(c.key)); draw() }, 'sl-link')
+      const noneBtn = button('Clear', () => { draft.picked.clear(); draw() }, 'sl-link')
+      const box = el('div', { className: 'sl-picklist' }, list.length ? list.map((c) => {
+        const input = el('input', { type: 'checkbox', checked: draft.picked.has(c.key) })
+        const row = el('label', { className: `sl-pick-row ${draft.picked.has(c.key) ? 'on' : ''}` }, [input, avatar(c, 'sm'), el('span', { className: 'sl-pick-who' }, [
+          el('strong', { textContent: c.name || c.email }),
+          el('small', { textContent: [c.name ? c.email : '', c.orders ? `${many(c.orders, 'order')} · ${money(c.spent, c.currency)}` : 'no orders yet', c.member ? `member ${memberNo(c.member.memberNo)}` : ''].filter(Boolean).join(' · ') }),
+        ])])
+        // ticking leaves the list where it is: only the count and the sentence change
+        input.addEventListener('change', () => { if (input.checked) draft.picked.add(c.key); else draft.picked.delete(c.key); row.classList.toggle('on', input.checked); count.textContent = `${chosen().length} chosen`; sayIt() })
+        return row
+      }) : [el('p', { className: 'sl-pick-empty', textContent: !state.loaded && !mState.loaded ? 'Loading the customers…' : all.length ? 'Nobody matches.' : 'No customers with an email yet. Type addresses below.' })])
+      box.dataset.keepScroll = 'picklist'
+      const emails = el('textarea', { className: 'sl-input', rows: 2, value: draft.emails, placeholder: 'Or type email addresses, one per line' })
+      emails.addEventListener('input', () => { draft.emails = emails.value; count.textContent = `${chosen().length} chosen`; sayIt() })
+      whom = [el('div', { className: 'sl-pick-top' }, [find, count, allBtn, noneBtn]), box, emails]
+    } else {
+      const code = el('input', { type: 'text', className: 'sl-input sl-code-in', value: draft.code, placeholder: 'For example MILTON10', maxLength: 30, spellcheck: false, ariaLabel: 'The code' })
+      code.addEventListener('input', () => { code.value = code.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 30); draft.code = code.value; sayIt() })
+      whom = [code, el('p', { className: 'sl-hint', textContent: 'One code for everyone you share it with: letters, numbers, - and _. Handy for a season, a launch or a convention.' })]
+    }
+    // 4. how often, and the name buyers see
+    const uses = el('select', { className: 'sl-select', ariaLabel: 'Uses' }, USES.map(([v, t]) => el('option', { value: v, textContent: t, selected: draft.uses === v })))
+    uses.addEventListener('change', () => { draft.uses = uses.value; draft.usesTouched = true; sayIt() })
+    const label = el('input', { type: 'text', className: 'sl-input', value: draft.label, maxLength: 40, placeholder: 'For example "Thank-you discount"' })
+    label.addEventListener('input', () => { draft.label = label.value })
+    const field = (t, control) => el('label', { className: 'sl-field' }, [el('span', { textContent: t }), control])
+    sayIt()
+    const create = button(dState.busy ? 'Making the codes…' : 'Create discount', makeDiscount, 'ia-btn sl-go')
+    create.disabled = dState.busy
+    return el('section', { className: 'sl-form' }, [
+      el('h2', { className: 'sl-h2', textContent: 'New discount' }),
+      dState.mode === 'test' ? el('p', { className: 'sl-hint', textContent: 'Stripe is in test mode: codes made now only work with test payments.' }) : null,
+      step(1, 'How much off', [el('div', { className: 'sl-line' }, [pcts, other])]),
+      step(2, 'How long it lasts', [el('div', { className: 'sl-line' }, [length, draft.length === 'date' ? day : null])]),
+      step(3, 'Who it is for', [modes, ...whom]),
+      step(4, 'Details', [el('div', { className: 'sl-pair' }, [field(draft.mode === 'people' ? 'Each code can be used' : 'The code can be used', uses), field('Name at checkout (optional)', label)])]),
+      el('div', { className: 'sl-make' }, [sentence, create, dState.note ? el('span', { className: `sl-said ${dState.note.ok ? '' : 'is-bad'}`, textContent: dState.note.text }) : null]),
+    ])
+  }
+  // the person a code is for, with their account's picture when they have one
+  const personFor = (d) => {
+    const c = customers().find((x) => x.email && x.email.toLowerCase() === String(d.email || '').toLowerCase())
+    return { name: d.name || (c && c.name) || '', email: d.email, member: memberOf(d.email) || null }
+  }
+  // what was just made: the codes, ready to copy or send
+  const madePanel = () => {
+    const made = dState.result
+    if (!made || !made.length) return null
+    return el('section', { className: 'sl-form sl-made' }, [
+      el('h2', { className: 'sl-h2', textContent: `Made ${many(made.length, 'code')}` }),
+      el('p', { className: 'sl-hint', textContent: made.some((d) => d.email) ? 'Send each person their code: "Email it" sends it from the site, in its own design. Or copy them and send them yourself.' : 'Share the code wherever you like: buyers type it in the cart.' }),
+      el('div', { className: 'sl-made-list' }, made.map((d) => {
+        const p = personFor(d)
+        return el('div', { className: 'sl-made-row' }, [
+          d.email ? avatar(p) : el('i', { className: 'sl-initials is-all', ariaHidden: 'true', textContent: '%' }),
+          el('span', { className: 'sl-made-who' }, [
+            el('strong', { textContent: d.email ? p.name || d.email : 'Anyone with the code' }),
+            el('small', { textContent: d.email ? [p.name ? d.email : '', p.member ? `member ${memberNo(p.member.memberNo)}` : 'no account yet'].filter(Boolean).join(' · ') : `${d.percent}% off, shared` }),
+          ]),
+          el('span', { className: 'sl-code-chip' }, [el('b', { textContent: `${d.percent}%` }), el('code', { className: 'sl-code', textContent: d.code })]),
+          el('span', { className: 'sl-made-acts' }, [
+            copyBtn(d.code, 'code'),
+            d.email ? emailBtn(d) : null,
+            d.sent ? el('small', { className: 'sl-dim', textContent: `emailed ${sentOn(d)}` }) : null,
+          ]),
+        ])
+      })),
+      made.length > 1 ? el('div', { className: 'sl-made-foot' }, [copyBtn(made.map((d) => `${d.code}${d.email ? `  ${d.email}` : ''}`).join('\n'), 'all'), button('Done', () => { dState.result = null; dState.note = null; draw() }, 'sl-link')]) : el('div', { className: 'sl-made-foot' }, [button('Done', () => { dState.result = null; dState.note = null; draw() }, 'sl-link')]),
+    ])
+  }
+
+  const discRow = (d) => {
+    const [k, t] = statusOf(d)
+    const rw = d.reward ? rewardOf(d.reward) : null
+    const who = d.email ? (d.name ? `${d.name} · ${d.email}` : d.email) : 'Anyone with the code'
+    const links = el('span', { className: 'sl-disc-links' }, [
+      copyBtn(d.code, 'code'),
+      d.email && k === 'active' ? emailBtn(d) : null,
+      d.active ? button('Switch off', () => askStop(d), 'sl-link sl-danger') : null,
+    ])
+    const acts = [
+      d.email ? iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: d.email.toLowerCase(), stub: { email: d.email, name: d.name } }; draw() }) : el('span', { className: 'sl-icon-gap' }),
+      iconBtn('trash', `Delete ${d.code}`, () => askDelete(d)),
+    ]
+    return el('div', { className: `sl-row is-static is-${k}`, role: 'row' }, [
+      el('span', { className: 'sl-pct', textContent: `${d.percent}%` }),
+      el('span', { className: 'sl-disc-code' }, [
+        el('strong', {}, [el('code', { className: 'sl-code', textContent: d.code }), d.reward ? badge('reward', 'Reward') : null, d.test && showTest.codes ? badge('test', 'Test') : null]),
+        el('small', { className: 'sl-disc-who' }, [d.email ? avatar(personFor(d), 'xs') : null, el('span', { textContent: [who, rw ? `reward: ${rw.name}` : '', d.label && d.label !== `${d.percent}% off` ? `"${d.label}"` : ''].filter(Boolean).join(' · ') })]),
+      ]),
+      el('span', { className: 'sl-disc-meta' }, [
+        el('span', { textContent: d.until ? `${d.until < now() ? 'Ended' : 'Until'} ${date(d.until * 1000)}` : 'No end date' }),
+        el('small', { textContent: `used ${d.used}${d.uses ? ` of ${d.uses}` : ' times'}${d.sent ? ` · emailed ${sentOn(d)}` : ''}` }),
+      ]),
+      el('span', {}, [badge(`d-${k}`, t)]),
+      links,
+      el('span', { className: 'sl-acts' }, acts),
+    ])
+  }
 
   const discountsView = () => {
     const f = dState
-    const kinds = [['all', 'All codes', () => true], ['active', 'Active', (d) => d.status === 'active'], ['scheduled', 'Starts later', (d) => d.status === 'scheduled'], ['ended', 'Ended', (d) => d.status === 'expired' || d.status === 'used-up']]
-    const kind = kinds.find((k) => k[0] === f.kind) || kinds[0]
+    // every code shows: with Stripe's test key every code is a test one, with the live key none is,
+    // so the test-data switch would only ever hide them all
+    const all = f.list
+    const inView = (d, v) => v === 'all' || statusOf(d)[0] === v
     const q = f.q.trim().toLowerCase()
-    const sorts = { new: (a, b) => b.created - a.created, ending: (a, b) => (a.ends || Infinity) - (b.ends || Infinity), big: (a, b) => b.percent - a.percent, used: (a, b) => b.used - a.used }
-    const all = visible(f.list, 'codes')
-    const list = all.filter((d) => kind[2](d) && (!q || [d.code, ...d.emails].join(' ').toLowerCase().includes(q))).sort(sorts[f.sort] || sorts.new)
+    const by = { new: (a, b) => b.created - a.created, ending: (a, b) => (a.until || 9e12) - (b.until || 9e12), big: (a, b) => b.percent - a.percent, used: (a, b) => b.used - a.used }
+    const list = all.filter((d) => inView(d, f.view) && (!q || [d.code, d.name, d.email, d.label].join(' ').toLowerCase().includes(q))).sort(by[f.sort] || by.new)
     const set = (k, v) => { dState[k] = v; dState.page = 1; draw() }
-    const problem = f.problem && el('div', { className: `sl-notice ${f.problem.code === 'no-stripe' ? '' : 'is-bad'}` }, [
-      el('strong', { textContent: f.problem.code === 'no-stripe' ? 'Stripe is not connected yet' : f.problem.status === 401 ? 'Your login has run out' : 'The discount codes could not be loaded' }),
-      el('p', { textContent: f.problem.message }),
-    ])
+    const p = f.problem
+    const problem = p ? el('div', { className: `sl-notice ${p.setup ? '' : 'is-bad'}` }, [
+      el('strong', { textContent: p.setup ? 'Stripe is not connected yet' : p.status === 401 ? 'Your login has run out' : 'The discount codes could not be loaded' }),
+      el('p', { textContent: p.message }),
+      p.setup ? el('p', { textContent: 'Discount codes are kept in Stripe. In Stripe: Developers → API keys, copy the Secret key. In Vercel: the project’s Settings → Environment Variables, add STRIPE_SECRET_KEY with it, then redeploy.' }) : null,
+    ]) : null
     return [
-      head('Discounts', 'Codes buyers type in the cart for money off: for everyone, or only for the customers you choose, for as long as you say.', [
-        button(f.loading ? 'Loading…' : 'Refresh', loadDiscounts),
-        button('+ New discount', () => { dState.editing = 'new'; dState.said = ''; draw() }, 'ia-btn'),
+      head('Discounts', 'Make a discount for chosen customers (each gets a code of their own) or one code for anyone you give it to. Buyers type it in the cart when they pay.', [
+        button(f.loading ? 'Loading…' : 'Refresh', () => { loadDiscounts(); if (!mState.loading) loadMembers() }),
       ]),
-      problem || (f.sample && showTest.codes ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Sample codes' }), el('p', { textContent: 'This is the local preview without a Stripe key, so these codes are made up. On the live site the codes are kept in Stripe.' })]) : null),
-      hiddenNote(f.list, 'discount codes', 'codes'),
-      el('div', { className: 'sl-stats' }, [
-        stat('Active now', String(all.filter((d) => d.status === 'active').length)),
-        stat('Start later', String(all.filter((d) => d.status === 'scheduled').length)),
-        stat('Times used', String(all.reduce((n, d) => n + d.used, 0)), 'across every code'),
-        stat('Ended', String(all.filter((d) => d.status === 'expired' || d.status === 'used-up').length)),
-      ]),
-      el('div', { className: 'sl-chips', role: 'group', ariaLabel: 'Show' }, kinds.map(([k, label, test]) => {
-        const b = el('button', { type: 'button', className: `sl-chip ${f.kind === k ? 'on' : ''}`, ariaPressed: String(f.kind === k) }, [label, el('small', { textContent: String(all.filter(test).length) })])
-        b.addEventListener('click', () => set('kind', k))
+      problem,
+      p && p.setup ? null : discountForm(),
+      madePanel(),
+      el('h2', { className: 'sl-h2 is-list', textContent: 'Your discount codes' }),
+      el('div', { className: 'sl-chips', role: 'group', ariaLabel: 'Show' }, DVIEWS.map(([k, label]) => {
+        const b = el('button', { type: 'button', className: `sl-chip ${f.view === k ? 'on' : ''}`, ariaPressed: String(f.view === k) }, [label, el('small', { textContent: String(all.filter((d) => inView(d, k)).length) })])
+        b.addEventListener('click', () => set('view', k))
         return b
       })),
       el('div', { className: 'sl-tools' }, [
-        search(f.q, 'Code or email…', (v) => set('q', v)),
-        select(f.sort, [['new', 'Newest first'], ['ending', 'Ending soonest'], ['big', 'Biggest discount'], ['used', 'Most used']], (v) => set('sort', v), 'Sort'),
+        search(f.q, 'Code, name, email…', (v) => set('q', v)),
+        select(f.sort, DSORTS, (v) => set('sort', v), 'Sort'),
       ]),
       el('p', { className: 'sl-count', textContent: f.loading && !f.loaded ? 'Loading the codes…' : `${list.length} ${list.length === 1 ? 'code' : 'codes'}` }),
       list.length ? el('div', { className: 'sl-table is-discounts', role: 'table' }, [
-        headRow(['Code', 'Discount', 'For', 'Active', 'Used', 'Status']),
-        ...pageOf(list, f).map((d) => {
-          return rowEl(dState.editing === d.code, [
-            el('span', { className: 'sl-c-order' }, [el('strong', { textContent: d.code }), el('small', { textContent: `Made ${date(d.created)}` })]),
-            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: `${d.percent}% off` })]),
-            el('span', {}, [el('strong', { textContent: who(d) }), d.emails.length > 1 ? el('small', { textContent: d.emails.slice(0, 2).join(', ') + (d.emails.length > 2 ? '…' : '') }) : null]),
-            el('span', {}, [el('small', { textContent: when(d) })]),
-            el('span', {}, [el('strong', { textContent: d.limit ? `${d.used} / ${d.limit}` : String(d.used) }), el('small', { textContent: d.limit ? 'times' : 'times, no limit' })]),
-            el('span', {}, [badge(`d-${d.status}`, D_STATUS[d.status] || d.status)]),
-          ], () => { dState.editing = d.code; dState.said = ''; draw() }, [iconBtn('trash', `Delete ${d.code}`, () => askDiscount(d))])
-        }),
-      ]) : (f.loaded && !f.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: f.list.length ? 'No codes match' : 'No discount codes yet' }), el('p', { textContent: f.list.length ? 'Try another chip or search.' : 'Press New discount to make the first.' })]) : null),
+        headRow(['Off', 'Code', 'Ends · used', 'Status', '']),
+        ...pageOf(list, f).map(discRow),
+      ]) : (f.loaded && !p ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'Nothing here' : 'No discount codes yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Make the first one above.' })]) : null),
       pager(list, f, ['code', 'codes']),
     ]
-  }
-
-  // the panel that makes a code, or changes one
-  const discountPanel = (d) => {
-    const fresh = d === 'new'
-    const was = fresh ? null : dState.list.find((x) => x.code === d)
-    if (!fresh && !was) return []
-    const close = () => { dState.editing = null; draw() }
-    const v = { code: fresh ? newCode() : was.code, percent: fresh ? 10 : was.percent, emails: fresh ? [] : [...was.emails], everyone: fresh ? true : !was.emails.length, starts: fresh ? 0 : was.starts, lasts: '7', ends: 0, limit: '' }
-    const field = (label, kids, hint) => el('div', { className: 'sl-label' }, [el('span', { textContent: label }), ...kids, hint ? el('small', { className: 'sl-hint', textContent: hint }) : null])
-    const seg = (options, value, onPick) => {
-      const box = el('div', { className: 'sl-seg', role: 'radiogroup' })
-      const paint = (val) => box.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b.dataset.v === String(val)); b.setAttribute('aria-checked', String(b.dataset.v === String(val))) })
-      options.forEach(([val, text]) => { const b = el('button', { type: 'button', className: 'sl-stage', role: 'radio', textContent: text }); b.dataset.v = String(val); b.addEventListener('click', () => { paint(val); onPick(val) }); box.append(b) })
-      paint(value)
-      return box
-    }
-
-    // the code
-    const codeIn = el('input', { className: 'sl-input', value: v.code, maxLength: 32, readOnly: !fresh, spellcheck: false })
-    codeIn.addEventListener('input', () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })
-    const another = fresh ? button('New code', () => { codeIn.value = newCode() }, 'ia-btn ghost') : null
-
-    // how much
-    const pctIn = el('input', { className: 'sl-input sl-pct', type: 'number', min: 1, max: 100, step: 1, value: v.percent, readOnly: !fresh })
-    const presets = fresh ? seg([5, 10, 15, 20, 25, 30, 40, 50].map((n) => [n, `${n}%`]), v.percent, (n) => { pctIn.value = n }) : null
-    pctIn.addEventListener('input', () => presets && presets.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === pctIn.value)))
-
-    // who: everyone, or chosen customers (picked from the list of customers, or typed)
-    const chips = el('div', { className: 'sl-people' })
-    const paintPeople = () => chips.replaceChildren(...(v.emails.length ? v.emails.map((e) => {
-      const c = el('span', { className: 'sl-person' }, [el('span', { textContent: e }), el('button', { type: 'button', ariaLabel: `Remove ${e}`, textContent: '×' })])
-      c.querySelector('button').addEventListener('click', () => { v.emails = v.emails.filter((x) => x !== e); paintPeople() })
-      return c
-    }) : [el('small', { className: 'sl-hint', textContent: 'Nobody chosen yet.' })]))
-    const listId = 'sl-customers-list'
-    const pick = el('input', { className: 'sl-input', placeholder: 'Choose a customer, or type an email', type: 'email' })
-    pick.setAttribute('list', listId)
-    const known = customers().filter((c) => c.email)
-    const datalist = el('datalist', { id: listId }, known.map((c) => el('option', { value: c.email, label: `${c.name || c.email} · ${c.orders} ${c.orders === 1 ? 'order' : 'orders'}` })))
-    const add = () => {
-      const e = pick.value.trim().toLowerCase()
-      if (!e) return
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { panelSaid.textContent = `"${e}" is not an email address.`; return }
-      if (!v.emails.includes(e)) v.emails.push(e)
-      pick.value = ''; panelSaid.textContent = ''; paintPeople()
-    }
-    pick.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add() } })
-    pick.addEventListener('change', () => { if (known.some((c) => c.email === pick.value)) add() })
-    const whoBox = el('div', { className: 'sl-who-box' }, [el('div', { className: 'sl-pick' }, [pick, datalist, button('Add', add, 'ia-btn ghost')]), chips])
-    whoBox.hidden = v.everyone
-    const whoSeg = seg([['all', 'Everyone'], ['some', 'Chosen customers']], v.everyone ? 'all' : 'some', (val) => { v.everyone = val === 'all'; whoBox.hidden = v.everyone })
-    paintPeople()
-
-    // when
-    const startIn = el('input', { className: 'sl-input', type: 'date', value: dayInput(v.starts) })
-    const endIn = el('input', { className: 'sl-input', type: 'date', value: '' })
-    const endBox = el('div', {}, [endIn])
-    endBox.hidden = true
-    const lastsSeg = fresh ? seg([['1', '24 hours'], ['7', '7 days'], ['30', '30 days'], ['0', 'No end'], ['date', 'Until a date']], v.lasts, (val) => { v.lasts = val; endBox.hidden = val !== 'date' }) : null
-    const limitIn = el('input', { className: 'sl-input', type: 'number', min: 1, step: 1, placeholder: 'No limit', value: v.limit })
-
-    const panelSaid = el('span', { className: 'sl-said is-bad' })
-    const save = button(fresh ? 'Make the code' : 'Save changes', async () => {
-      const starts = fromDayInput(startIn.value, false) || (fresh ? Date.now() : was.starts)
-      const startAt = Math.max(starts, fresh && !startIn.value ? Date.now() : starts)
-      const ends = !fresh ? undefined : v.lasts === 'date' ? fromDayInput(endIn.value, true) : v.lasts === '0' ? 0 : Math.max(Date.now(), startAt) + Number(v.lasts) * DAY
-      if (fresh && v.lasts === 'date' && !endIn.value) { panelSaid.textContent = 'Pick the day it ends.'; return }
-      if (!v.everyone && !v.emails.length) { panelSaid.textContent = 'Choose at least one customer, or pick Everyone.'; return }
-      save.disabled = true; panelSaid.textContent = 'Saving…'
-      const body = fresh
-        ? { code: codeIn.value, percent: Number(pctIn.value), emails: v.everyone ? [] : v.emails, starts: startAt, ends, limit: Number(limitIn.value) || 0 }
-        : { code: was.code, emails: v.everyone ? [] : v.emails, starts: startAt }
-      const r = await dApi(fresh ? 'POST' : 'PATCH', body)
-      if (!r.ok) { panelSaid.textContent = r.json.message || 'Not saved. Try again.'; save.disabled = false; return }
-      const got = r.json.discount
-      dState.list = [got, ...dState.list.filter((x) => x.code !== got.code)]
-      dState.editing = got.code; dState.said = fresh ? 'Made ✓ Buyers can use it now.' : 'Saved ✓'
-      draw()
-    }, 'ia-btn')
-    const remove = fresh ? null : button('Delete code', () => askDiscount(was), 'sl-link sl-danger')
-
-    const block = (title, kids) => el('section', { className: 'sl-block' }, [el('h3', { textContent: title }), ...kids])
-    const panel = el('aside', { className: 'sl-panel', role: 'dialog', ariaModal: 'true', ariaLabel: fresh ? 'New discount' : `Discount ${was.code}` }, [
-      el('header', { className: 'sl-panel-head' }, [
-        el('div', {}, [el('div', { className: 'ia-kicker', textContent: fresh ? 'New discount' : `${was.percent}% off · used ${was.used} ${was.used === 1 ? 'time' : 'times'}` }), el('h2', { textContent: fresh ? 'Make a code' : was.code }), !fresh ? el('div', { className: 'sl-badges' }, [badge(`d-${was.status}`, D_STATUS[was.status])]) : null]),
-        button('×', close, 'sl-x'),
-      ]),
-      el('div', { className: 'sl-panel-body' }, [
-        block('The code', [field('Code buyers type', [el('div', { className: 'sl-pick' }, [codeIn, another])], fresh ? 'Letters, numbers, - and _. Make your own (MILTON10) or press New code.' : 'A code cannot be renamed: make a new one instead.')]),
-        block('How much', [presets, field('Percentage off', [pctIn], fresh ? 'Pick one above, or type any percentage from 1 to 100.' : 'Set when the code was made. For another percentage, make a new code.')]),
-        block('Who can use it', [whoSeg, whoBox, el('small', { className: 'sl-hint', textContent: 'Chosen customers type their email in the cart with the code, and pay with that email.' })]),
-        block('When', [
-          field('Starts', [startIn], 'Empty: straight away.'),
-          fresh ? field('Lasts', [lastsSeg, endBox]) : field('Ends', [el('strong', { className: 'sl-plain', textContent: was.ends ? date(was.ends) : 'No end' })], 'Set when the code was made.'),
-          fresh ? field('How many times it can be used', [limitIn], 'In total, by everyone. Empty: no limit.') : field('Used', [el('strong', { className: 'sl-plain', textContent: was.limit ? `${was.used} of ${was.limit}` : `${was.used}, no limit` })]),
-        ]),
-        el('div', { className: 'sl-save' }, [save, el('span', { className: 'sl-said', textContent: dState.said }), panelSaid]),
-        remove ? el('div', { className: 'sl-save' }, [remove]) : null,
-      ]),
-    ])
-    dState.said = ''
-    const shade = el('div', { className: 'sl-shade' })
-    shade.addEventListener('click', close)
-    return [shade, panel]
   }
 
   // ---------- drawing ----------
   const draw = () => {
     if (!root) return
     const scroll = root.scrollTop
-    const focusedSearch = document.activeElement && document.activeElement.classList.contains('sl-search')
-    const caret = focusedSearch ? document.activeElement.selectionStart : null
+    // a search box being typed in, and any list scrolled inside, stay as they are
+    const searches = [...root.querySelectorAll('.sl-search')]
+    const typing = searches.indexOf(document.activeElement)
+    const caret = typing >= 0 ? document.activeElement.selectionStart : null
+    const hadModal = Boolean(root.querySelector('.sl-modal-shade')) // drawn again: no fade in
+    const inner = Object.fromEntries([...root.querySelectorAll('[data-keep-scroll]')].map((n) => [n.dataset.keepScroll, n.scrollTop]))
     const open = state.view === 'orders' && state.open && state.orders.find((o) => o.id === state.open)
     const views = { orders: ordersView, customers: customersView, discounts: discountsView }
-    const panels = open ? orderPanel(open) : state.view === 'discounts' && dState.editing ? discountPanel(dState.editing) : []
+    const panels = open ? orderPanel(open) : []
     const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea') // typing in a panel: leave it as it is
     if (keep) return
     root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels, ...modalLayer())
     root.scrollTop = scroll
-    if (focusedSearch) { const s = root.querySelector('.sl-search'); if (s) { s.focus(); s.setSelectionRange(caret, caret) } }
+    if (hadModal) root.querySelector('.sl-modal-shade')?.classList.add('is-still')
+    root.querySelectorAll('[data-keep-scroll]').forEach((n) => { if (inner[n.dataset.keepScroll]) n.scrollTop = inner[n.dataset.keepScroll] })
+    if (typing >= 0) { const s = root.querySelectorAll('.sl-search')[typing]; if (s) { s.focus(); try { s.setSelectionRange(caret, caret) } catch { /* not a text box */ } } }
   }
   addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return
-    if (state.modal) { state.modal = null; draw(); return }
-    if (state.open || dState.editing) { state.open = null; dState.editing = null; draw() }
+    if (e.key !== 'Escape' || !root || !root.isConnected) return
+    if (state.modal) { closeModal(); return }
+    if (state.open) { state.open = null; draw() }
   })
 
   /* Called by shell.js whenever the address changes to a Sales screen. */
@@ -854,10 +1121,10 @@ window.IASales = (() => {
     const before = state.view
     state.view = ['customers', 'discounts'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
-    if (before !== state.view) { state.open = null; dState.editing = null; state.modal = null }
-    // the discounts screen also wants the customers, to offer them in its drop-down
+    if (before !== state.view) { state.open = null; state.modal = null }
+    // Customers shows each one's codes; Discounts offers every customer, account holders too
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()
-    if (state.view === 'customers' && !mState.loaded && !mState.loading) loadMembers()
+    if (state.view !== 'orders' && !mState.loaded && !mState.loading) loadMembers()
     if (!state.loaded && !state.loading) load()
     else draw()
     if (before !== view || !state.loaded) readSwitch().then(draw)

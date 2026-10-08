@@ -92,14 +92,11 @@ const adminBundle = () => ({
   name: 'admin-bundle',
   configureServer(server) {
     startAdminBackend(server)
-    // The admin's Sales screens and the cart ask the functions in /api (on Vercel). Here the same
-    // code runs with the STRIPE_SECRET_KEY from a .env.local file, and with no key, on sample
-    // orders and codes (dev/), so the screens can be worked on. There is no login on this
-    // computer, so there is no pass to check.
+    // The admin's Orders screen asks api/orders.js (on Vercel). Here the same code runs with the
+    // STRIPE_SECRET_KEY from a .env.local file, and with no key, on sample orders (dev/), so the
+    // screen can be worked on. There is no login on this computer, so there is no pass to check.
     const local = [
       ['/api/orders', 'api/orders.js', 'orders', 'dev/sample-orders.js', 'sampleOrders'],
-      ['/api/discounts', 'api/discounts.js', 'discounts', 'dev/sample-discounts.js', 'sampleDiscounts'],
-      ['/api/discount', 'api/discount.js', 'discountCheck', 'dev/sample-discounts.js', 'sampleDiscountCheck'],
     ]
     // the keys for payments, customer accounts (the database) and their emails, from a .env.local
     // file beside package.json (never committed: *.local is ignored)
@@ -115,11 +112,14 @@ const adminBundle = () => ({
       // MONGODB_URI=memory: customer accounts on a stand-in database kept in memory (dev/memory-db.js)
       if (process.env.MONGODB_URI === 'memory') { globalThis.__maTestDb ||= memoryDb(); delete process.env.MONGODB_URI }
     }
-    // paying (api/checkout.js for Stripe, api/paypal.js for PayPal), customer accounts
-    // (api/account.js) and Stripe's messages about payments (api/stripe-webhook.js) run here too,
-    // so a test key, a PayPal sandbox and the database can be tried on this computer before the
-    // site goes live. The webhook checks its message as it arrived, so it gets it untouched.
-    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js'], ['/api/contact', 'api/contact.js']]) {
+    // paying (api/checkout.js for Stripe, api/paypal.js for PayPal), discount codes (api/discount.js
+    // checks one for the cart, api/discounts.js is the admin's Discounts screen: both need the
+    // Stripe test key, and say so without it), customer accounts (api/account.js) and Stripe's
+    // messages about payments (api/stripe-webhook.js) run here too, so a test key, a PayPal sandbox
+    // and the database can be tried on this computer before the site goes live. The admin's
+    // functions let in requests to localhost without a pass (api/_session.js: adminOk), never on
+    // Vercel. The webhook checks its message as it arrived, so it gets it untouched.
+    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/discount', 'api/discount.js'], ['/api/discounts', 'api/discounts.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js'], ['/api/contact', 'api/contact.js']]) {
       server.middlewares.use(route, async (req, res, next) => {
         if ((req.url || '/').split('?')[0] !== '/') return next()
         useKeys()
@@ -127,30 +127,35 @@ const adminBundle = () => ({
         for await (const chunk of req) body += chunk
         let parsed = {}
         try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
-        const handler = (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`)).default
         const reply = {
           setHeader: (k, v) => res.setHeader(k, v),
           status(code) { res.statusCode = code; return reply },
           json(data) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); return reply },
         }
+        // a file that fails to load (a typo, or a helper it needs that changed: those are only read
+        // afresh when the dev server restarts) answers with the error instead of stopping the server
         try {
+          const handler = (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`)).default
           await handler({ method: req.method, body: parsed, rawBody: body, url: req.url, socket: req.socket, headers: { ...req.headers, 'x-forwarded-proto': 'http' } }, reply)
         } catch (e) { if (!res.writableEnded) reply.status(500).json({ message: `${file} failed: ${e.message}` }) }
       })
     }
     for (const [route, file, name, sampleFile, sampleName] of local) {
       server.middlewares.use(route, async (req, res, next) => {
-        if ((req.url || '/').split('?')[0] !== '/') return next() // "/api/discount" must not answer "/api/discounts"
+        if ((req.url || '/').split('?')[0] !== '/') return next()
         useKeys()
         let body = ''
         for await (const chunk of req) body += chunk
         let parsed = {}
         try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
         // the orders also come from the database (PayPal orders), so it alone is enough for them
-        const run = process.env.STRIPE_SECRET_KEY || (name === 'orders' && (globalThis.__maTestDb || (/^mongodb/.test(process.env.MONGODB_URI || '') && !/<[^>]*>/.test(process.env.MONGODB_URI))))
-          ? (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`))[name]
-          : (await import(pathToFileURL(resolve(sampleFile)).href))[sampleName]
-        const { status, json } = await run({ method: req.method, body: parsed })
+        let status = 500, json = {}
+        try {
+          const run = process.env.STRIPE_SECRET_KEY || (name === 'orders' && (globalThis.__maTestDb || (/^mongodb/.test(process.env.MONGODB_URI || '') && !/<[^>]*>/.test(process.env.MONGODB_URI))))
+            ? (await import(`${pathToFileURL(resolve(file)).href}?t=${Date.now()}`))[name]
+            : (await import(pathToFileURL(resolve(sampleFile)).href))[sampleName]
+          ;({ status, json } = await run({ method: req.method, body: parsed }))
+        } catch (e) { json = { message: `${file} failed: ${e.message}` } }
         res.statusCode = status
         res.setHeader('Content-Type', 'application/json')
         res.setHeader('Cache-Control', 'no-store')

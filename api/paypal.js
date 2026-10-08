@@ -1,7 +1,7 @@
 import { priceCart, takes, read } from './_cart.js'
 import { buyer } from './_buyer.js'
 import { db, dbReady } from './_db.js'
-import { boughtOf, readBought, recordOrder, shapeAddress, takeFromCart } from './_orders.js'
+import { boughtOf, codeUsed, readBought, recordOrder, shapeAddress, takeFromCart } from './_orders.js'
 
 /* Paying with PayPal. Two steps, both POST:
    - the cart (see _cart.js): works out what it costs from the site's own content, asks PayPal for
@@ -41,6 +41,9 @@ const savePaid = async (id, said) => {
   })
   // paid: what was bought leaves the buyer's saved cart
   if (before && before.userId) await takeFromCart(before.userId, readBought(before.bought))
+  // a discount code on it: counted (Stripe does not see PayPal's uses), and a reward code shows as used
+  const code = before && before.code
+  if (code) { try { await codeUsed({ code, promoId: before.promoId, viaPaypal: true, userId: before.userId, ref: `pp_${id}` }) } catch (e) { console.error('code use not noted:', e.message) } }
 }
 
 const token = async () => {
@@ -81,11 +84,12 @@ export default async function handler(req, res) {
   }
 
   // step one: an order for the cart
-  const cart = await priceCart(body)
-  if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message })
-  const { shop, lines, name, what, summary, cents, off } = cart
-  if (!takes(shop, 'paypal')) return res.status(403).json({ message: 'PayPal is switched off. Pay by card instead.' })
+  // the logged-in customer first: a reward code in the cart works only for them
   const { user, mustLogIn } = await buyer(req)
+  const cart = await priceCart(body, user)
+  if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message, ...(cart.error.code ? { code: true } : {}) })
+  const { shop, lines, name, what, summary, cents, off, deal } = cart
+  if (!takes(shop, 'paypal')) return res.status(403).json({ message: 'PayPal is switched off. Pay by card instead.' })
   if (mustLogIn) return res.status(401).json({ login: true, message: 'Log in, or make an account, to buy.' })
   const currency = String(shop.currency || 'eur').toUpperCase()
   const amount = (c) => ({ currency_code: currency, value: money(c) })
@@ -112,7 +116,7 @@ export default async function handler(req, res) {
     if (!go) throw new Error('paypal: no approval link')
     // kept as waiting until the buyer comes back and the payment is taken
     try {
-      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: lines.map((l) => ({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 })), bought: boughtOf(lines), amount: (cents - off) / 100, discount: off / 100, discountCode: cart.deal ? cart.deal.code : '', currency, summary, status: 'pending', test: sandbox() })
+      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: lines.map((l) => ({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 })), bought: boughtOf(lines), amount: (cents - off) / 100, discount: off / 100, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
     } catch (e) { console.error('paypal order not saved:', e.message) }
     return res.status(200).json({ url: go.href })
   } catch (e) {

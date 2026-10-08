@@ -23,6 +23,15 @@ export const goodPass = (pass) => {
   return tag === 'ia' && /^\d+$/.test(until || '') && Boolean(sig) && same(sig, mark(until)) && Number(until) > Date.now()
 }
 
+/* Is this request from the admin? Their pass in the Authorization header ("token <pass>" or
+   "Bearer <pass>"), or, on this computer only (npm run dev, never on Vercel), any request made to
+   localhost: the admin here has no login, it saves straight to the files. */
+export const adminOk = (req) => {
+  const pass = String((req && req.headers && req.headers.authorization) || '').replace(/^(token|bearer)\s+/i, '')
+  if (pass && configured() && goodPass(pass)) return true
+  return !process.env.VERCEL && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(String((req && req.headers && req.headers.host) || ''))
+}
+
 // the one repository the admin may touch: the one this site was deployed from
 export const repo = () => (process.env.VERCEL_GIT_REPO_OWNER && process.env.VERCEL_GIT_REPO_SLUG
   ? `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`

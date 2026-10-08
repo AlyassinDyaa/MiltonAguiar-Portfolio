@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db, dbReady } from './_db.js'
-import { ours, paidWithOf, readBought, recordOrder, shapeAddress, takeFromCart } from './_orders.js'
+import { codeUsed, ours, paidWithOf, readBought, recordOrder, shapeAddress, stripeCodes, takeFromCart } from './_orders.js'
 
 /* Stripe tells the site here when something happens to a payment, so the order lands in the
    database (and so in the buyer's account) whether or not they come back to the site.
@@ -55,6 +55,13 @@ export default async function handler(req, res) {
       const piId = typeof o.payment_intent === 'string' ? o.payment_intent : (o.payment_intent && o.payment_intent.id) || ''
       const payment = piId ? await stripe(`payment_intents/${piId}?expand[]=latest_charge`) : null
       const charge = payment && payment.latest_charge && typeof payment.latest_charge === 'object' ? payment.latest_charge : null
+      // the discount code on it: the one the cart sent (metadata), or else the promotion code Stripe applied
+      let usedCode = (o.metadata && (o.metadata.code || o.metadata.discount)) || ''
+      try {
+        const promo = Array.isArray(o.discounts) && o.discounts.find((x) => x && x.promotion_code)
+        if (!usedCode && promo) { const p = await stripeCodes(`promotion_codes/${typeof promo.promotion_code === 'string' ? promo.promotion_code : promo.promotion_code.id}`); usedCode = p.ok ? p.said.code : '' }
+      } catch (e) { console.error('discount code not read:', e.message) }
+      usedCode = String(usedCode || '').toUpperCase()
       await recordOrder({
         ref: o.id,
         provider: 'stripe',
@@ -70,13 +77,15 @@ export default async function handler(req, res) {
         discount: ((o.total_details && o.total_details.amount_discount) || 0) / 100,
         currency: String(o.currency || '').toUpperCase(),
         summary: (o.metadata && o.metadata.order) || '',
-        discountCode: (o.metadata && o.metadata.discount) || '',
+        discountCode: usedCode,
         status: 'paid',
         test: !o.livemode,
         createdAt: new Date((o.created || Date.now() / 1000) * 1000),
       })
       // paid: what was bought leaves the buyer's saved cart, even if they never come back to the site
       await takeFromCart(userId, readBought(o.metadata && o.metadata.bought))
+      // a reward code shows as used in its owner's account (Stripe counts the use itself)
+      if (usedCode) { try { await codeUsed({ code: usedCode, viaPaypal: false, userId, ref: o.id }) } catch (e) { console.error('code use not noted:', e.message) } }
     }
     if (event.type === 'charge.refunded' && o && o.payment_intent && o.refunded) {
       await (await db()).collection('orders').updateOne({ pi: o.payment_intent }, { $set: { status: 'refunded', updatedAt: new Date() } })

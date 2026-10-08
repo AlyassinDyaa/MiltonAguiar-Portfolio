@@ -10,28 +10,20 @@ const notePaying = (body) => {
 /* Who takes the payment, for the line under the buttons. */
 export const payLine = () => { const w = payWays(); return w.card && w.paypal ? 'Secure checkout by Stripe or PayPal' : w.paypal ? 'Secure checkout with PayPal' : 'Secure checkout by Stripe' }
 
-/* Ask the site's checkout function (api/checkout.js) for a Stripe payment page and go there.
-   Answers with a message when it cannot. */
-export async function checkout(body, way = 'card') {
+/* Ask the site's checkout function (api/checkout.js for a Stripe payment page, api/paypal.js for
+   PayPal's) and go there. The body is the cart, { items, code } (code: the discount code in the
+   cart, if any), or one piece. Answers with a message when it cannot; when the discount code is
+   the trouble (it ran out meanwhile), dropCode takes it out of the cart, which shows the full
+   price again. */
+export async function checkout(body, way = 'card', dropCode) {
   try {
     const answer = await fetch(way === 'paypal' ? '/api/paypal' : '/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const said = await answer.json().catch(() => ({}))
     if (answer.ok && said.url) { notePaying(body); window.location.href = said.url; return null }
+    if (said.code && dropCode) dropCode()
     return said.message || 'The checkout did not answer. Try again in a moment.'
   } catch {
     return 'Could not reach the checkout. Check the connection and try again.'
-  }
-}
-
-/* Ask whether a discount code is good (api/discount.js): { ok, code, percent, needsEmail } or
-   { ok: false, message, needsEmail }. The checkout checks it again itself. */
-export async function checkCode(code, email) {
-  try {
-    const answer = await fetch('/api/discount', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim(), email: email.trim() }) })
-    const said = await answer.json().catch(() => ({}))
-    return answer.ok || said.message ? said : { ok: false, message: 'The code could not be checked. Try again in a moment.' }
-  } catch {
-    return { ok: false, message: 'Could not reach the shop. Check the connection and try again.' }
   }
 }
 

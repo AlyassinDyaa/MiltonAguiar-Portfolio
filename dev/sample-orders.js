@@ -16,8 +16,6 @@ const ITEMS = [
 ]
 const STAGES = ['new', 'new', 'packed', 'shipped', 'shipped', 'delivered', 'delivered', 'cancelled']
 
-import { clearSampleDiscounts } from './sample-discounts.js'
-
 let made = null
 const make = () => {
   const day = 24 * 60 * 60 * 1000
@@ -50,7 +48,7 @@ export function sampleOrders({ method, body }) {
   if (body && body.action === 'clear-test') {
     const orders = made.filter((o) => !o.hidden).length
     made.forEach((o) => { o.hidden = true })
-    return { status: 200, json: { orders, codes: clearSampleDiscounts() } }
+    return { status: 200, json: { orders, codes: 0 } } // discount codes live in Stripe only, never here
   }
   const o = made.find((x) => x.paymentIntent === (body && body.paymentIntent))
   if (!o) return { status: 400, json: { message: 'That order has no payment to save to.' } }

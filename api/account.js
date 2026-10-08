@@ -1,10 +1,9 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
-import { forCustomer } from './_orders.js'
+import { forCustomer, stripeCodes, usesHere } from './_orders.js'
 import { accountsMode } from './_buyer.js'
-import { packEmails, stripe } from './_discounts.js'
-import { goodPass } from './_session.js'
+import { adminOk } from './_session.js'
 import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
@@ -29,6 +28,8 @@ import {
         { action: 'saved', saved }                         the pieces kept for later (slugs)
         { action: 'cart', cart }                          keeps the cart with the account
         { action: 'orders' }                              this customer's orders, newest first
+        { action: 'rewards' }                             every reward, earned or not, and how far they have come
+        { action: 'seenGifts' }                           what the admin gave them (rewards, codes) is no longer new
         { action: 'removeOrder', number, password }       takes an order out of their account (the shop keeps it)
         { action: 'everywhere' }                          logs out every device
         { action: 'delete', password }                    deletes the account (orders stay, unlinked)
@@ -69,8 +70,10 @@ const freePictures = () => {
 }
 /* ---------- rewards (Shop → Rewards in the admin): profile pictures, membership card designs and
    discounts a customer earns, by confirming their email, by a number of orders (3, 6, 10...), or
-   by a number of pieces collected. Each has an id made from its name. A discount is a personal
-   code, made in Stripe the moment it is earned, that only this customer's email can use. */
+   by a number of pieces collected, or as a gift from the admin. Each has an id made from its name.
+   A discount is a personal code, made in Stripe when the customer first looks at Rewards after
+   earning it (one use, for the days set on the reward), that only their account can use; it is
+   listed in the admin's Discounts screen too. */
 const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
 const rewardsList = () => {
   const page = readJson('content/pages/rewards.json') || {}
@@ -87,7 +90,7 @@ const rewardsList = () => {
       return {
         id: slug(r.name) || slug(r.picture), name: String(r.name || ''), kind: kindOf(r), earnedBy: by,
         count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)),
-        picture: String(r.picture || ''), cardArt: String(r.cardArt || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
+        picture: String(r.picture || ''), face: String(r.face || ''), cardLook: String(r.cardLook || 'art'), cardArt: String(r.cardArt || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
       }
     })
 }
@@ -101,21 +104,40 @@ const progressOf = async (d, user) => {
 const giftsOf = (user) => (Array.isArray(user && user.gifts) ? user.gifts.map((g) => g && g.id).filter(Boolean) : [])
 const earnedOnItsOwn = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
 const earns = (r, p) => (p.gifts || []).includes(r.id) || earnedOnItsOwn(r, p)
-// a discount reward earned: its personal code, made once in Stripe (one use, only with this email, for
-// the days the admin set) and kept with the customer
+// Stripe, at the version promotion codes are read with everywhere on the site (api/_orders.js)
+const stripePost = async (path, fields) => {
+  const got = await stripeCodes(path, { method: 'POST', body: new URLSearchParams(Object.entries(fields).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])).toString() })
+  if (!got.ok) throw new Error((got.said.error && got.said.error.message) || `stripe ${got.status}`)
+  return got.said
+}
+/* A discount reward earned: its personal code, made once in Stripe (a coupon and one promotion code:
+   one use, for the days the admin set, only for this customer's account) and kept with the customer
+   as { code, percent, until (ms), promoId }, with usedAt once it has paid for an order. The reward
+   is claimed in the database first, so two requests at once (two tabs) never make two codes.
+   A code from before promotion codes (no promoId) no longer works at the checkout: a new one
+   takes its place. */
 const rewardCode = async (d, user, r) => {
   const had = user.rewardCodes && user.rewardCodes[r.id]
-  if (had) return had
+  if (had && had.code && had.promoId) return had
   if (!process.env.STRIPE_SECRET_KEY) return null // discounts live in Stripe: none without its key
-  // the site's initials and the percentage, then a random part: MA10-3DB3B3
-  const initials = String(((readJson('content/site/brand.json') || {}).name) || 'MA').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || 'MA'
-  const code = `${initials}${Math.round(r.percent)}-${randomBytes(3).toString('hex').toUpperCase()}`
-  const until = Date.now() + r.days * 864e5
-  const fields = { id: code, percent_off: String(r.percent), duration: 'once', name: `${r.percent}% off · ${r.name}`.slice(0, 40), redeem_by: String(Math.floor(until / 1000)), max_redemptions: '1', 'metadata[ma]': '1', 'metadata[starts]': String(Date.now()), 'metadata[reward]': r.id, 'metadata[member]': String(user.memberNo || '') }
-  for (const [k, v] of Object.entries(packEmails([user.email]))) fields[`metadata[${k}]`] = v
-  await stripe('coupons', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(fields).toString() })
-  const got = { code, percent: r.percent, until }
-  await d.collection('users').updateOne({ _id: user._id }, { $set: { [`rewardCodes.${r.id}`]: got } })
+  const users = d.collection('users')
+  const key = `rewardCodes.${r.id}`
+  // free to make: none yet, an old code, or a claim left behind more than two minutes ago
+  const claim = await users.updateOne({ _id: user._id, $or: [{ [key]: { $exists: false } }, { [`${key}.code`]: { $exists: true }, [`${key}.promoId`]: { $exists: false } }, { [`${key}.pending`]: { $lt: Date.now() - 120000 } }] }, { $set: { [key]: { pending: Date.now() } } })
+  if (!claim.modifiedCount) return null // being made by another request this moment: shown on the next look
+  const forget = () => users.updateOne({ _id: user._id }, { $unset: { [key]: '' } })
+  const until = Math.floor((Date.now() + r.days * 864e5) / 1000)
+  let coupon
+  try { coupon = await stripePost('coupons', { percent_off: r.percent, duration: 'once', name: `${r.percent}% off · ${r.name}`.slice(0, 40), redeem_by: until, 'metadata[ma]': '1', 'metadata[reward]': r.id }) } catch (err) { await forget(); throw err }
+  let promo = null
+  for (let attempt = 0; attempt < 3 && !promo; attempt++) {
+    // the site's letters and the percentage, then a random part: MA10-3DB3B3
+    const code = `MA${Math.round(r.percent)}-${randomBytes(3).toString('hex').toUpperCase()}`
+    try { promo = await stripePost('promotion_codes', { coupon: coupon.id, code, max_redemptions: 1, expires_at: until, 'metadata[ma]': '1', 'metadata[reward]': r.id, 'metadata[email]': user.email, 'metadata[name]': user.name || '', 'metadata[member]': String(user.memberNo || '') }) } catch { /* that code was taken: another */ }
+  }
+  if (!promo) { await forget(); return null } // tried again next time
+  const got = { code: promo.code, percent: r.percent, until: until * 1000, promoId: promo.id }
+  await users.updateOne({ _id: user._id }, { $set: { [key]: got } })
   return got
 }
 const rewardPictures = () => rewardsList().filter((r) => r.kind === 'picture' && r.earnedBy === 'verify').map((r) => r.picture) // given on confirming
@@ -160,6 +182,20 @@ const giveReward = async (users, user) => {
   return { rewards, avatar }
 }
 
+// discount codes the admin gave this email before it had an account (api/discounts.js holds them):
+// once the address is confirmed they move into the account, as new gifts
+const claimHeld = async (d, user) => {
+  if (!user) return
+  try {
+    const held = await d.collection('heldCodes').find({ email: user.email }).toArray()
+    if (!held.length) return
+    const codes = (Array.isArray(user.giftCodes) ? user.giftCodes : []).filter((g) => !held.some((h) => h.entry.id === g.id))
+    const fresh = (Array.isArray(user.newGifts) ? user.newGifts : []).filter((g) => !held.some((h) => g === `code:${h.entry.id}`))
+    await d.collection('users').updateOne({ _id: user._id }, { $set: { giftCodes: [...codes, ...held.map((h) => h.entry)], newGifts: [...fresh, ...held.map((h) => `code:${h.entry.id}`)] } })
+    await d.collection('heldCodes').deleteMany({ _id: { $in: held.map((h) => h._id) } })
+  } catch (e) { console.error('held codes not moved:', e.message) }
+}
+
 const sendVerify = async (req, user) => {
   const token = await makeToken(user._id, 'verify', VERIFY_HOURS * 60)
   // the reward, shown in the email: the first reward picture (the built-in shield as a PNG, which every
@@ -179,64 +215,86 @@ const sendVerify = async (req, user) => {
 }
 
 /* ---------- the admin's side: members and gifted rewards
-   { action: 'adminMembers' }                     every account: { members, rewards }
-   { action: 'adminGift', email, reward, note }   gives a reward (emails them; a discount gets its code)
-   { action: 'adminUngift', email, reward }       takes a gift back (a discount code already made keeps working)
+   { action: 'adminMembers' }                           every account: { members, rewards }
+   { action: 'adminGift', email, reward, note, tell }   gives a reward; tell (on unless false) emails them.
+        A discount's code is made when they next look at Rewards in their account.
+   { action: 'adminUngift', email, reward }             takes a gift back (a discount code already made keeps working)
    Only with the admin's pass (on this computer, the admin has no login, so none is asked). */
-const isAdmin = (req) => {
-  const pass = String(req.headers.authorization || '').replace(/^(token|bearer)\s+/i, '')
-  if (pass && goodPass(pass)) return true
-  return !process.env.VERCEL && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(String(req.headers.host || ''))
+/* The picture a customer has on, as their account shows it: a free picture or a reward picture
+   ("icon:<picture>"), or one of the pieces they bought (its slug); with its crop ("x,y,zoom"). */
+const pictureOf = (avatar) => {
+  if (!avatar) return null
+  if (avatar.startsWith('icon:')) {
+    const src = avatar.slice(5)
+    const page = readJson('content/pages/account.json') || {}
+    const listed = [...(Array.isArray(page.icons) ? page.icons : []), ...(Array.isArray(page.verifiedIcons) ? page.verifiedIcons : []), ...rewardsList()].find((i) => i && i.picture === src)
+    return { src, face: String((listed && listed.face) || '') }
+  }
+  if (!/^[a-z0-9-]{1,80}$/.test(avatar)) return null
+  const piece = readJson(`content/work/${avatar}.json`)
+  return piece && piece.src ? { src: piece.src, face: String(piece.face || '') } : null
 }
+const memberOf = (u) => ({
+  email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
+  gifts: (Array.isArray(u.gifts) ? u.gifts : []).filter((g) => g && g.id).map((g) => ({ id: g.id, at: g.at, note: g.note || '' })),
+  newGifts: Array.isArray(u.newGifts) ? u.newGifts : [], // given and not seen by them yet
+  picture: pictureOf(typeof u.avatar === 'string' ? u.avatar : ''),
+})
 const adminAction = async (req, d, users, action, body) => {
   const rewards = rewardsList()
   if (action === 'adminMembers') {
-    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, createdAt: 1, gifts: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
     return [200, {
-      rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, cardArt: r.cardArt, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
-      members: all.map((u) => ({ email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt, gifts: (Array.isArray(u.gifts) ? u.gifts : []).map((g) => ({ id: g.id, at: g.at, note: g.note || '' })) })),
+      rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, face: r.face, cardLook: r.cardLook, cardArt: r.cardArt, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
+      members: all.map(memberOf),
     }]
   }
   const user = await users.findOne({ email: tidyEmail(body.email) })
   if (!user) return [404, { message: 'There is no account with that email.' }]
+  if (action === 'adminUngift') {
+    // also a reward taken off the Rewards list since it was given
+    const id = clean(body.reward, 80)
+    if (!id) return [400, { message: 'Which reward?' }]
+    await users.updateOne({ _id: user._id }, { $pull: { gifts: { id }, newGifts: id } })
+    return [200, { ok: true, member: memberOf({ ...user, gifts: (user.gifts || []).filter((g) => g && g.id !== id), newGifts: (user.newGifts || []).filter((g) => g !== id) }) }]
+  }
   const r = rewards.find((x) => x.id === String(body.reward || ''))
   if (!r) return [400, { message: 'That reward is no longer offered. Reload and pick another.' }]
-  if (action === 'adminUngift') {
-    await users.updateOne({ _id: user._id }, { $pull: { gifts: { id: r.id } } })
-    return [200, { ok: true }]
-  }
   if (action !== 'adminGift') return [400, { message: 'Unknown action.' }]
   const p = await progressOf(d, user)
   if (p.gifts.includes(r.id)) return [409, { message: `${user.name || user.email} already has "${r.name}" as a gift.` }]
   if (earnedOnItsOwn(r, p)) return [409, { message: `${user.name || user.email} has already earned "${r.name}".` }]
   const note = clean(body.note, 300)
-  await users.updateOne({ _id: user._id }, { $push: { gifts: { id: r.id, at: Date.now(), note } } })
-  // a discount: its personal code now, so the email can carry it
-  let code = null
-  if (r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('gift code not made:', e.message) } }
-  const what = r.kind === 'picture' ? 'a profile picture' : r.kind === 'card' ? 'a membership card design' : `${r.percent}% off an order`
-  const pic = r.kind === 'picture' && r.picture ? { src: r.picture === '/avatars/confirmed.svg' ? '/email/confirmed.png' : r.picture, title: r.name, text: ' Yours to use as your profile picture.' }
-    : r.kind === 'card' && r.cardArt ? { src: r.cardArt, title: r.name, text: ' A new look for your membership card.' } : null
+  const gift = { id: r.id, at: Date.now(), note }
+  // new to them: their account page says so until they have seen it
+  await users.updateOne({ _id: user._id }, { $push: { gifts: gift }, $addToSet: { newGifts: r.id } })
+  const member = memberOf({ ...user, gifts: [...(Array.isArray(user.gifts) ? user.gifts : []), gift], newGifts: [...new Set([...(Array.isArray(user.newGifts) ? user.newGifts : []), r.id])] })
   let mailed = false
-  try {
-    await sendMail({
-      to: user.email,
-      subject: `A gift for you: ${r.name}`,
-      kicker: 'A gift',
-      title: 'A gift for you',
-      lines: [
-        `Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`,
-        `You have been given ${what}: "${r.name}". It is already in your account.`,
-        ...(note ? [note] : []),
-        ...(code ? [`Your code: ${code.code}. It takes ${code.percent}% off one order, until ${new Date(code.until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}. Only your email can use it.`] : []),
-      ],
-      picture: pic,
-      button: { label: r.kind === 'discount' ? 'Go to the shop' : 'See your rewards', url: `${siteUrl(req)}${r.kind === 'discount' ? '/shop' : '/account?tab=rewards'}` },
-      after: 'Thank you for being a member.',
-    })
-    mailed = true
-  } catch (e) { console.error('gift email not sent:', e.message) }
-  return [200, { ok: true, mailed, code: code ? code.code : null }]
+  if (body.tell !== false) {
+    const first = (user.name || '').split(' ')[0]
+    const what = r.kind === 'discount' ? `${r.percent}% off one order` : r.kind === 'card' ? `the ${r.name} membership card design` : `the ${r.name} profile picture`
+    const pic = r.kind === 'picture' && r.picture ? { src: r.picture === '/avatars/confirmed.svg' ? '/email/confirmed.png' : r.picture, title: r.name, text: ' Now one of your profile pictures.' }
+      : r.kind === 'card' && r.cardArt ? { src: r.cardArt, title: r.name, text: ' A new look for your membership card.' } : null
+    // worded as the account notice it is (a subject like "A gift for you" is what spam filters look for)
+    try {
+      mailed = await sendMail({
+        to: user.email,
+        subject: `New in your Milton Aguiar account: ${r.name}`,
+        kicker: 'Your account',
+        title: 'A new reward',
+        lines: [
+          `Hi${first ? ` ${first}` : ''},`,
+          `Milton has added a reward to your account: ${what}.`,
+          ...(note ? [note] : []),
+          r.kind === 'discount' ? 'Your code is under Rewards in your account, ready for your next order.' : 'You can use it from Details in your account.',
+        ],
+        picture: pic,
+        button: { label: 'See your gift', url: `${siteUrl(req)}/account?tab=rewards` },
+        after: 'You are getting this because you have an account on the Milton Aguiar site.',
+      })
+    } catch (e) { console.error('gift email not sent:', e.message) }
+  }
+  return [200, { ok: true, mailed: Boolean(mailed), member }]
 }
 
 export default async function handler(req, res) {
@@ -262,7 +320,7 @@ export default async function handler(req, res) {
 
     // ---------- the admin (Sales → Customers): the members, and rewards given to them as gifts
     if (action.startsWith('admin')) {
-      if (!isAdmin(req)) return say(res, 401, { message: 'Your login has run out. Sign out of the admin and sign in again.' })
+      if (!adminOk(req)) return say(res, 401, { message: 'Your login has run out. Sign out of the admin and sign in again.' })
       return say(res, ...(await adminAction(req, d, users, action, body)))
     }
 
@@ -345,6 +403,7 @@ export default async function handler(req, res) {
       // a reset link reached the inbox, so the address is confirmed too; every other login ends
       await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password), verified: true } })
       const given = user.verified ? { avatar: user.avatar } : await giveReward(users, { ...user, verified: true })
+      await claimHeld(d, user)
       user.avatar = given.avatar
       await d.collection('sessions').deleteMany({ userId: user._id })
       await forgetTries(`login:${user.email}`)
@@ -356,6 +415,7 @@ export default async function handler(req, res) {
       const token = await spendToken(body.token, 'verify')
       if (!token) return say(res, 400, { message: 'This link has run out or has been used. Log in and ask for a new one.' })
       await users.updateOne({ _id: token.userId }, { $set: { verified: true } })
+      await claimHeld(d, await users.findOne({ _id: token.userId }))
       const { rewards } = await giveReward(users, await users.findOne({ _id: token.userId }))
       const user = await currentUser(req)
       return say(res, 200, { verified: true, rewards, user: publicUser(user) })
@@ -373,9 +433,35 @@ export default async function handler(req, res) {
         const earned = earns(r, p)
         let code = null
         if (earned && r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('reward code not made:', e.message) } }
-        list.push({ id: r.id, name: r.name, kind: r.kind, earnedBy: r.earnedBy, count: r.count, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined, earned, gifted: p.gifts.includes(r.id) && !earnedOnItsOwn(r, p), code })
+        // the code as the customer sees it (null while it is being made: the page asks again)
+        const shown = code && code.code ? { code: code.code, percent: code.percent, until: code.until, ...(code.usedAt ? { usedAt: code.usedAt } : {}) } : null
+        list.push({ id: r.id, name: r.name, kind: r.kind, earnedBy: r.earnedBy, count: r.count, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined, earned, gifted: p.gifts.includes(r.id) && !earnedOnItsOwn(r, p), code: shown })
       }
-      return say(res, 200, { progress: p, rewards: list })
+      // the discount codes the admin gave them (Sales → Discounts): ready, used, or ended. Stripe is
+      // asked how each stands; when it cannot say, a code shows as ready (the cart checks it anyway)
+      const giftCodes = []
+      for (const g of Array.isArray(user.giftCodes) ? user.giftCodes : []) {
+        if (!g || !g.id) continue
+        let state = g.usedAt ? 'used' : 'ready'
+        if (state === 'ready' && process.env.STRIPE_SECRET_KEY) {
+          try {
+            const got = await stripeCodes(`promotion_codes/${encodeURIComponent(g.id)}`)
+            if (got.ok) {
+              const pc = got.said
+              if (pc.max_redemptions && (pc.times_redeemed || 0) + (await usesHere(String(g.code).toUpperCase())) >= pc.max_redemptions) state = 'used'
+              else if (!pc.active || (pc.expires_at && pc.expires_at * 1000 < Date.now())) state = 'ended'
+            }
+          } catch (e) { console.error('gift code not checked:', e.message) }
+        }
+        if (state === 'ready' && g.until && g.until < Date.now()) state = 'ended'
+        giftCodes.push({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, state, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })
+      }
+      return say(res, 200, { progress: p, rewards: list, giftCodes })
+    }
+
+    if (action === 'seenGifts') {
+      await users.updateOne({ _id: user._id }, { $set: { newGifts: [] } })
+      return say(res, 200, { user: publicUser({ ...user, newGifts: [] }) })
     }
 
     if (action === 'resend') {

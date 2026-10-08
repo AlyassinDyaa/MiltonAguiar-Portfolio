@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { check } from './_discounts.js'
+import { checkCode, discountCents } from './_orders.js'
 
 /* What a cart costs, worked out on the server from the site's own content (a leading underscore
    keeps Vercel from serving this file). Shared by the two ways to pay, Stripe (checkout.js) and
    PayPal (paypal.js), so both always charge the same.
 
-   The site sends the cart as { items: [{ slug, size, signed, qty }], discount: { code, email } }
-   (or a single piece as { slug, size, signed }). Every price, sale price, size price and
-   signature extra is read here, never taken from the browser, and a discount code is checked
-   again against Stripe. */
+   The site sends the cart as { items: [{ slug, size, signed, qty }], code } (or a single piece as
+   { slug, size, signed }). Every price, sale price, size price and signature extra is read here,
+   never taken from the browser, and a discount code is checked again against Stripe, for the
+   buyer paying (a reward code works only for the customer it was made for). */
 export const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return null } }
 const MAX_LINES = 20
 const MAX_QTY = 10
@@ -17,9 +17,11 @@ const MAX_QTY = 10
 /* How the shop takes payment: 'stripe', 'paypal' or 'both' (Shop -> Settings & payments). */
 export const takes = (shop, way) => { const p = shop.payments || 'stripe'; return p === 'both' || p === way }
 
-/* Answers { error: { status, message } } or { shop, lines, deal, choice, name(l), what(l), summary, cents, off } */
-export async function priceCart(body) {
-  const no = (status, message) => ({ error: { status, message } })
+/* Answers { error: { status, message, code? } } or { shop, lines, deal, choice, name(l), what(l), summary, cents, off }.
+   `user` is the logged-in customer (or null); deal is { code, percent, label, promoId } or null.
+   error.code is true when the discount code is the trouble: the cart then drops it. */
+export async function priceCart(body, user = null) {
+  const no = (status, message, extra = {}) => ({ error: { status, message, ...extra } })
   const shop = read('content/site/shop.json') || {}
   if (!shop.enabled) return no(403, 'Online purchases are switched off at the moment.')
   const b = body && typeof body === 'object' ? body : {}
@@ -60,16 +62,17 @@ export async function priceCart(body) {
     lines.push({ slug, piece, size, signed, cents, qty })
   }
 
-  // a discount code: good now, and for this buyer
+  // a discount code from the cart: still good now, and for this buyer
   let deal = null
-  if (b.discount && b.discount.code) {
-    deal = await check(b.discount.code, b.discount.email)
-    if (!deal.ok) return no(400, deal.message)
+  if (b.code) {
+    const c = await checkCode(b.code, user)
+    if (!c.ok) return no(409, `${c.message} Remove it from the cart to pay the full price.`, { code: true })
+    deal = { code: c.code, percent: c.percent, label: c.label, promoId: c.promoId }
   }
   const cents = lines.reduce((t, l) => t + l.cents * l.qty, 0)
   return {
     shop, lines, deal, choice, cents,
-    off: deal ? Math.round((cents * deal.percent) / 100) : 0,
+    off: deal ? discountCents(cents, deal.percent) : 0,
     name: (l) => `${String(l.piece.title || l.slug).slice(0, 90)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${choice ? (l.signed ? ' (signed)' : ' (unsigned)') : ''}`,
     what: (l) => typeNote(l.piece.type) || shop.note || '',
     // what was ordered, readable in the dashboard: "raptor A3 x2 signed, hulk x1"

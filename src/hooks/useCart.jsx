@@ -11,9 +11,13 @@ import { useAccount } from './useAccount'
    empties it on this device.
    Paying: what goes to the payment page is noted first (notePaying, in data/checkout.js). Back from
    paying, settle() takes exactly those lines out of the cart, also when the account's saved cart
-   arrives a moment later (the server takes them out of the saved cart too, once paid). */
+   arrives a moment later (the server takes them out of the saved cart too, once paid).
+   A discount code typed into the cart is checked by the site (api/discount.js) and kept for this
+   visit: subtotal is what the pieces come to, off what the code takes off, total what is paid. */
 const KEY = 'ma.cart'
 export const PAYING = 'ma.paying'
+const CODE = 'ma.code' // the discount code in the cart: { code, percent, label }
+const loadCode = () => { try { const c = JSON.parse(sessionStorage.getItem(CODE) || 'null'); return c && c.code && c.percent > 0 ? c : null } catch { return null } }
 const MAX_QTY = 10
 const Cart = createContext(null)
 const clamp = (n) => Math.min(MAX_QTY, Math.max(1, Math.round(Number(n) || 1)))
@@ -78,11 +82,29 @@ export function CartProvider({ children }) {
     const gone = Array.isArray(list) ? (l) => list.some(([slug, size, signed]) => l.slug === slug && (l.size || '') === size && Boolean(l.signed) === Boolean(signed)) : () => true
     if (!owner.current) bought.current = gone
     setRaw((r) => r.filter((l) => !gone(l)))
+    setDiscount(null) // the code went with the order
   }, [])
 
   const count = lines.reduce((n, l) => n + l.qty, 0)
-  const total = lines.reduce((n, l) => n + l.qty * l.each, 0)
-  const value = { lines, count, total, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw }
+  const subtotal = lines.reduce((n, l) => n + l.qty * l.each, 0)
+
+  /* A discount code typed into the cart: checked by the site, then the percentage comes off the
+     whole order, rounded the way Stripe rounds it, so the cart shows exactly what the payment
+     page charges. Kept for this visit; it goes once the order is paid. */
+  const [discount, setDiscount] = useState(loadCode)
+  useEffect(() => { try { if (discount) sessionStorage.setItem(CODE, JSON.stringify(discount)); else sessionStorage.removeItem(CODE) } catch { /* only for this page */ } }, [discount])
+  const applyCode = useCallback(async (typed) => {
+    try {
+      const answer = await fetch('/api/discount', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: String(typed || '').trim() }) })
+      const said = await answer.json().catch(() => ({}))
+      if (answer.ok && said.ok) { setDiscount({ code: said.code, percent: said.percent, label: said.label }); return { ok: true } }
+      return { ok: false, message: said.message || 'That code could not be checked. Try again.' }
+    } catch { return { ok: false, message: 'Could not reach the site. Check the connection and try again.' } }
+  }, [])
+  const dropCode = useCallback(() => setDiscount(null), [])
+  const off = discount ? Math.round(Math.round(subtotal * 100) * discount.percent / 100) / 100 : 0
+  const total = Math.round((subtotal - off) * 100) / 100
+  const value = { lines, count, subtotal, off, total, discount, applyCode, dropCode, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw }
   return <Cart.Provider value={value}>{children}</Cart.Provider>
 }
 

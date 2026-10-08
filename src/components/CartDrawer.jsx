@@ -4,39 +4,36 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { asset, money, payWays, shop, shows } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
-import { checkCode, checkout, payLine } from '../data/checkout'
+import { checkout, payLine } from '../data/checkout'
 import { Elsewhere, Lock, PaypalButton } from './Buy'
 
 const EASE = [0.16, 1, 0.3, 1]
 const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
 
 /* The cart, sliding in from the right as one tall panel: a red head with how many pieces are in
-   it; each piece with its picture, signed or not, how many and what it comes to; then the total
-   and one button that pays for all of it on a single Stripe page. */
+   it; each piece with its picture, signed or not, how many and what it comes to; a discount code
+   (a link that opens the box for it); then the total and the buttons that pay for all of it on a
+   single Stripe or PayPal page. */
 export default function CartDrawer() {
   const cart = useCart()
   const account = useAccount()
   const mustLogIn = account.required && !account.user // accounts required, and nobody logged in
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
-  // a discount code: what is typed, the email it may need, and the code once it is accepted
-  const [code, setCode] = useState('')
-  const [email, setEmail] = useState('')
-  const [askEmail, setAskEmail] = useState(false)
-  const [deal, setDeal] = useState(null) // { code, percent, email }
-  const [dealNote, setDealNote] = useState('')
+  // a discount code: the box for it (opened from a link), what is typed, and why it was turned away;
+  // the code once accepted lives in the cart (cart.discount)
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [codeNote, setCodeNote] = useState('')
   const [checking, setChecking] = useState(false)
   const apply = async (e) => {
     e.preventDefault()
-    if (checking || !code.trim()) return
-    setChecking(true); setDealNote('')
-    const said = await checkCode(code, email)
+    if (checking || !typed.trim()) return
+    setChecking(true); setCodeNote('')
+    const r = await cart.applyCode(typed)
     setChecking(false)
-    if (said.ok) { setDeal({ code: said.code, percent: said.percent, email: said.needsEmail ? email.trim() : '' }); setAskEmail(false) }
-    else { setDeal(null); setDealNote(said.message || 'That code is not valid.'); if (said.needsEmail) setAskEmail(true) }
+    if (r.ok) { setTyped(''); setCodeOpen(false) } else setCodeNote(r.message)
   }
-  const dropDeal = () => { setDeal(null); setCode(''); setEmail(''); setAskEmail(false); setDealNote('') }
-  const off = deal ? Math.round(cart.total * deal.percent) / 100 : 0
   const { open, lines } = cart
   const setOpen = (v) => { if (!v) setNote(''); cart.setOpen(v) }
 
@@ -54,7 +51,7 @@ export default function CartDrawer() {
   const pay = async (way) => {
     if (busy || !lines.length) return
     setBusy(way); setNote('')
-    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(deal ? { discount: { code: deal.code, email: deal.email } } : {}) }, way)
+    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(cart.discount ? { code: cart.discount.code } : {}) }, way, cart.dropCode)
     if (problem) { setNote(problem); setBusy(false) }
   }
 
@@ -74,6 +71,8 @@ export default function CartDrawer() {
             {lines.length === 0 ? (
               <div className="cart-empty">
                 <p>Nothing in here yet. Open any piece in the shop and press <b>Add to cart</b>.</p>
+                {/* a code put in from the account page waits here for the first piece */}
+                {cart.discount && <p className="cart-empty-code"><b>{cart.discount.code}</b> is in your cart: {cart.discount.percent}% off comes off as soon as you add a piece.</p>}
                 {shows('pages', 'shop')
                   ? <Link className="btn sm" to="/shop" onClick={() => setOpen(false)}>Go to the shop <span className="arrow">→</span></Link>
                   : <button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>Keep looking</button>}
@@ -104,21 +103,25 @@ export default function CartDrawer() {
                 </ul>
 
                 <footer className="cart-foot">
-                  {deal ? (
-                    <div className="cart-deal is-on">
-                      <span><b>{deal.code}</b> · {deal.percent}% off</span>
-                      <strong>− {money(off, true)}</strong>
-                      <button type="button" onClick={dropDeal} aria-label="Remove the discount code">×</button>
+                  {/* a discount code: a link that opens the box; once applied, a line with what it takes off */}
+                  {cart.discount ? (
+                    <div className="cart-discount">
+                      <span className="cart-discount-tag"><b>{cart.discount.code}</b><small>{cart.discount.percent}% off</small></span>
+                      <button type="button" className="cart-discount-x" onClick={cart.dropCode} aria-label={`Remove the code ${cart.discount.code}`}>×</button>
+                      <span className="cart-discount-off">−{money(cart.off, true)}</span>
                     </div>
-                  ) : (
-                    <form className="cart-deal" onSubmit={apply}>
-                      <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Discount code" aria-label="Discount code" autoComplete="off" spellCheck="false" />
-                      {askEmail && <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" aria-label="Your email" autoComplete="email" />}
-                      <button type="submit" disabled={checking || !code.trim()}>{checking ? '…' : 'Apply'}</button>
-                      {dealNote && <p role="alert">{dealNote}</p>}
+                  ) : codeOpen ? (
+                    <form className="cart-code" onSubmit={apply}>
+                      <label className="sr-only" htmlFor="cart-code">Discount code</label>
+                      <input id="cart-code" type="text" value={typed} onChange={(e) => { setTyped(e.target.value.toUpperCase()); setCodeNote('') }} placeholder="Discount code" autoComplete="off" autoCapitalize="characters" spellCheck="false" maxLength={40} autoFocus />
+                      <button type="submit" className="btn sm" disabled={checking || !typed.trim()}>{checking ? 'Checking…' : 'Apply'}</button>
+                      {codeNote && <p className="cart-code-note" role="alert">{codeNote}</p>}
                     </form>
+                  ) : (
+                    <button type="button" className="cart-code-open" onClick={() => setCodeOpen(true)}>Have a discount code?</button>
                   )}
-                  <div className="cart-total"><span>Total</span><strong>{deal && <s>{money(cart.total, true)}</s>}{money(cart.total - off)}</strong></div>
+                  {cart.discount && <div className="cart-total is-sub"><span>Before the discount</span><s>{money(cart.subtotal, true)}</s></div>}
+                  <div className="cart-total"><span>Total</span><strong>{money(cart.total)}</strong></div>
                   {shop.shipping !== false && <p className="cart-small">You enter your delivery address on the next page.</p>}
                   {mustLogIn ? (
                     <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>

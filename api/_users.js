@@ -129,44 +129,66 @@ const assetHost = () => {
 const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}${path.startsWith('/') ? '' : '/'}${path}`)
 
 /* Every email in the site's comic style, on the red circuit picture: the name on black (the second
-   word in red), a dark panel framed in ink with a small tag, a big italic heading, the words, a picture
-   when there is one, and a red inked button with a hard shadow; under it the link written out,
-   and a quiet footer. Built from tables with the styles written on each piece, the way email
-   apps need it. */
+   word in red), a dark panel framed in ink with a small tag, a big italic heading, the words, a discount
+   code in a dashed box and a picture when there are any, and a red inked button with a hard
+   shadow; under it the link written out, and a quiet footer. Built from tables with the styles
+   written on each piece, the way email apps need it.
+   Staying dark everywhere: the page says it is a dark email (color-scheme), so Apple Mail and
+   Outlook leave it alone. Gmail's phone app in dark mode turns light emails dark and dark ones light
+   whatever they say, so every dark background is also painted as a background image (which it never
+   changes), and the light words sit in two blend layers that turn its flip back (the gmail-* classes,
+   which only Gmail ever matches: it puts a <u> before the body). */
 const DISPLAY = "'Arial Black', 'Helvetica Neue', Impact, Arial, sans-serif"
 const BODY = "Arial, 'Helvetica Neue', Helvetica, sans-serif"
-export const emailHtml = ({ subject, kicker, title, lines, button, picture, after }) => {
+const MONO = "'Courier New', Consolas, Menlo, monospace"
+const C = { page: '#6d0d14', ink: '#0b0b0c', panel: '#17171a', red: '#d8232f', bright: '#ff2a36', text: '#d9d9d6', soft: '#8a8a8f', foot: '#b9b9be', gold: '#ffd34d', line: '#3a3a40' }
+const paint = (c) => `background-color:${c};background-image:linear-gradient(${c},${c});`
+// light words that must stay light in Gmail's dark mode
+const keep = (html, tag = 'div') => `<${tag} class="gmail-screen"><${tag} class="gmail-dif">${html}</${tag}></${tag}>`
+export const emailHtml = ({ subject, kicker, title, lines = [], button, picture, after, code }) => {
   const b = brandInfo()
   const name = String(b.name || 'Milton Aguiar').trim()
   const cut = name.lastIndexOf(' ')
   const [first, second] = cut > 0 ? [name.slice(0, cut), name.slice(cut + 1)] : [name, '']
   const insta = (Array.isArray(b.social) ? b.social : []).find((x) => /instagram/i.test(x.label || ''))
   const home = assetHost() // the live address (never this computer's), for the footer link
-  const para = (t) => `<p style="margin:0 0 14px;font-family:${BODY};font-size:16px;line-height:1.6;color:#d9d9d6;">${esc(t)}</p>`
+  const back = pictureUrl('/email/background.jpg')
+  const para = (t) => `<p style="margin:0 0 14px;font-family:${BODY};font-size:16px;line-height:1.6;color:${C.text};">${keep(esc(t), 'span')}</p>`
+  const footLink = `font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:underline;`
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background:#6d0d14;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#6d0d14;">${esc(lines[1] || lines[0] || '')}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" background="${esc(pictureUrl('/email/background.jpg'))}" style="background-color:#6d0d14;background-image:url('${esc(pictureUrl('/email/background.jpg'))}');background-size:cover;background-position:center top;background-repeat:no-repeat;"><tr><td align="center" style="padding:28px 12px 36px;">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>${esc(subject)}</title>
+<style>
+  :root { color-scheme: dark; supported-color-schemes: dark; }
+  u + .body .gmail-screen { background:#000; mix-blend-mode:screen; display:inline; }
+  u + .body .gmail-dif { background:#000; mix-blend-mode:difference; display:inline; }
+  u + .body div.gmail-screen, u + .body div.gmail-dif { display:block; }
+</style></head>
+<body class="body" style="margin:0;padding:0;${paint(C.page)}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" background="${esc(back)}" style="background-color:${C.page};background-image:url('${esc(back)}');background-size:cover;background-position:center top;background-repeat:no-repeat;"><tr><td align="center" style="padding:28px 12px 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
-  <tr><td style="background:#0b0b0c;border:3px solid #0b0b0c;padding:16px 22px 15px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;">${esc(first)}${second ? ` <span style="color:#ff2a36;">${esc(second)}</span>` : ''}</td></tr>
-  <tr><td style="background:#17171a;border:3px solid #0b0b0c;border-top:0;padding:30px 26px 30px;">
-    ${kicker ? `<span style="display:inline-block;padding:5px 10px 4px;background:#0b0b0c;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">${esc(kicker)}</span>` : ''}
-    <h1 style="margin:16px 0 18px;font-family:${DISPLAY};font-size:32px;line-height:1.05;font-weight:900;font-style:italic;text-transform:uppercase;color:#f3f3f1;">${esc(title || subject)}</h1>
+  <tr><td style="${paint(C.ink)}border:3px solid ${C.ink};padding:16px 22px 15px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;"><span style="color:#ffffff;">${keep(esc(first), 'span')}</span>${second ? ` <span style="color:${C.bright};">${esc(second)}</span>` : ''}</td></tr>
+  <tr><td style="${paint(C.panel)}border:3px solid ${C.ink};border-top:0;padding:30px 26px 30px;">
+    ${kicker ? `<span style="display:inline-block;padding:5px 10px 4px;${paint(C.ink)}font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">${keep(esc(kicker), 'span')}</span>` : ''}
+    <h1 style="margin:16px 0 18px;font-family:${DISPLAY};font-size:32px;line-height:1.05;font-weight:900;font-style:italic;text-transform:uppercase;color:#f3f3f1;">${keep(esc(title || subject))}</h1>
     ${lines.map(para).join('\n    ')}
+    ${code ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr><td style="${paint(C.ink)}border:2px dashed ${C.gold};padding:14px 22px;">
+      <span style="display:block;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:${C.gold};">${esc(code.label || 'Your code')}</span>
+      <span style="display:block;margin-top:6px;font-family:${MONO};font-size:26px;font-weight:700;letter-spacing:3px;color:#ffffff;">${keep(esc(code.text), 'span')}</span>
+      ${code.note ? `<span style="display:block;margin-top:6px;font-family:${BODY};font-size:13px;color:${C.foot};">${keep(esc(code.note), 'span')}</span>` : ''}
+    </td></tr></table>` : ''}
     ${picture ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr>
-      <td style="vertical-align:middle;"><img src="${esc(pictureUrl(picture.src))}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:50%;border:3px solid #ffd34d;"></td>
-      <td style="vertical-align:middle;padding-left:14px;font-family:${BODY};font-size:14px;line-height:1.5;color:#d9d9d6;"><strong style="display:block;font-family:${DISPLAY};font-size:15px;font-style:italic;text-transform:uppercase;color:#ffd34d;">${esc(picture.title)}</strong>${esc(picture.text)}</td>
+      <td style="vertical-align:middle;"><img src="${esc(pictureUrl(picture.src))}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:50%;border:3px solid ${C.gold};${paint(C.ink)}"></td>
+      <td style="vertical-align:middle;padding-left:14px;font-family:${BODY};font-size:14px;line-height:1.5;color:${C.text};"><strong style="display:block;font-family:${DISPLAY};font-size:15px;font-style:italic;text-transform:uppercase;color:${C.gold};">${esc(picture.title)}</strong>${keep(esc(picture.text), 'span')}</td>
     </tr></table>` : ''}
-    ${button ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 6px;"><tr><td style="background:#d8232f;border:3px solid #0b0b0c;border-right-width:7px;border-bottom-width:7px;">
-      <a href="${esc(button.url)}" style="display:inline-block;padding:14px 24px;font-family:${DISPLAY};font-size:15px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${esc(button.label)} &rarr;</a>
+    ${button ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 6px;"><tr><td style="${paint(C.red)}border:3px solid ${C.ink};border-right-width:7px;border-bottom-width:7px;">
+      <a href="${esc(button.url)}" style="display:inline-block;padding:14px 24px;font-family:${DISPLAY};font-size:15px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${keep(`${esc(button.label)} &rarr;`, 'span')}</a>
     </td></tr></table>
-    <p style="margin:18px 0 0;font-family:${BODY};font-size:12px;line-height:1.6;color:#8a8a8f;">Button not working? Paste this into your browser:<br><a href="${esc(button.url)}" style="color:#ff5a52;word-break:break-all;">${esc(button.url)}</a></p>` : ''}
-    ${after ? `<p style="margin:22px 0 0;padding-top:16px;border-top:1px dashed #3a3a40;font-family:${BODY};font-size:13px;line-height:1.6;color:#8a8a8f;">${esc(after)}</p>` : ''}
+    <p style="margin:18px 0 0;font-family:${BODY};font-size:12px;line-height:1.6;color:${C.soft};">Button not working? Paste this into your browser:<br><a href="${esc(button.url)}" style="color:#ff5a52;word-break:break-all;">${esc(button.url)}</a></p>` : ''}
+    ${after ? `<p style="margin:22px 0 0;padding-top:16px;border-top:1px dashed ${C.line};font-family:${BODY};font-size:13px;line-height:1.6;color:${C.soft};">${esc(after)}</p>` : ''}
   </td></tr>
   <tr><td style="height:14px;line-height:14px;font-size:0;">&nbsp;</td></tr>
-  <tr><td align="center" style="background:#0b0b0c;border:3px solid #0b0b0c;padding:18px 14px 16px;font-family:${BODY};font-size:13px;line-height:1.6;color:#b9b9be;">
-    ${b.tagline ? `<span style="display:block;margin-bottom:10px;">${esc(b.tagline)}</span>` : ''}<a href="${esc(home)}" style="font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:underline;">${esc(home.replace(/^https?:\/\//, ''))}</a>${insta ? `<span style="color:#ff2a36;font-weight:900;">&nbsp;&nbsp;/&nbsp;&nbsp;</span><a href="${esc(insta.url)}" style="font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:underline;">Instagram</a>` : ''}
+  <tr><td align="center" style="${paint(C.ink)}border:3px solid ${C.ink};padding:18px 14px 16px;font-family:${BODY};font-size:13px;line-height:1.6;color:${C.foot};">
+    ${b.tagline ? `<span style="display:block;margin-bottom:10px;">${keep(esc(b.tagline), 'span')}</span>` : ''}<a href="${esc(home)}" style="${footLink}">${keep(esc(home.replace(/^https?:\/\//, '')), 'span')}</a>${insta ? `<span style="color:${C.bright};font-weight:900;">&nbsp;&nbsp;/&nbsp;&nbsp;</span><a href="${esc(insta.url)}" style="${footLink}">${keep('Instagram', 'span')}</a>` : ''}
   </td></tr>
 </table>
 </td></tr></table>
@@ -180,7 +202,8 @@ export const emailHtml = ({ subject, kicker, title, lines, button, picture, afte
    - Resend (resend.com): RESEND_API_KEY, sending from an address on a domain verified there.
    MAIL_FROM is the sender as people see it ("Milton Aguiar <hello@...>"); MAIL_REPLY_TO, if set,
    is where replies go. With neither set, on this computer the email is printed instead.
-   An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text }, after, replyTo }. */
+   An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text },
+   code: { label, text, note } (a discount code, in a dashed box), after, replyTo }. */
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
 const smtpReady = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 export const mailReady = () => smtpReady() || Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM)
@@ -194,7 +217,7 @@ const smtp = () => transport || (transport = nodemailer.createTransport({
 export const sendMail = async (mail) => {
   const { to, subject, lines, button, after } = mail
   const brand = process.env.MAIL_BRAND || siteName()
-  const text = [mail.title || subject, '', ...lines, mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
+  const text = [mail.title || subject, '', ...lines, mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
   if (!mailReady()) {
     // on this computer the link is printed instead, so the whole journey can be tried without email
     if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n`)
@@ -229,6 +252,9 @@ export const publicUser = (u) => (u ? {
   avatar: typeof u.avatar === 'string' ? u.avatar : '',
   card: typeof u.card === 'string' ? u.card : '', // the membership card design they chose (a reward)
   gifts: Array.isArray(u.gifts) ? u.gifts.map((g) => g && g.id).filter(Boolean) : [], // rewards the admin gave them
+  newGifts: Array.isArray(u.newGifts) ? u.newGifts.filter((g) => typeof g === 'string') : [], // given and not seen yet: reward ids, and 'code:<id>' for a code
+  // discount codes the admin gave them (Sales → Discounts)
+  giftCodes: Array.isArray(u.giftCodes) ? u.giftCodes.filter((g) => g && g.id).map((g) => ({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })) : [],
   memberNo: Number(u.memberNo) || null, // the order they signed up in: the first customer is 1
   saved: Array.isArray(u.saved) ? u.saved : [],
   cart: Array.isArray(u.cart) ? u.cart : [],

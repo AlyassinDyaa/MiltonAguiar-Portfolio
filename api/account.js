@@ -72,10 +72,13 @@ const freePictures = () => {
    code, made in Stripe the moment it is earned, that only this customer's email can use. */
 const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
 const rewardsList = () => {
-  const page = readJson('content/pages/rewards.json')
-  const list = page && Array.isArray(page.rewards) ? page.rewards
-    // before the Rewards screen: the pictures for confirming the email, kept with the account page
-    : ((readJson('content/pages/account.json') || {}).verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' }))
+  const page = readJson('content/pages/rewards.json') || {}
+  const of = (key, kind) => (Array.isArray(page[key]) ? page[key] : []).map((r) => ({ ...r, kind }))
+  // the Rewards screen has a list for each kind; an older file kept them in one list ("rewards"),
+  // and before that the pictures for confirming the email lived with the account page
+  const list = [...of('pictures', 'picture'), ...of('cards', 'card'), ...of('discounts', 'discount'),
+    ...(Array.isArray(page.rewards) ? page.rewards : []),
+    ...(page.pictures || page.rewards ? [] : ((readJson('content/pages/account.json') || {}).verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))]
   const kindOf = (r) => (['card', 'discount'].includes(r.kind) ? r.kind : 'picture')
   return list.filter((r) => r && !r.hidden && (kindOf(r) === 'card' ? r.cardLook || r.cardArt : kindOf(r) === 'discount' ? Number(r.percent) > 0 : r.picture))
     .map((r) => {

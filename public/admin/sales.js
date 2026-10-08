@@ -203,6 +203,9 @@ window.IASales = (() => {
       el('label', { className: 'sl-pager-per' }, [el('span', { textContent: 'Per page' }), per]),
     ])
   }
+  // the letters in a customer's badge, and how long a paid order has waited to be posted
+  const initials = (t) => String(t || '?').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
+  const waitDays = (o) => (done(o) && o.payment !== 'refunded' && ['new', 'packed'].includes(o.fulfilment) ? Math.floor((Date.now() - o.created) / 864e5) : 0)
   const headRow = (titles) => el('div', { className: 'sl-row sl-th', role: 'row' }, [...titles.map((t) => el('span', { role: 'columnheader', textContent: t })), el('span', { role: 'columnheader' })])
 
   // the open modal, if any: { kind: 'confirm', title, text, more, yes, run } or { kind: 'customer', key }
@@ -375,10 +378,13 @@ window.IASales = (() => {
           const look = o.items.length ? iconBtn('pieces', showing ? 'Hide the pieces' : 'See the pieces bought', () => { if (showing) state.pieces.delete(o.id); else state.pieces.add(o.id); draw() }) : null
           if (look && showing) look.classList.add('on')
           return [rowEl(state.open === o.id, [
-            el('span', { className: 'sl-c-order' }, [el('strong', { textContent: `#${o.number}` }), el('small', { textContent: date(o.created, true) })]),
-            el('span', { className: 'sl-c-who' }, [el('strong', { textContent: o.name || '—' }), el('small', { textContent: [o.email, country(o.country)].filter(Boolean).join(' · ') })]),
-            el('span', { className: 'sl-c-items' }, [el('strong', { textContent: o.items[0] ? `${o.items[0].name}${o.items[0].qty > 1 ? ` ×${o.items[0].qty}` : ''}` : '—' }), o.items.length > 1 ? el('small', { textContent: `+ ${o.items.length - 1} more` }) : null]),
-            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(o.total, o.currency) }), o.refunded ? el('small', { textContent: `${money(o.refunded, o.currency)} refunded` }) : null]),
+            el('span', { className: 'sl-c-order' }, [el('strong', { textContent: `#${o.number}` }), el('small', { textContent: date(o.created, true) }), waitDays(o) >= 2 ? el('em', { className: 'sl-wait', textContent: `waiting ${waitDays(o)} days` }) : null]),
+            el('span', { className: 'sl-c-who' }, [el('i', { className: 'sl-initials', ariaHidden: 'true', textContent: initials(o.name || o.email) }), el('span', {}, [el('strong', { textContent: o.name || '—' }), el('small', { textContent: o.email || country(o.country) })])]),
+            el('span', { className: 'sl-c-items' }, [
+              el('span', { className: 'sl-thumbs', ariaHidden: 'true' }, o.items.filter((i) => i.src).slice(0, 3).map((i) => el('img', { src: i.src, alt: '', loading: 'lazy' }))),
+              el('span', {}, [el('strong', { textContent: o.items[0] ? `${o.items[0].title || o.items[0].name}${o.items[0].qty > 1 ? ` ×${o.items[0].qty}` : ''}` : '—' }), el('small', { textContent: [o.items[0] && o.items[0].size, o.items[0] && o.items[0].signed != null ? (o.items[0].signed ? 'signed' : 'unsigned') : '', o.items.length > 1 ? `+ ${o.items.length - 1} more` : ''].filter(Boolean).join(' · ') })]),
+            ]),
+            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(o.total, o.currency) }), o.refunded ? el('small', { textContent: `${money(o.refunded, o.currency)} refunded` }) : o.discount ? el('small', { textContent: `${money(o.discount, o.currency)} off` }) : null]),
             el('span', { className: 'sl-c-pay' }, [badge(o.payment, PAYMENT[o.payment] || o.payment), o.paidWith ? el('small', { textContent: o.paidWith }) : null]),
             el('span', {}, [done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : el('small', { className: 'sl-dim', textContent: '—' })]),
           ], () => { state.open = o.id; draw() }, [look, iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: keyOf(o) }; draw() }), iconBtn('trash', `Delete order #${o.number}`, () => askOrder(o))]), showing ? piecesPanel(o) : null]

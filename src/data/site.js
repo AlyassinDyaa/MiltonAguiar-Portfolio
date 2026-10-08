@@ -132,7 +132,10 @@ function assemble(content) {
   const rw = page('rewards')
   const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
   if (rw.rewardText) accountPage.rewardText = rw.rewardText
-  accountPage.rewards = (Array.isArray(rw.rewards) ? rw.rewards : (accountPage.verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))
+  const of = (key, kind) => (Array.isArray(rw[key]) ? rw[key] : []).map((r) => ({ ...r, kind }))
+  accountPage.rewards = [...of('pictures', 'picture'), ...of('cards', 'card'), ...of('discounts', 'discount'),
+    ...(Array.isArray(rw.rewards) ? rw.rewards : []),
+    ...(rw.pictures || rw.rewards ? [] : (accountPage.verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))]
     .filter((r) => r && !r.hidden && (r.kind === 'card' ? r.cardLook || r.cardArt : r.kind === 'discount' ? Number(r.percent) > 0 : typeof r.picture === 'string' && r.picture))
     .map((r) => {
       const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces'].includes(r.earnedBy) ? r.earnedBy : 'verify'

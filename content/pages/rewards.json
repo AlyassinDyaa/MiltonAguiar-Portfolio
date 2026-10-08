@@ -1,61 +1,59 @@
 {
   "rewardText": "Confirm your email to unlock rewards: a profile picture and a membership card design only confirmed members get.",
-  "rewards": [
+  "pictures": [
     {
       "name": "Confirmed",
-      "kind": "picture",
-      "earnedBy": "verify",
-      "picture": "/avatars/confirmed.svg"
+      "picture": "/avatars/confirmed.svg",
+      "earnedBy": "verify"
     },
     {
       "name": "Raptor",
-      "kind": "picture",
-      "earnedBy": "verify",
       "picture": "/uploads/raptor.webp",
       "face": "46,5,372",
+      "earnedBy": "verify"
+    },
+    {
+      "name": "Dead Arrow",
+      "picture": "/uploads/dead-arrow-showcase.webp",
+      "face": "49,10,366",
+      "earnedBy": "orders",
+      "count": 5,
+      "hidden": false
+    }
+  ],
+  "cards": [
+    {
+      "name": "Raptor card",
+      "cardLook": "art",
       "cardArt": "/uploads/robins.webp",
-      "cardLook": "art"
+      "earnedBy": "verify"
     },
     {
       "name": "Ink card",
-      "kind": "card",
-      "earnedBy": "verify",
-      "cardLook": "ink"
-    },
-    {
-      "name": "3 orders: 10% off",
-      "kind": "discount",
-      "earnedBy": "orders",
-      "count": 3,
-      "percent": 10,
-      "days": 60
+      "cardLook": "ink",
+      "earnedBy": "verify"
     },
     {
       "name": "Gold card",
-      "kind": "card",
+      "cardLook": "gold",
       "earnedBy": "orders",
-      "count": 6,
-      "cardLook": "gold"
+      "count": 6
+    }
+  ],
+  "discounts": [
+    {
+      "name": "3 orders: 10% off",
+      "percent": 10,
+      "days": 60,
+      "earnedBy": "orders",
+      "count": 3
     },
     {
       "name": "10 orders: 15% off",
-      "kind": "discount",
-      "earnedBy": "orders",
-      "count": 10,
       "percent": 15,
-      "days": 90
-    },
-    {
-      "percent": 10,
-      "hidden": false,
-      "name": "Dead Arrow",
+      "days": 90,
       "earnedBy": "orders",
-      "count": 5,
-      "cardLook": "ink",
-      "kind": "picture",
-      "days": 60,
-      "face": "49,10,366",
-      "picture": "/uploads/dead-arrow-showcase.webp"
+      "count": 10
     }
   ]
 }

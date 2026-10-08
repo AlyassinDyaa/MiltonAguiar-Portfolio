@@ -71,7 +71,7 @@
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
     'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
-    'site/rewards': { groups: { rewardText: 'Before they confirm', rewards: 'The rewards' }, half: [], inner: ['kind', 'earnedBy', 'count', 'percent', 'days', 'cardLook', 'hidden'] },
+    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
@@ -854,6 +854,9 @@
      removes it (nothing changes on the site until the form is saved); No, Escape or a click
      outside keeps it. */
   const ASK_BEFORE_REMOVING = {
+    pictures: { what: 'profile picture', text: 'Customers who earned it lose it, and anyone using it as their picture goes back to their initials. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
+    cards: { what: 'card design', text: 'Customers who earned it lose it, and anyone using it goes back to the usual card. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
+    discounts: { what: 'discount', text: 'Customers no longer earn it. Codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     rewards: { what: 'reward', text: 'Customers who earned it lose it: a picture or card design they chose goes back to the usual one, and they no longer see it under Rewards. Discount codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     icons: { what: 'free picture', text: 'Customers using it as their profile picture go back to their initials.' },
   }
@@ -896,4 +899,37 @@
     const label = (named && named.value) || (item && (item.querySelector('[class*="ListItemTopBar"]') || {}).textContent) || ''
     askRemove(ASK_BEFORE_REMOVING[list], String(label).trim(), () => { removing = true; try { btn.click() } finally { removing = false } })
   }, true)
+
+  /* ---------- a membership card design, as customers will see it ----------
+     Under each card design (Shop → Rewards): the card with its look and picture, redrawn as they
+     change. It keeps nothing itself: it reads the look and the picture of the same design. */
+  if (window.CMS && window.createClass && window.h) {
+    const h = window.h
+    const LOOKS = [['ink', /^ink/i], ['gold', /^gold/i], ['chrome', /^chrome/i], ['art', /picture/i]]
+    window.CMS.registerWidget('cardpreview', window.createClass({
+      getInitialState() { return { look: 'ink', art: '', name: '' } },
+      componentDidMount() { this.read(); this.timer = setInterval(() => this.read(), 400) },
+      componentWillUnmount() { clearInterval(this.timer) },
+      read() {
+        const item = this.root && this.root.closest('[class*="-listControlItem"]')
+        if (!item) return
+        const said = [...item.querySelectorAll('[class*="singleValue"]')].map((n) => n.textContent)
+        const found = LOOKS.find(([, re]) => said.some((t) => re.test(t)))
+        const img = item.querySelector('[class*="ImageWrapper"] img')
+        const name = (item.querySelector('input[id^="name-field"]') || {}).value || ''
+        const next = { look: found ? found[0] : 'ink', art: img ? img.getAttribute('src') || '' : '', name }
+        if (next.look !== this.state.look || next.art !== this.state.art || next.name !== this.state.name) this.setState(next)
+      },
+      render() {
+        const { look, art, name } = this.state
+        return h('div', { className: 'ia-cardprev-wrap', ref: (el) => { this.root = el } },
+          h('div', { className: `ia-cardprev is-${look} ${art ? 'has-art' : ''}`, style: art ? { '--card-art': `url("${art}")` } : {} },
+            h('span', { className: 'ia-cardprev-top' }, h('b', {}, 'MILTON ', h('i', {}, 'AGUIAR')), h('em', {}, 'Collector')),
+            h('span', { className: 'ia-cardprev-chip' }),
+            h('strong', { className: 'ia-cardprev-name' }, 'Your name here'),
+            h('span', { className: 'ia-cardprev-foot' }, h('small', {}, 'Member no.'), ' #0001')),
+          h('p', { className: 'ia-cardprev-note' }, look === 'art' && !art ? 'Add a picture above to see the card.' : `“${name || 'This design'}”, as customers will see it.`))
+      },
+    }))
+  }
 })()

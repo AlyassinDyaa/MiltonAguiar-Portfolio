@@ -1295,3 +1295,8 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .is-orders .sl-row .sl-acts .sl-icon { opacity: 0.45; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s; }
 .is-orders .sl-row:hover .sl-acts .sl-icon, .is-orders .sl-row .sl-acts .sl-icon:focus-visible, .is-orders .sl-row .sl-acts .sl-icon.on { opacity: 1; }
 @media (hover: none) { .is-orders .sl-row .sl-acts .sl-icon { opacity: 1; } }
+/* "The admin has been updated": its two buttons side by side, not the notice's corner close button */
+.ia-notice .ia-update-actions .ia-btn { position: static; width: auto; height: 42px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 1rem; font-weight: 800; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; background: var(--accent); color: #fff; }
+.ia-notice .ia-update-actions .ia-btn:hover { background: #ff2a36; color: #fff; }
+.ia-notice .ia-update-actions .ia-btn.ghost { background: var(--panel-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.ia-notice .ia-update-actions .ia-btn.ghost:hover { background: var(--fg); color: #0b0b0c; box-shadow: none; }

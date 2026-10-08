@@ -752,7 +752,9 @@
   /* The admin is one page that never reloads itself, so a tab left open keeps running the version
      it was opened with, even after the panel has been updated. Every few minutes (while the tab is
      in view) the panel's own files are compared with the ones it started with; when they differ,
-     a notice offers to reload. Content saved in the meantime is not affected. */
+     a notice offers to reload. Content saved in the meantime is not affected. "Later" puts it off
+     until the panel changes again, not until the next check. Not on this computer's own copy,
+     where the files change as they are worked on. */
   const fingerprint = async () => {
     const texts = await Promise.all(['shell.js', 'config.yml', 'admin.css'].map((f) => fetch(f, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''), () => '')))
     if (texts.some((t) => !t)) return ''
@@ -772,10 +774,11 @@
       el('p', { textContent: 'Reload to get the newest version. Save anything you are editing first.' }),
       el('div', { className: 'ia-update-actions' }, [reload, later]),
     ])
-    later.addEventListener('click', () => box.remove())
+    later.addEventListener('click', () => { box.remove(); fingerprint().then((f) => { if (f) firstPrint = f }) })
     document.body.append(box)
   }
-  setInterval(async () => {
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+  if (!local) setInterval(async () => {
     if (document.hidden || !firstPrint || document.querySelector('.ia-update')) return
     const now = await fingerprint()
     if (now && now !== firstPrint) offerReload()

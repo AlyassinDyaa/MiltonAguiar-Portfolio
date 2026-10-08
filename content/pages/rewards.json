@@ -42,6 +42,18 @@
       "count": 10,
       "percent": 15,
       "days": 90
+    },
+    {
+      "percent": 10,
+      "hidden": false,
+      "name": "Dead Arrow",
+      "earnedBy": "orders",
+      "count": 5,
+      "cardLook": "ink",
+      "kind": "picture",
+      "days": 60,
+      "face": "49,10,366",
+      "picture": "/uploads/dead-arrow-showcase.webp"
     }
   ]
 }

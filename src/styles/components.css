@@ -1444,10 +1444,11 @@ a.buy-btn { text-decoration: none; }
 .acct2-issue b { font-family: var(--display); font-size: clamp(3rem, 6.4vw, 5.8rem); font-weight: 900; font-style: italic; line-height: 0.9; letter-spacing: -0.01em; color: #fff; text-shadow: 0.05em 0.05em 0 #0b0b0c; }
 .acct2-strip { --pw: clamp(104px, 10vw, 156px); --gap: clamp(10px, 1vw, 14px); position: absolute; z-index: 1; top: 0; right: 0; bottom: 0; width: min(68%, 1000px); overflow: hidden;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24%); mask-image: linear-gradient(90deg, transparent 0, #000 24%); }
-.acct2-track { display: flex; gap: var(--gap); width: max-content; height: 100%; padding: clamp(12px, 1.4vw, 18px) 0; animation: strip-run calc(var(--n) * 4.5s) linear infinite, strip-in 0.8s var(--ease-out) both; }
+.acct2-track { display: flex; gap: var(--gap); width: max-content; min-width: 100%; justify-content: flex-end; height: 100%; padding: clamp(12px, 1.4vw, 18px) 16px clamp(12px, 1.4vw, 18px) 0; animation: strip-in 0.8s var(--ease-out) both; }
+.acct2-track.is-gliding { justify-content: flex-start; animation: strip-glide var(--glide) ease-in-out 1s infinite alternate, strip-in 0.8s var(--ease-out) both; }
 .acct2-hero:hover .acct2-track { animation-play-state: paused; }
-/* one set of panels and its gaps: then the second set stands exactly where the first began */
-@keyframes strip-run { to { transform: translateX(calc(-1 * var(--n) * (var(--pw) + var(--gap)))); } }
+/* each picture once: the panels glide to the last one and back */
+@keyframes strip-glide { to { transform: translateX(calc(-1 * var(--shift))); } }
 @keyframes strip-in { from { opacity: 0; } }
 .acct2-panel { position: relative; flex: 0 0 var(--pw); overflow: hidden; border: 3px solid #0b0b0c; background: #0b0b0c; transform: skewX(-9deg); box-shadow: 6px 6px 0 rgba(11, 11, 12, 0.55); }
 .acct2-panel img { filter: none; opacity: 1; mix-blend-mode: normal; position: absolute; inset: 0 -22%; width: 144%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 22%; transform: skewX(9deg) scale(1.02); transition: transform 1.2s var(--ease-out); }

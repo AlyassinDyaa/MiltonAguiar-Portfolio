@@ -603,6 +603,29 @@ function Orders({ orders, problem, onRemoved }) {
   )
 }
 
+/* The banner's comic panels, each picture once. When they are wider than the banner, they glide
+   slowly to the last one and back (nothing repeats); when they fit, they stand still. */
+function PanelStrip({ pieces }) {
+  const box = useRef(null)
+  const track = useRef(null)
+  const [shift, setShift] = useState(0)
+  useEffect(() => {
+    const measure = () => { if (box.current && track.current) setShift(Math.max(0, Math.ceil(track.current.scrollWidth - box.current.clientWidth))) }
+    measure()
+    const watch = new ResizeObserver(measure)
+    if (box.current) watch.observe(box.current)
+    if (track.current) watch.observe(track.current)
+    return () => watch.disconnect()
+  }, [pieces.length])
+  return (
+    <div className="acct2-strip" ref={box}>
+      <div ref={track} className={`acct2-track ${shift > 0 ? 'is-gliding' : ''}`} style={{ '--shift': `${shift}px`, '--glide': `${Math.max(12, Math.round(shift / 18))}s` }}>
+        {pieces.map((p) => <span key={p.slug} className="acct2-panel"><img src={asset(p.src)} alt="" loading="eager" /></span>)}
+      </div>
+    </div>
+  )
+}
+
 function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const { user, call } = useAccount()
   const f = useForm({ name: user.name, phone: user.phone, marketing: user.marketing, avatar: user.avatar || '', card: user.card || '' })
@@ -1006,7 +1029,20 @@ function Home() {
   const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) : null
   const savedPieces = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug))
   const newest = everything.filter((p) => !p.rough).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
-  const strip = [...new Map([chosen, ...owned, ...savedPieces, ...newest].filter((p) => p && p.src).map((p) => [p.slug, p])).values()].slice(0, 12)
+  // each picture once: the same art listed twice (a shop copy "Brand New Day" of the work
+  // "Spider-Man: Brand New Day") counts once, by its file or by one title holding the other
+  const files = new Set()
+  const titles = []
+  const plain = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  const strip = [chosen, ...owned, ...savedPieces, ...newest].filter((p) => {
+    if (!p || !p.src) return false
+    const file = String(p.src).split('?')[0].toLowerCase()
+    const title = plain(p.title || p.slug)
+    if (files.has(file) || titles.some((t) => t === title || (Math.min(t.length, title.length) >= 6 && (t.includes(title) || title.includes(t))))) return false
+    files.add(file)
+    titles.push(title)
+    return true
+  }).slice(0, 12)
   const LEADS = {
     orders: 'Every piece you have ordered, and where it is now.',
     rewards: 'What you have earned, and how close you are to the next one.',
@@ -1026,12 +1062,7 @@ function Home() {
               <small>Member no.</small>
               <b>{memberNumber(user.memberNo)}</b>
             </div>
-            {/* a carousel: the panels run past, twice over, so the loop has no seam */}
-            <div className="acct2-strip">
-              <div className="acct2-track" style={{ '--n': strip.length }}>
-                {[...strip, ...strip].map((p, i) => <span key={`${p.slug}-${i}`} className="acct2-panel"><img src={asset(p.src)} alt="" loading={i < strip.length ? 'eager' : 'lazy'} /></span>)}
-              </div>
-            </div>
+            <PanelStrip pieces={strip} />
           </div>
           <div className="acct2-id">
             <Avatar user={preview ? { ...user, avatar: preview.avatar } : user} size="xl" />

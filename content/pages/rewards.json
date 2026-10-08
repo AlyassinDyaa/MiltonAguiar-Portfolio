@@ -8,11 +8,11 @@
       "picture": "/avatars/confirmed.svg"
     },
     {
-      "name": "Superman",
+      "name": "Raptor",
       "kind": "picture",
       "earnedBy": "verify",
-      "picture": "/uploads/superman.webp",
-      "face": "43,20,284"
+      "picture": "/uploads/raptor.webp",
+      "face": "46,5,372"
     },
     {
       "name": "Ink card",

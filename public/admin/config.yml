@@ -216,34 +216,6 @@ collections:
           - { name: home, label: Show on the home page, widget: boolean, default: false, required: false, hint: 'No longer used: the home page shows pieces from Work.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes the whole section off the site but keeps it here.' }
 
-  - name: redraws
-    label: Step by step
-    label_singular: Set
-    description: 'One piece at each stage (pencils, inks, colours), or an old drawing next to its redraw. Visitors drag a line across to compare the two.'
-    folder: content/redraws
-    create: true
-    extension: json
-    format: json
-    identifier_field: title
-    slug: '{{slug}}'
-    summary: '{{title}}'
-    sortable_fields: [order, title]
-    fields:
-      - { name: title, label: Title, widget: string }
-      - { name: text, label: One line about it, widget: string, required: false }
-      - name: stages
-        label: Stages
-        label_singular: Stage
-        widget: list
-        min: 2
-        summary: '{{fields.year}}'
-        hint: 'First stage first. The last one is the finished side.'
-        fields:
-          - { name: year, label: Stage, widget: string, hint: 'What this stage is called: "Pencils", "Inks", "Colours", or a year.' }
-          - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Use the same shape and framing for every stage in a set, so they line up.' }
-      - { name: order, label: Order on site, widget: number, value_type: int, default: 10, required: false, hint: 'Lower numbers come first.' }
-      - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false }
-
   - name: events
     label: Conventions
     label_singular: Event
@@ -337,6 +309,21 @@ collections:
           - { name: redrawLabel, label: Small label, widget: string, required: false }
           - { name: redrawTitle, label: Heading, widget: string }
           - { name: redrawText, label: Text, widget: text, required: false }
+          - name: steps
+            label: The sets
+            label_singular: set
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.title}}'
+            hint: 'One piece at three stages. Upload the pencils, the inks and the colours of the same drawing, the same shape and framing, so they line up (portrait, about 3:4). Visitors drag two lines across to wipe from one to the next. Without inks, it compares the pencils and the colours.'
+            fields:
+              - { name: title, label: Title, widget: string, hint: 'For example "Daredevil: Born Again".' }
+              - { name: text, label: One line about it, widget: string, required: false }
+              - { name: pencils, label: Pencils, widget: image, choose_url: false }
+              - { name: inks, label: Inks, widget: image, choose_url: false, required: false }
+              - { name: colours, label: Colours, widget: image, choose_url: false }
+              - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false }
           - { name: commissionsTitle, label: Heading, widget: string, hint: 'Set above "Open!" or "Closed", which follows the switch on the Commissions page.' }
           - { name: commissionsButton, label: Button, widget: string }
           - { name: eventsLabel, label: Small label, widget: string, required: false }
@@ -385,12 +372,13 @@ collections:
           - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
           - { name: processLabel, label: Small label, widget: string, required: false }
           - { name: processTitle, label: Heading, widget: string }
+          - { name: processSet, label: Set shown beside the steps, widget: string, required: false, hint: 'The pencils, inks and colours shown beside How it works (pointing at a step shows its stage). Type the title of a set from Page text → Home → The sets; leave it empty for the first set, or type none for no set.' }
           - name: steps
             label: Steps
             label_singular: Step
             widget: list
             summary: '{{fields.title}}'
-            hint: 'Shown as a strip of numbered panels. Up to four sit in one row.'
+            hint: 'Shown as numbered panels beside the pencils-to-colours set. A step that mentions pencils, inks or colours shows that stage when pointed at; the last step shows the finished piece.'
             fields:
               - { name: title, label: Step, widget: string }
               - { name: text, label: Description, widget: text }

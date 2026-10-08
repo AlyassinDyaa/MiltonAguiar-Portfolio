@@ -51,12 +51,11 @@
     'site/categories': { groups: { subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
     shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
-    redraws: { groups: { title: 'The set', stages: 'The stages, first to last', order: 'Rarely needed' }, half: ['title', 'text'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
     'pages/home': {
       groups: { kicker: 'Top of the page', buttons: 'Buttons', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
       half: ['latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
-      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl', 'words', 'to', 'address', 'tone', 'off'],
+      inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl', 'words', 'to', 'address', 'tone', 'off', 'text'],
     },
     'pages/lists': { groups: { workLabel: 'Work page', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
@@ -87,7 +86,7 @@
   const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Customer accounts', 'site/rewards': 'Rewards', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
-    'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, and the heading of each part below it.',
+    'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, the pencils-to-colours sets, and the heading of each part below it.',
     'pages/lists': 'The heading and introduction above the Work page and the Gallery page.',
     'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
@@ -857,6 +856,7 @@
      removes it (nothing changes on the site until the form is saved); No, Escape or a click
      outside keeps it. */
   const ASK_BEFORE_REMOVING = {
+    steps: { what: 'set', text: 'It comes off the home page and the Work page. Its pictures stay in the Media library. To take it off the site for now without losing it, switch on "Hide from the site" instead.' },
     pictures: { what: 'profile picture', text: 'Customers who earned it lose it, and anyone using it as their picture goes back to their initials. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     cards: { what: 'card design', text: 'Customers who earned it lose it, and anyone using it goes back to the usual card. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     discounts: { what: 'discount', text: 'Customers no longer earn it. Codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },

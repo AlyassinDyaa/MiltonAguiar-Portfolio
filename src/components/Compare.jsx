@@ -1,20 +1,33 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Poster from './Poster'
 
 /* Step by step: every stage of the same piece on top of each other (pencils, inks, colours; or an
    old drawing and its redraw), side by side, with a line between each two that you drag to wipe
    from one to the next. Three stages get two lines, two stages one. `year` is what a stage is
    called: "Pencils", "Inks", "2019". Each line is a slider: it is dragged with a finger or the
-   mouse (anywhere on the picture moves the nearest line), and moved with the arrow keys too. */
+   mouse (anywhere on the picture moves the nearest line), and moved with the arrow keys too.
+   `show` (a stage's number, or null for all of them evenly) moves the lines by themselves: the
+   Commissions page shows the stage of the step being pointed at. */
 const GAP = 6 // the closest two lines may come, in percent of the width
 
-export default function Compare({ set }) {
+export default function Compare({ set, show = null }) {
   const stages = set.stages
   const lines = stages.length - 1
   // where the lines start: evenly spread (one line: the middle; two: a third and two thirds)
   const [pos, setPos] = useState(() => Array.from({ length: lines }, (_, i) => Math.round(((i + 1) * 100) / stages.length)))
   const box = useRef(null)
   const held = useRef(-1)
+  const [gliding, setGliding] = useState(false)
+  const even = () => Array.from({ length: lines }, (_, i) => Math.round(((i + 1) * 100) / stages.length))
+  useEffect(() => {
+    if (show === undefined) return
+    // the stage asked for fills the picture; the others keep a sliver at the edges
+    const t = show === null ? null : Math.min(stages.length - 1, Math.max(0, show))
+    setPos(t === null ? even() : Array.from({ length: lines }, (_, i) => (i < t ? 3 + i * GAP : 97 - (lines - 1 - i) * GAP)))
+    setGliding(true)
+    const done = setTimeout(() => setGliding(false), 750)
+    return () => clearTimeout(done)
+  }, [show]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const place = (i, value) => setPos((now) => {
     const lo = i ? now[i - 1] + GAP : 0
@@ -34,6 +47,7 @@ export default function Compare({ set }) {
     let i = 0
     pos.forEach((p, k) => { if (Math.abs(p - at) < Math.abs(pos[i] - at)) i = k })
     held.current = i
+    setGliding(false)
     box.current.setPointerCapture?.(e.pointerId)
     place(i, at)
   }
@@ -50,7 +64,7 @@ export default function Compare({ set }) {
   const last = stages[stages.length - 1]
   const edges = [0, ...pos, 100] // stage k shows from edges[k] to edges[k + 1]
   return (
-    <figure className="compare">
+    <figure className={`compare ${gliding ? 'is-gliding' : ''}`}>
       <div className="compare-stage" ref={box} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
         <Poster title={set.title} src={last.src} />
         {/* the earlier stages over it, each cut off at its line; the earliest on top */}

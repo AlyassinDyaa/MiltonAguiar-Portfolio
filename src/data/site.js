@@ -229,10 +229,14 @@ function assemble(content) {
     .filter((g) => !once.has(g.src) && once.add(g.src))
     .slice(0, 6)
 
-  redraws = live(folder('redraws'))
+  // the sets made on the Home page (Pencils, Inks, Colours), then any made the older way, one file each
+  const homeSets = (Array.isArray(page('home').steps) ? page('home').steps : []).map((r, i) => ({
+    slug: `set-${i}`, title: r.title || '', text: r.text || '', hidden: r.hidden, order: i,
+    stages: [['Pencils', r.pencils], ['Inks', r.inks], ['Colours', r.colours]].filter(([, src]) => src).map(([year, src]) => ({ year, src })),
+  }))
+  redraws = [...live(homeSets), ...live(folder('redraws')).sort(byOrder)]
     .map((r) => ({ ...r, stages: (r.stages || []).filter((s) => s && s.year) }))
     .filter((r) => r.stages.length > 1)
-    .sort(byOrder)
   events = live(folder('events')).filter((e) => e.name).sort(byOrder)
 }
 assemble(built)

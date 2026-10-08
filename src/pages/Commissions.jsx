@@ -1,4 +1,6 @@
-import { brand, commissions, quote, work } from '../data/site'
+import { useRef, useState } from 'react'
+import { brand, commissions, quote, redraws, work } from '../data/site'
+import Compare from '../components/Compare'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
@@ -11,6 +13,16 @@ import { Elsewhere } from '../components/Buy'
 /* The colour of each step's panel, in turn. */
 const TONES = ['is-loud', 'is-red']
 
+/* The stage of a pencils-to-colours set a step is about: "Quote and pencils" the pencils, "Inks
+   and colours" the inks, "Delivery" (the last step) the finished colours; any other, none. */
+const stageOf = (step, i, steps, set) => {
+  const words = `${step.title} ${step.text}`.toLowerCase()
+  const names = set.stages.map((s) => String(s.year).toLowerCase().replace(/s$/, ''))
+  const said = [...names.keys()].map((k) => [k, words.indexOf(names[k])]).filter(([, at]) => at >= 0).sort((a, b) => a[1] - b[1])
+  if (said.length) return said[0][0]
+  return i === steps.length - 1 ? set.stages.length - 1 : null
+}
+
 export default function Commissions() {
   const { open, title, intro, tiers, steps, notes, processLabel, processTitle, requestLabel, requestTitle, closedTitle, closedText } = commissions
   const kinds = [...tiers.map((t) => t.name), 'Something else']
@@ -19,6 +31,13 @@ export default function Commissions() {
   const form = true
   const byService = Boolean(brand.contactAction)
   const { send, state, problem, fallback, again } = useSendForm('commission')
+  // the set shown beside How it works: the one named in the admin, or the first; "none" for none
+  const wanted = String(commissions.processSet || '').trim().toLowerCase()
+  const set = wanted === 'none' ? null : redraws.find((r) => !wanted || r.title.toLowerCase() === wanted) || redraws[0] || null
+  const [focus, setFocus] = useState(null) // the stage the step being pointed at is about
+  const art = useRef(null)
+  // on a phone the picture is above the steps: a tapped step brings it back into view
+  const pick = (k) => { setFocus(k); if (k !== null && art.current && matchMedia('(max-width: 799px)').matches) art.current.scrollIntoView({ behavior: 'smooth', block: 'center' }) }
   let n = 1
   return (
     <Page title="Commissions">
@@ -62,7 +81,35 @@ export default function Commissions() {
           <div className="container">
             <Runner label={processLabel} page={++n} />
             <div className="spread-head"><h2 className="display h-lg">{processTitle}</h2></div>
-            {/* a strip, read left to right: one panel a step, the gutters between them leaning the way it reads */}
+            {set ? (
+              /* the piece at each stage beside the steps, staying in view; pointing at a step shows its stage */
+              <div className="cm-process">
+                <div className="cm-process-art" ref={art}>
+                  <Compare set={set} show={focus} />
+                  <p className="cm-process-tip">Pick a step to see that stage, or drag the lines yourself.</p>
+                </div>
+                <ol className="cm-steps" onMouseLeave={() => setFocus(null)}>
+                  {steps.map((s, i) => {
+                    const k = stageOf(s, i, steps, set)
+                    return (
+                      <Reveal as="li" key={s.title} delay={i * 0.08} y={20}>
+                        <button type="button" className={`hp cm-step ${TONES[i % TONES.length]} ${focus !== null && focus === k ? 'on' : ''}`} onMouseEnter={() => setFocus(k)} onFocus={() => setFocus(k)} onClick={() => pick(k)} aria-label={`${s.title}${k !== null ? `: show the ${set.stages[k].year.toLowerCase()}` : ''}`}>
+                          <span className="hp-in">
+                            <span className="step-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                            <span className="cm-step-words">
+                              <strong className="display h-sm">{s.title}</strong>
+                              <span>{s.text}</span>
+                              {k !== null && <em aria-hidden="true">{set.stages[k].year}</em>}
+                            </span>
+                          </span>
+                        </button>
+                      </Reveal>
+                    )
+                  })}
+                </ol>
+              </div>
+            ) : (
+            /* a strip, read left to right: one panel a step, the gutters between them leaning the way it reads */
             <ol className={`steps ${steps.length > 4 ? 'is-long' : ''}`} style={{ '--n': steps.length }}>
               {steps.map((s, i) => (
                 <Reveal as="li" key={s.title} delay={i * 0.09} y={24}>
@@ -78,6 +125,7 @@ export default function Commissions() {
                 </Reveal>
               ))}
             </ol>
+            )}
           </div>
         </section>
       )}

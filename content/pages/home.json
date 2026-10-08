@@ -30,12 +30,23 @@
     "Commissions"
   ],
   "figure": {
-    "src": "/uploads/raptor-cutout.webp",
+    "src": "/uploads/raptor-sticker.webp",
     "size": 100,
     "x": 0,
     "y": 0
   },
   "redrawText": "The same piece at each stage. Drag the lines to wipe from the pencils to the inks to the finished colours.",
+  "steps": [
+    {
+      "title": "Daredevil: Born Again",
+      "text": "Stages of drawing Daredevil",
+      "pencils": "/uploads/daredevil-pencils-cropped_01.webp",
+      "inks": "/uploads/daredevil-inks_01.webp",
+      "colours": "/uploads/daredevil.webp",
+      "commissions": true,
+      "hidden": false
+    }
+  ],
   "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",
   "latestLabel": "Fresh off the board",
   "commissionsTitle": "Commissions are",
@@ -55,16 +66,5 @@
   "commissionsButton": "How it works",
   "eventsLabel": "In person",
   "redrawLabel": "The process",
-  "eventsTitle": "Find me at",
-  "steps": [
-    {
-      "title": "Daredevil: Born Again",
-      "text": "Stages of drawing Daredevil",
-      "pencils": "/uploads/daredevil-pencils-cropped_01.webp",
-      "inks": "/uploads/daredevil-inks_01.webp",
-      "colours": "/uploads/daredevil.webp",
-      "commissions": true,
-      "hidden": false
-    }
-  ]
+  "eventsTitle": "Find me at"
 }

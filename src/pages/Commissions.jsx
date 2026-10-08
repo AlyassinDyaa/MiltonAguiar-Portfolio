@@ -82,24 +82,24 @@ export default function Commissions() {
             <Runner label={processLabel} page={++n} />
             <div className="spread-head"><h2 className="display h-lg">{processTitle}</h2></div>
             {set ? (
-              /* the piece at each stage beside the steps, staying in view; pointing at a step shows its stage */
+              /* the piece at each stage on top, the steps in a strip under it; picking a step shows its stage */
               <div className="cm-process">
                 <div className="cm-process-art" ref={art}>
                   <Compare set={set} show={focus} />
                   <p className="cm-process-tip">Pick a step to see that stage, or drag the lines yourself.</p>
                 </div>
-                <ol className="cm-steps" onMouseLeave={() => setFocus(null)}>
+                <ol className={`steps cm-steps ${steps.length > 4 ? 'is-long' : ''}`} style={{ '--n': steps.length }} onMouseLeave={() => setFocus(null)}>
                   {steps.map((s, i) => {
                     const k = stageOf(s, i, steps, set)
                     return (
-                      <Reveal as="li" key={s.title} delay={i * 0.08} y={20}>
+                      <Reveal as="li" key={s.title} delay={i * 0.08} y={24}>
                         <button type="button" className={`hp cm-step ${TONES[i % TONES.length]} ${focus !== null && focus === k ? 'on' : ''}`} onMouseEnter={() => setFocus(k)} onFocus={() => setFocus(k)} onClick={() => pick(k)} aria-label={`${s.title}${k !== null ? `: show the ${set.stages[k].year.toLowerCase()}` : ''}`}>
                           <span className="hp-in">
-                            <span className="step-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                            <span className="cm-step-words">
-                              <strong className="display h-sm">{s.title}</strong>
-                              <span>{s.text}</span>
-                              {k !== null && <em aria-hidden="true">{set.stages[k].year}</em>}
+                            <span className="words">
+                              <span className="step-n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                              <strong className="display h-md">{s.title}</strong>
+                              <span className="cm-step-text">{s.text}</span>
+                              {k !== null && <em className="cm-step-stage" aria-hidden="true">{set.stages[k].year}</em>}
                             </span>
                           </span>
                         </button>

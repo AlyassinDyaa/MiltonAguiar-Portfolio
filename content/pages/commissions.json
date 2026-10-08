@@ -8,16 +8,16 @@
   "processLabel": "The process",
   "steps": [
     {
-      "title": "Send the idea",
-      "text": "Who or what, the mood, and any reference pictures you have."
+      "title": "Pencils",
+      "text": "Send the idea and you get a quote. Then a pencil drawing to approve before any ink goes on."
     },
     {
-      "title": "Quote and pencils",
-      "text": "You get a price, then a pencil drawing to approve before any ink goes on."
+      "title": "Inks",
+      "text": "The approved pencils are inked in black and white, with a progress shot on the way."
     },
     {
-      "title": "Inks and colours",
-      "text": "The piece is inked and coloured, with progress shots along the way."
+      "title": "Colours",
+      "text": "Flat colours, then light and shadow, until the piece is finished."
     },
     {
       "title": "Delivery",

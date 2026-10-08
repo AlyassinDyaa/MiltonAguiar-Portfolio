@@ -1641,35 +1641,23 @@ form.acc-modal-box { max-width: none; }
 .acct-keep b { color: var(--fg); }
 @media (max-width: 599px) { .acct-keep { bottom: 8px; } .acct-keep .btn { flex: 1 1 auto; justify-content: center; } }
 
-/* Commissions, How it works: the piece at each stage on the left (staying in view), the steps down
-   the right as a strip of panels with leaning gutters; the step pointed at shows its stage */
-.cm-process { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: clamp(28px, 4vw, 64px); align-items: start; }
-.cm-process-art { position: sticky; top: 96px; }
+/* Commissions, How it works: the piece at each stage on top, centred, and the steps in a strip
+   under it (the same strip as without a set); the step picked shows its stage */
+.cm-process { display: grid; gap: clamp(28px, 3.4vw, 48px); }
+.cm-process-art { justify-self: center; width: min(100%, 360px); }
 .cm-process-art .compare-stage { box-shadow: 10px 10px 0 -2px var(--accent); }
-.cm-process-tip { margin: 22px 0 0; font-size: 0.86rem; color: var(--fg-mute); }
-.cm-steps { --t: 16px; --g: 10px; display: grid; margin: 0; padding: 0; list-style: none; }
-.cm-steps > li { min-width: 0; --clip: polygon(0 var(--t), 100% 0, 100% calc(100% - var(--t)), 0 100%); }
-.cm-steps > li + li { margin-top: calc(var(--g) - var(--t)); }
-.cm-steps > li:first-child { --clip: polygon(0 0, 100% 0, 100% calc(100% - var(--t)), 0 100%); }
-.cm-steps > li:last-child { --clip: polygon(0 var(--t), 100% 0, 100% 100%, 0 100%); }
-.cm-steps > li:only-child { --clip: none; }
-.cm-step { cursor: pointer; }
-.cm-step .hp-in { display: grid; grid-template-columns: clamp(80px, 9vw, 120px) minmax(0, 1fr); align-items: center; gap: clamp(14px, 2vw, 28px); padding: calc(var(--t) + clamp(18px, 2.2vw, 28px)) clamp(20px, 2.6vw, 36px); }
-.cm-step .step-n { font-size: clamp(3.6rem, 6vw, 5.6rem); transition: transform 0.3s var(--ease-out); }
-.cm-step-words { display: grid; gap: 6px; justify-items: start; }
-.cm-step-words strong { margin: 0; }
-.cm-step-words > span { color: var(--fg-dim); }
-.cm-step-words em { margin-top: 6px; padding: 3px 8px 2px; font-family: var(--display); font-size: 0.7rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; background: var(--k); color: #fff; opacity: 0; transform: translateX(-6px); transition: opacity 0.25s, transform 0.25s; }
-.cm-step { transition: background 0.2s, translate 0.3s var(--ease-out); }
-button.hp.cm-step.on { background: var(--fg); translate: -10px 0; }
+.cm-process-tip { margin: 22px 0 0; font-size: 0.86rem; text-align: center; color: var(--fg-mute); }
+.cm-steps .words { min-height: clamp(240px, 22vw, 320px); }
+.cm-steps .display { margin: 20px 0 10px; }
+.cm-step { cursor: pointer; transition: background 0.2s, translate 0.3s var(--ease-out); }
+.cm-step .step-n { transition: transform 0.3s var(--ease-out); }
+.cm-step-text { color: var(--fg-dim); }
+.cm-step-stage { margin-top: auto; padding: 3px 8px 2px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; background: var(--k); color: #fff; opacity: 0.55; transition: opacity 0.25s; }
+button.hp.cm-step.on { background: var(--fg); translate: 0 -10px; }
 button.hp.cm-step.is-loud.on { background: var(--accent); }
 .cm-step.on .step-n, .cm-step:hover .step-n { transform: translateX(6px) rotate(-4deg); }
-.cm-step.on .cm-step-words em, .cm-step:hover .cm-step-words em, .cm-step:focus-visible .cm-step-words em { opacity: 1; transform: none; }
+.cm-step.on .cm-step-stage, .cm-step:hover .cm-step-stage, .cm-step:focus-visible .cm-step-stage { opacity: 1; }
 /* the lines gliding to a stage by themselves */
 .compare.is-gliding .compare-then { transition: clip-path 0.7s var(--ease-out); }
 .compare.is-gliding .compare-line { transition: left 0.7s var(--ease-out); }
-@media (max-width: 799px) {
-  .cm-process { grid-template-columns: minmax(0, 1fr); }
-  .cm-process-art { position: static; width: min(100%, 340px); margin-inline: auto; }
-}
 @media (prefers-reduced-motion: reduce) { .compare.is-gliding .compare-then, .compare.is-gliding .compare-line { transition: none; } }

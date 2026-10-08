@@ -15,7 +15,7 @@
       "price": 10
     }
   ],
-  "status": "sale",
+  "status": "none",
   "title": "Man of Tomorrow",
   "type": "Prints",
   "inShop": true,

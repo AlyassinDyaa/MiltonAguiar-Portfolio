@@ -754,10 +754,10 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 @media (hover: none) { .pc-alt { display: none; } }
 .pc.is-gone .pc-frame > img, .pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.7); }
 /* the tag, and the cart button that shows when the card is pointed at */
-.sc-tag { position: absolute; z-index: 3; top: 12px; left: -6px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 4px 9px; font-family: var(--display); font-size: 0.74rem; font-weight: 800; line-height: 1; letter-spacing: 0.14em; text-transform: uppercase; background: var(--accent); color: #fff; box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.7); }
+.sc-tag { position: absolute; z-index: 3; top: 20px; left: 20px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px 5px 10px; font-family: var(--display); font-size: 0.84rem; font-weight: 900; font-style: italic; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent); color: #fff; border: 2px solid #0b0b0c; box-shadow: 3px 3px 0 #0b0b0c; transform: rotate(-2deg); pointer-events: none; }
 .sc-tag.is-new::before { content: ''; flex: 0 0 auto; width: 9px; height: 9px; background: currentColor; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
-.sc-tag.is-soldout { background: #0b0b0c; }
-.sc-tag.is-inline { position: static; box-shadow: none; }
+.sc-tag.is-soldout { background: #0b0b0c; border-color: #f3f3f1; box-shadow: 3px 3px 0 var(--accent); }
+.sc-tag.is-inline { position: static; box-shadow: none; transform: none; border-width: 0; }
 .pc-add { position: absolute; z-index: 3; right: 10px; bottom: 10px; display: grid; place-items: center; width: 44px; height: 44px; background: var(--accent); color: #fff; box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.8); opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.35s var(--ease-out), background 0.2s, color 0.2s; }
 .pc:hover .pc-add, .pc:focus-within .pc-add { opacity: 1; transform: translateY(-6px); }
 .pc-add:hover, .pc-add:focus-visible { background: #fff; color: #0b0b0c; outline: 0; }
@@ -784,7 +784,7 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
   .pc-title { font-size: 1.05rem; }
   .pc-price b { font-size: 1.1rem; }
   .pc-meta small { font-size: 0.66rem; letter-spacing: 0.1em; }
-  .sc-tag { top: 8px; font-size: 0.64rem; padding: 4px 7px 3px 7px; }
+  .sc-tag { top: 14px; left: 14px; font-size: 0.7rem; padding: 4px 8px 3px 7px; box-shadow: 2px 2px 0 #0b0b0c; }
 }
 @media (prefers-reduced-motion: reduce) { .pc-frame, .pc-alt, .pc-add { transition: none; } .pc:hover .pc-frame { transform: none; } }
 

@@ -31,9 +31,10 @@ export default function Commissions() {
   const form = true
   const byService = Boolean(brand.contactAction)
   const { send, state, problem, fallback, again } = useSendForm('commission')
-  // the set shown beside How it works: the one named in the admin, or the first; "none" for none
-  const wanted = String(commissions.processSet || '').trim().toLowerCase()
-  const set = wanted === 'none' ? null : redraws.find((r) => !wanted || r.title.toLowerCase() === wanted) || redraws[0] || null
+  // the set shown beside How it works: the one switched on for it under Home → The sets (the first
+  // of those), or else the first set
+  const wanted = String(commissions.processSet || '').trim().toLowerCase() // an older way: a set's title, or "none"
+  const set = wanted === 'none' ? null : (wanted && redraws.find((r) => r.title.toLowerCase() === wanted)) || redraws.find((r) => r.commissions) || redraws[0] || null
   const [focus, setFocus] = useState(null) // the stage the step being pointed at is about
   const art = useRef(null)
   // on a phone the picture is above the steps: a tapped step brings it back into view
@@ -82,7 +83,7 @@ export default function Commissions() {
             <Runner label={processLabel} page={++n} />
             <div className="spread-head"><h2 className="display h-lg">{processTitle}</h2></div>
             {set ? (
-              /* the piece at each stage on top, the steps in a strip under it; picking a step shows its stage */
+              /* the piece at each stage on the left, the steps two by two on its right; picking a step shows its stage */
               <div className="cm-process">
                 <div className="cm-process-art" ref={art}>
                   <Compare set={set} show={focus} />

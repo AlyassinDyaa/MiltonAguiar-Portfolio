@@ -1641,14 +1641,29 @@ form.acc-modal-box { max-width: none; }
 .acct-keep b { color: var(--fg); }
 @media (max-width: 599px) { .acct-keep { bottom: 8px; } .acct-keep .btn { flex: 1 1 auto; justify-content: center; } }
 
-/* Commissions, How it works: the piece at each stage on top, centred, and the steps in a strip
-   under it (the same strip as without a set); the step picked shows its stage */
-.cm-process { display: grid; gap: clamp(28px, 3.4vw, 48px); }
-.cm-process-art { justify-self: center; width: min(100%, 360px); }
+/* Commissions, How it works: the piece at each stage on the left, the steps two by two on its
+   right, as tall as the picture, with leaning gutters between them; the step picked shows its stage */
+.cm-process { display: grid; grid-template-columns: minmax(240px, 360px) minmax(0, 1fr); gap: clamp(24px, 3.4vw, 48px); align-items: start; }
 .cm-process-art .compare-stage { box-shadow: 10px 10px 0 -2px var(--accent); }
-.cm-process-tip { margin: 22px 0 0; font-size: 0.86rem; text-align: center; color: var(--fg-mute); }
-.cm-steps .words { min-height: clamp(240px, 22vw, 320px); }
-.cm-steps .display { margin: 20px 0 10px; }
+.cm-process-tip { margin: 22px 0 0; font-size: 0.86rem; color: var(--fg-mute); }
+.cm-steps.steps { --s: clamp(16px, 1.8vw, 28px); grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; row-gap: var(--gap); height: 100%; }
+.cm-steps.steps > li:nth-child(odd) { margin-left: 0; --clip: polygon(0 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%); }
+.cm-steps.steps > li:nth-child(even) { margin-left: calc(var(--s) * -1); --clip: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%); }
+.cm-steps.steps > li:only-child { --clip: none; }
+.cm-steps.steps .words { min-height: 0; padding: clamp(18px, 2vw, 28px) var(--pad); }
+.cm-steps.steps > li:nth-child(odd) .words { padding-right: calc(var(--pad) + var(--s)); }
+.cm-steps.steps > li:nth-child(even) .words { padding-left: calc(var(--pad) + var(--s)); }
+.cm-steps .step-n { font-size: clamp(3.2rem, 5vw, 5rem); }
+.cm-steps .display { margin: 14px 0 8px; }
+@media (max-width: 799px) {
+  .cm-process { grid-template-columns: minmax(0, 1fr); }
+  .cm-process-art { justify-self: center; width: min(100%, 360px); }
+}
+@media (max-width: 559px) {
+  .cm-steps.steps { grid-template-columns: minmax(0, 1fr); }
+  .cm-steps.steps > li:nth-child(n) { margin-left: 0; --clip: none; }
+  .cm-steps.steps > li:nth-child(n) .words { padding-inline: var(--pad); }
+}
 .cm-step { cursor: pointer; transition: background 0.2s, translate 0.3s var(--ease-out); }
 .cm-step .step-n { transition: transform 0.3s var(--ease-out); }
 .cm-step-text { color: var(--fg-dim); }

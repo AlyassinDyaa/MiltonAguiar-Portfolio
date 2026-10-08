@@ -231,7 +231,7 @@ function assemble(content) {
 
   // the sets made on the Home page (Pencils, Inks, Colours), then any made the older way, one file each
   const homeSets = (Array.isArray(page('home').steps) ? page('home').steps : []).map((r, i) => ({
-    slug: `set-${i}`, title: r.title || '', text: r.text || '', hidden: r.hidden, order: i,
+    slug: `set-${i}`, title: r.title || '', text: r.text || '', hidden: r.hidden, order: i, commissions: Boolean(r.commissions),
     stages: [['Pencils', r.pencils], ['Inks', r.inks], ['Colours', r.colours]].filter(([, src]) => src).map(([year, src]) => ({ year, src })),
   }))
   redraws = [...live(homeSets), ...live(folder('redraws')).sort(byOrder)]

@@ -63,6 +63,7 @@
       "pencils": "/uploads/daredevil-pencils-cropped_01.webp",
       "inks": "/uploads/daredevil-inks_01.webp",
       "colours": "/uploads/daredevil.webp",
+      "commissions": true,
       "hidden": false
     }
   ]

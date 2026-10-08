@@ -323,6 +323,7 @@ collections:
               - { name: pencils, label: Pencils, widget: image, choose_url: false }
               - { name: inks, label: Inks, widget: image, choose_url: false, required: false }
               - { name: colours, label: Colours, widget: image, choose_url: false }
+              - { name: commissions, label: Show on the Commissions page, widget: boolean, default: false, required: false, hint: 'Beside How it works on the Commissions page. One set shows there: the first one switched on (with none switched on, the first set).' }
               - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false }
           - { name: commissionsTitle, label: Heading, widget: string, hint: 'Set above "Open!" or "Closed", which follows the switch on the Commissions page.' }
           - { name: commissionsButton, label: Button, widget: string }
@@ -372,13 +373,12 @@ collections:
           - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
           - { name: processLabel, label: Small label, widget: string, required: false }
           - { name: processTitle, label: Heading, widget: string }
-          - { name: processSet, label: Set shown beside the steps, widget: string, required: false, hint: 'The pencils, inks and colours shown beside How it works (pointing at a step shows its stage). Type the title of a set from Page text → Home → The sets; leave it empty for the first set, or type none for no set.' }
           - name: steps
             label: Steps
             label_singular: Step
             widget: list
             summary: '{{fields.title}}'
-            hint: 'Shown as numbered panels beside the pencils-to-colours set. A step that mentions pencils, inks or colours shows that stage when pointed at; the last step shows the finished piece.'
+            hint: 'Shown as numbered panels beside the pencils-to-colours set (pick which set under Page text → Home → The sets: "Show on the Commissions page"). A step that mentions pencils, inks or colours shows that stage when picked; the last step shows the finished piece.'
             fields:
               - { name: title, label: Step, widget: string }
               - { name: text, label: Description, widget: text }

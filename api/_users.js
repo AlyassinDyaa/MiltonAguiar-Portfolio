@@ -145,7 +145,7 @@ const C = { page: '#6d0d14', ink: '#0b0b0c', panel: '#17171a', red: '#d8232f', b
 const paint = (c) => `background-color:${c};background-image:linear-gradient(${c},${c});`
 // light words that must stay light in Gmail's dark mode
 const keep = (html, tag = 'div') => `<${tag} class="gmail-screen"><${tag} class="gmail-dif">${html}</${tag}></${tag}>`
-export const emailHtml = ({ subject, kicker, title, lines = [], button, picture, after, code }) => {
+export const emailHtml = ({ subject, kicker, title, lines = [], button, picture, after, code, orders }) => {
   const b = brandInfo()
   const name = String(b.name || 'Milton Aguiar').trim()
   const cut = name.lastIndexOf(' ')
@@ -171,7 +171,15 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
     ${kicker ? `<span style="display:inline-block;padding:5px 10px 4px;${paint(C.ink)}font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:#ffffff;">${keep(esc(kicker), 'span')}</span>` : ''}
     <h1 style="margin:16px 0 18px;font-family:${DISPLAY};font-size:32px;line-height:1.05;font-weight:900;font-style:italic;text-transform:uppercase;color:#f3f3f1;">${keep(esc(title || subject))}</h1>
     ${lines.map(para).join('\n    ')}
-    ${code ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr><td style="${paint(C.ink)}border:2px dashed ${C.gold};padding:14px 22px;">
+    ${Array.isArray(orders) ? orders.map((o) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;${paint(C.ink)}border:2px solid ${C.line};"><tr><td style="padding:14px 16px;">
+      <span style="display:block;font-family:${DISPLAY};font-size:18px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;">${keep(esc(o.title), 'span')}</span>
+      <span style="display:block;margin:2px 0 10px;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:${C.soft};">${esc(o.sub || '')}</span>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${(o.rows || []).map(([l, v]) => `<tr><td style="padding:3px 0;font-family:${BODY};font-size:14px;line-height:1.45;color:${C.text};">${keep(esc(l), 'span')}</td><td align="right" style="padding:3px 0 3px 12px;font-family:${BODY};font-size:14px;color:${C.text};white-space:nowrap;">${keep(esc(v || ''), 'span')}</td></tr>`).join('')}
+        ${o.total ? `<tr><td style="padding:8px 0 0;border-top:1px dashed ${C.line};font-family:${DISPLAY};font-size:12px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:${C.soft};">Total</td><td align="right" style="padding:8px 0 0 12px;border-top:1px dashed ${C.line};font-family:${DISPLAY};font-size:18px;font-weight:900;font-style:italic;color:${C.bright};">${esc(o.total)}</td></tr>` : ''}
+      </table>
+      ${o.foot ? `<span style="display:block;margin-top:10px;font-family:${BODY};font-size:13px;line-height:1.5;color:${C.foot};">${keep(esc(o.foot), 'span')}</span>` : ''}
+    </td></tr></table>`).join('\n    ') : ''}
+    ${code ?`<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr><td style="${paint(C.ink)}border:2px dashed ${C.gold};padding:14px 22px;">
       <span style="display:block;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:${C.gold};">${esc(code.label || 'Your code')}</span>
       <span style="display:block;margin-top:6px;font-family:${MONO};font-size:26px;font-weight:700;letter-spacing:3px;color:#ffffff;">${keep(esc(code.text), 'span')}</span>
       ${code.note ? `<span style="display:block;margin-top:6px;font-family:${BODY};font-size:13px;color:${C.foot};">${keep(esc(code.note), 'span')}</span>` : ''}
@@ -203,8 +211,15 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
    MAIL_FROM is the sender as people see it ("Milton Aguiar <hello@...>"); MAIL_REPLY_TO, if set,
    is where replies go. With neither set, on this computer the email is printed instead.
    An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text },
-   code: { label, text, note } (a discount code, in a dashed box), after, replyTo }. */
+   code: { label, text, note } (a discount code, in a dashed box), orders: [{ title, sub, rows: [[what, price]],
+   total, foot }] (orders written out, a box each), after, replyTo }. */
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
+// the artist's own inbox, as for the Contact form: CONTACT_TO, else the contact email in the admin
+// (Site → Name, colour and contact), else the address the site sends from
+export const artistInbox = () => {
+  const m = String(process.env.MAIL_FROM || '').match(/<([^>]+)>/)
+  return process.env.CONTACT_TO || brandInfo().email || (m && m[1]) || process.env.SMTP_USER || String(process.env.MAIL_FROM || '').trim()
+}
 const smtpReady = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 export const mailReady = () => smtpReady() || Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM)
 let transport = null
@@ -217,7 +232,7 @@ const smtp = () => transport || (transport = nodemailer.createTransport({
 export const sendMail = async (mail) => {
   const { to, subject, lines, button, after } = mail
   const brand = process.env.MAIL_BRAND || siteName()
-  const text = [mail.title || subject, '', ...lines, mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
+  const text = [mail.title || subject, '', ...lines, ...(Array.isArray(mail.orders) ? mail.orders.map((o) => ['', ...[`${o.title}${o.sub ? ` (${o.sub})` : ''}`, ...(o.rows || []).map(([l, v]) => `  ${l}  ${v || ''}`), o.total ? `  Total  ${o.total}` : '', o.foot ? `  ${o.foot}` : ''].filter(Boolean)].join('\n')) : []), mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
   if (!mailReady()) {
     // on this computer the link is printed instead, so the whole journey can be tried without email
     if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n`)

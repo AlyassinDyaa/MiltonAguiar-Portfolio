@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
+import { artistInbox, sendMail } from './_users.js'
 
 /* Orders in the database, so a buyer's account can show them (the leading underscore keeps Vercel
    from serving this file). Each is kept under `ref`: the Stripe checkout's id (cs_...), or "pp_"
@@ -92,6 +93,125 @@ export const paidWithOf = (details) => {
 }
 const paidWithLabel = (o) => o.paidWith || (o.provider === 'paypal' ? 'PayPal' : o.provider === 'stripe' ? 'Card' : '')
 
+/* An order line with its piece kept on it (slug, title, picture, size, signed, type), so the order
+   still shows the piece after it is taken off the site. */
+export const withPiece = (item, pieces = piecesNow()) => {
+  const d = describeItem(item.name, pieces)
+  return d.slug ? { ...item, slug: d.slug, title: d.title, src: d.src, size: d.size, signed: d.signed, type: d.type } : item
+}
+
+/* A paid order, told to the artist by email, once (however often Stripe or PayPal says so): who
+   bought, what, the discount code, where it goes, how it was paid, and a button to Sales → Orders.
+   Sent to ORDER_EMAIL_TO, else the artist's inbox (CONTACT_TO, else the contact email in the admin,
+   else the address the site sends from). */
+/* ---------- order numbers: a member's orders carry their member number, then which order of theirs
+   it is (member 3's first order is 0003-01, the next 0003-02); an order without an account is
+   G-0001, G-0002... Given once, when the order is paid, and kept. Orders from before keep the
+   number they had (the end of the payment's id). */
+const pad = (n, w) => String(n).padStart(w, '0')
+const after = (got) => (got && got.value !== undefined && got.ok !== undefined ? got.value : got) // older drivers wrap the document
+export const numberOrder = async (ref) => {
+  if (!dbReady()) return ''
+  const d = await db()
+  const orders = d.collection('orders')
+  const o = await orders.findOne({ ref })
+  if (!o) return ''
+  if (o.orderNo) return o.orderNo
+  if (o.status !== 'paid') return ''
+  const users = d.collection('users')
+  // the buyer's account: the one they were logged in to, else one with the same (confirmed) email
+  const u = (o.userId && await users.findOne({ _id: o.userId })) || (o.email ? await users.findOne({ email: String(o.email).toLowerCase(), verified: true }) : null)
+  let no
+  if (u && u.memberNo) {
+    const doc = after(await users.findOneAndUpdate({ _id: u._id }, { $inc: { orderSeq: 1 } }, { returnDocument: 'after' }))
+    no = `${pad(u.memberNo, 4)}-${pad((doc && doc.orderSeq) || 1, 2)}`
+  } else {
+    const doc = after(await d.collection('counters').findOneAndUpdate({ _id: 'guestOrders' }, { $inc: { seq: 1 } }, { upsert: true, returnDocument: 'after' }))
+    no = `G-${pad((doc && doc.seq) || 1, 4)}`
+  }
+  // should two calls race, the first number given stays
+  const set = await orders.updateOne({ ref, orderNo: { $exists: false } }, { $set: { orderNo: no } })
+  if (!set.modifiedCount) { const now = await orders.findOne({ ref }); return (now && now.orderNo) || no }
+  return no
+}
+// the number an order shows: its order number, or (from before) the end of the payment's id
+export const numberOf = (o) => o.orderNo || String(o.ref || '').replace(/^(cs_(test|live)_|pp_)/, '').slice(-8).toUpperCase()
+
+/* ---------- the buyer's email for a paid order (once, however often the payment is reported):
+   the order number, what they bought, the discount, the total, how it was paid and where it goes */
+export const tellBuyer = async (ref, site) => {
+  if (!dbReady()) return
+  const d = await db()
+  const order = after(await d.collection('orders').findOneAndUpdate({ ref, status: 'paid', buyerTold: { $ne: true } }, { $set: { buyerTold: true } }))
+  if (!order || !order.email) return
+  const cur = order.currency || 'EUR'
+  const price = (n) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(Number(n) || 0) } catch { return `${n} ${cur}` } }
+  const member = (order.userId && await d.collection('users').findOne({ _id: order.userId })) || await d.collection('users').findOne({ email: String(order.email).toLowerCase() })
+  const no = order.orderNo || numberOf(order)
+  const first = String(order.name || (member && member.name) || '').split(' ')[0]
+  const a = order.address
+  const code = order.discountCode || order.code || ''
+  const home = String(site || '').replace(/\/$/, '')
+  const when = new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  try {
+    await sendMail({
+      to: order.email,
+      subject: `Your Milton Aguiar order ${no}`,
+      kicker: 'Thank you',
+      title: `Order ${no} received`,
+      lines: [
+        `Hi${first ? ` ${first}` : ''},`,
+        'Thank you for your order. Every piece is checked and packed by hand before it leaves the studio.',
+        member ? 'You can follow it in your account, from packing to your door, with the tracking number once it is posted.' : 'Make an account with this email address and you can follow it there, from packing to your door, with the tracking number once it is posted.',
+      ],
+      orders: [{
+        title: `Order ${no}`,
+        sub: when,
+        rows: [
+          ...(order.items || []).map((i) => [`${i.qty > 1 ? `${i.qty} × ` : ''}${i.name}`, i.amount != null ? price(i.amount) : '']),
+          ...(order.discount > 0 ? [[`Discount${code ? ` (${code})` : ''}`, `−${price(order.discount)}`]] : []),
+        ],
+        total: price(order.amount),
+        foot: [order.amount > 0 ? `Paid by ${order.paidWith || (order.provider === 'paypal' ? 'PayPal' : 'card')}` : 'Free, with a code', a ? `Posting to ${[a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), a.country].filter(Boolean).join(', ')}` : ''].filter(Boolean).join(' · '),
+      }],
+      button: member ? { label: 'See your order', url: `${home}/account?tab=orders` } : { label: 'Make an account', url: `${home}/account/signup` },
+      after: 'Questions about your order? Just reply to this email.',
+      replyTo: artistInbox() || undefined,
+    })
+  } catch (e) { console.error('buyer email not sent:', e.message) }
+}
+
+export const tellAdmin = async (ref, site) => {
+  if (!dbReady()) return
+  const got = await (await db()).collection('orders').findOneAndUpdate({ ref, status: 'paid', adminTold: { $ne: true } }, { $set: { adminTold: true } })
+  const order = got && got.value !== undefined && got.ok !== undefined ? got.value : got // older drivers wrap the document
+  if (!order) return
+  const to = process.env.ORDER_EMAIL_TO || artistInbox()
+  if (!to) return
+  const cur = order.currency || 'EUR'
+  const price = (n) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(Number(n) || 0) } catch { return `${n} ${cur}` } }
+  const a = order.address
+  const items = (order.items || []).map((i) => `${i.qty > 1 ? `${i.qty} × ` : ''}${i.name}${i.amount != null ? `, ${price(i.amount)}` : ''}`)
+  const code = order.discountCode || order.code || ''
+  try {
+    await sendMail({
+      to,
+      subject: `New order ${numberOf(order)}: ${price(order.amount)}${order.name ? ` from ${order.name}` : ''}${order.test ? ' (test)' : ''}`,
+      kicker: 'New order',
+      title: order.amount > 0 ? `${price(order.amount)} paid` : 'A free order',
+      lines: [
+        `${order.name || 'Someone'}${order.email ? ` (${order.email})` : ''} ${order.amount > 0 ? `paid ${price(order.amount)} by ${order.paidWith || (order.provider === 'paypal' ? 'PayPal' : 'card')}` : 'ordered for free, with a discount code'}${order.test ? ' (a test)' : ''}.`,
+        ...(items.length ? ['What they bought:', ...items] : []),
+        ...(order.discount > 0 ? [`Discount: −${price(order.discount)}${code ? ` (code ${code})` : ''}`] : []),
+        ...(a ? [`Post to: ${[a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), a.state, a.country].filter(Boolean).join(', ')}`] : []),
+        ...(order.phone ? [`Phone: ${order.phone}`] : []),
+      ],
+      button: { label: 'Open orders', url: `${String(site || '').replace(/\/$/, '')}/admin/#/sales/orders` },
+      after: 'Mark it packed and shipped in Sales → Orders: the buyer sees each step, and the tracking number, in their account.',
+    })
+  } catch (e) { console.error('order email not sent:', e.message) }
+}
+
 // a new order, or more about one (where it is up to, once the admin has set it, is kept)
 export const recordOrder = async (order) => {
   if (!dbReady()) return
@@ -119,12 +239,12 @@ export const forCustomer = (o) => {
   const c = CARRIERS[t.carrier]
   const byCarrier = c && c[1] && tracking && !linkOf(tracking) ? c[1](encodeURIComponent(tracking)) : ''
   return {
-    number: String(o.ref || '').replace(/^(cs_(test|live)_|pp_)/, '').slice(-8).toUpperCase(),
+    number: numberOf(o),
     createdAt: o.createdAt,
     provider: o.provider,
     paidWith: paidWithLabel(o),
     status: o.status === 'refunded' ? 'refunded' : o.status === 'pending' ? 'pending' : STAGES.includes(t.status) ? t.status : 'new',
-    items: Array.isArray(o.items) ? o.items.map((i) => ({ name: text(i.name, 200), qty: i.qty || 1, amount: i.amount })) : [],
+    items: Array.isArray(o.items) ? o.items.map((i) => ({ name: text(i.name, 200), qty: i.qty || 1, amount: i.amount, slug: i.slug || '', title: i.title || '', src: i.src || '' })) : [],
     amount: o.amount,
     discount: o.discount || 0,
     currency: o.currency || 'EUR',

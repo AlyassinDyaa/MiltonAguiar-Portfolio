@@ -432,7 +432,7 @@ window.IASales = (() => {
       ]),
       el('div', { className: 'sl-piece-foot' }, [
         i.total != null ? el('b', { textContent: money(i.total, o.currency) }) : null,
-        i.slug ? el('a', { className: 'sl-link', href: `#/collections/shop/entries/${i.slug}`, textContent: 'Open the piece' }) : el('small', { className: 'sl-dim', textContent: 'Not a piece on the site any more' }),
+        i.slug && !i.gone ? el('a', { className: 'sl-link', href: `#/collections/shop/entries/${i.slug}`, textContent: 'Open the piece' }) : el('small', { className: 'sl-dim', textContent: i.gone ? 'Taken off the site since' : 'Not a piece on the site any more' }),
       ]),
     ]),
   ])))
@@ -470,7 +470,7 @@ window.IASales = (() => {
         button('×', close, 'sl-x'),
       ]),
       el('div', { className: 'sl-panel-body' }, [
-        done(o) && (o.paymentIntent || o.provider === 'paypal') ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
+        done(o) && (o.paymentIntent || o.provider === 'paypal' || o.free) ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
         block('Pieces', [
           el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: i.name }), el('small', { textContent: `× ${i.qty}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
           o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,

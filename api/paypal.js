@@ -1,7 +1,8 @@
 import { priceCart, takes, read } from './_cart.js'
 import { buyer } from './_buyer.js'
 import { db, dbReady } from './_db.js'
-import { boughtOf, codeUsed, readBought, recordOrder, shapeAddress, takeFromCart } from './_orders.js'
+import { boughtOf, codeUsed, numberOrder, piecesNow, readBought, recordOrder, shapeAddress, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
+import { siteUrl } from './_users.js'
 
 /* Paying with PayPal. Two steps, both POST:
    - the cart (see _cart.js): works out what it costs from the site's own content, asks PayPal for
@@ -23,8 +24,9 @@ const api = () => (process.env.PAYPAL_ENV === 'live' ? 'https://api-m.paypal.com
 const money = (cents) => (cents / 100).toFixed(2)
 const sandbox = () => process.env.PAYPAL_ENV !== 'live'
 
-/* a PayPal payment taken: the order waiting in the database gets the buyer and the address */
-const savePaid = async (id, said) => {
+/* a PayPal payment taken: the order waiting in the database gets the buyer and the address, and
+   the artist is emailed (once) */
+const savePaid = async (id, said, site = '') => {
   if (!dbReady()) return
   const unit = (said.purchase_units || [])[0] || {}
   const ship = unit.shipping || {}
@@ -44,6 +46,9 @@ const savePaid = async (id, said) => {
   // a discount code on it: counted (Stripe does not see PayPal's uses), and a reward code shows as used
   const code = before && before.code
   if (code) { try { await codeUsed({ code, promoId: before.promoId, viaPaypal: true, userId: before.userId, ref: `pp_${id}` }) } catch (e) { console.error('code use not noted:', e.message) } }
+  try { await numberOrder(`pp_${id}`) } catch (e) { console.error('order not numbered:', e.message) }
+  try { await tellAdmin(`pp_${id}`, site) } catch (e) { console.error('order email not sent:', e.message) }
+  try { await tellBuyer(`pp_${id}`, site) } catch (e) { console.error('buyer email not sent:', e.message) }
 }
 
 const token = async () => {
@@ -72,7 +77,7 @@ export default async function handler(req, res) {
     if (!/^[A-Z0-9]{8,32}$/.test(id)) return res.status(400).json({ message: 'That is not a PayPal order.' })
     try {
       const done = await paypal(`/v2/checkout/orders/${id}/capture`)
-      if (done.status === 'COMPLETED') { try { await savePaid(id, done) } catch (e) { console.error('paypal order not saved:', e.message) } }
+      if (done.status === 'COMPLETED') { try { await savePaid(id, done, siteUrl(req)) } catch (e) { console.error('paypal order not saved:', e.message) } }
       // logged in: the Shop sends them on to their orders (it need not have checked yet)
       const { user } = await buyer(req)
       return res.status(200).json({ ok: done.status === 'COMPLETED', status: done.status, account: Boolean(user) })
@@ -114,9 +119,9 @@ export default async function handler(req, res) {
     const made = await paypal('/v2/checkout/orders', order)
     const go = (made.links || []).find((l) => l.rel === 'payer-action' || l.rel === 'approve')
     if (!go) throw new Error('paypal: no approval link')
-    // kept as waiting until the buyer comes back and the payment is taken
+    // kept as waiting until the buyer comes back and the payment is taken (each line with its piece kept on it)
     try {
-      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: lines.map((l) => ({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 })), bought: boughtOf(lines), amount: (cents - off) / 100, discount: off / 100, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
+      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: (() => { const pieces = piecesNow(); return lines.map((l) => withPiece({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 }, pieces)) })(), bought: boughtOf(lines), amount: (cents - off) / 100, discount: off / 100, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
     } catch (e) { console.error('paypal order not saved:', e.message) }
     return res.status(200).json({ url: go.href })
   } catch (e) {

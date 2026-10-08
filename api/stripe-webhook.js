@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db, dbReady } from './_db.js'
-import { codeUsed, ours, paidWithOf, readBought, recordOrder, shapeAddress, stripeCodes, takeFromCart } from './_orders.js'
+import { codeUsed, numberOrder, ours, paidWithOf, piecesNow, readBought, recordOrder, shapeAddress, stripeCodes, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
+import { siteUrl } from './_users.js'
 
 /* Stripe tells the site here when something happens to a payment, so the order lands in the
    database (and so in the buyer's account) whether or not they come back to the site.
@@ -46,7 +47,7 @@ export default async function handler(req, res) {
   try {
     const o = event.data && event.data.object
     // a checkout of another site sharing the Stripe account is none of this site's business
-    if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && o && o.payment_status === 'paid' && ours(o)) {
+    if ((event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') && o && (o.payment_status === 'paid' || o.payment_status === 'no_payment_required') && ours(o)) { // a 100% code: nothing to pay, still an order
       const lines = await stripe(`checkout/sessions/${o.id}/line_items?limit=100`)
       const ship = (o.collected_information && o.collected_information.shipping_details) || o.shipping_details || null
       const who = o.customer_details || {}
@@ -66,13 +67,14 @@ export default async function handler(req, res) {
         ref: o.id,
         provider: 'stripe',
         pi: piId,
-        paidWith: (charge && paidWithOf(charge.payment_method_details)) || 'Card',
+        paidWith: (charge && paidWithOf(charge.payment_method_details)) || (o.amount_total === 0 ? 'Free, with a code' : 'Card'),
         userId,
         email: String(who.email || '').toLowerCase(),
         name: who.name || (ship && ship.name) || '',
         phone: who.phone || '',
         address: ship && ship.address ? shapeAddress(ship.address, ship.name) : null,
-        items: lines && Array.isArray(lines.data) ? lines.data.map((l) => ({ name: l.description, qty: l.quantity || 1, amount: (l.amount_total || 0) / 100 })) : [],
+        // each line at its price before any discount (the discount is its own line), with its piece kept on it
+        items: lines && Array.isArray(lines.data) ? (() => { const pieces = piecesNow(); return lines.data.map((l) => withPiece({ name: l.description, qty: l.quantity || 1, amount: (l.amount_subtotal ?? l.amount_total ?? 0) / 100 }, pieces)) })() : [],
         amount: (o.amount_total || 0) / 100,
         discount: ((o.total_details && o.total_details.amount_discount) || 0) / 100,
         currency: String(o.currency || '').toUpperCase(),
@@ -82,6 +84,11 @@ export default async function handler(req, res) {
         test: !o.livemode,
         createdAt: new Date((o.created || Date.now() / 1000) * 1000),
       })
+      // its order number (a member's carries their member number), then the artist and the buyer
+      // hear of it by email (once each, however often Stripe sends this)
+      try { await numberOrder(o.id) } catch (e) { console.error('order not numbered:', e.message) }
+      try { await tellAdmin(o.id, siteUrl(req)) } catch (e) { console.error('order email not sent:', e.message) }
+      try { await tellBuyer(o.id, siteUrl(req)) } catch (e) { console.error('buyer email not sent:', e.message) }
       // paid: what was bought leaves the buyer's saved cart, even if they never come back to the site
       await takeFromCart(userId, readBought(o.metadata && o.metadata.bought))
       // a reward code shows as used in its owner's account (Stripe counts the use itself)

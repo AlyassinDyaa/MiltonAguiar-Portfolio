@@ -1759,3 +1759,68 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 /* the empty cart, holding a code put in from the account page */
 .cart-empty-code { margin: 14px 0 18px; padding: 10px 12px; border: 1px dashed var(--gold, #ffd34d); font-size: 0.9rem; color: var(--fg-dim); }
 .cart-empty-code b { font-family: var(--display); letter-spacing: 0.06em; color: var(--gold, #ffd34d); }
+
+/* putting gifts away: an archive icon on each gift, and the archived ones folded into a list */
+.acct-gift-archive { position: absolute; top: 8px; right: 8px; z-index: 1; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid transparent; color: var(--fg-mute); cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
+.acct-gift-archive svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.acct-gift-archive:hover, .acct-gift-archive:focus-visible { color: var(--fg); border-color: var(--line-strong); background: var(--panel-2); outline: 0; }
+.acct-reward.is-new .acct-gift-archive { top: 18px; }
+.acct-shelf { margin-top: 14px; }
+.acct-shelf-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; font-family: var(--display); font-size: 0.86rem; font-weight: 800; font-style: italic; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-mute); cursor: pointer; }
+.acct-shelf-toggle small { min-width: 20px; padding: 1px 6px; text-align: center; font-style: normal; background: var(--panel-2); color: var(--fg); }
+.acct-shelf-toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform 0.25s; }
+.acct-shelf-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.acct-shelf-toggle:hover, .acct-shelf-toggle:focus-visible { color: var(--fg); }
+.acct-shelf-list { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.acct-shelf-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 10px 14px; border: 1px solid var(--line-strong); background: var(--panel); }
+.acct-shelf-list li > span { display: grid; flex: 1 1 200px; min-width: 0; }
+.acct-shelf-list b { font-family: var(--display); font-weight: 800; font-style: italic; font-size: 1.1rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--fg); }
+.acct-shelf-list small { font-size: 0.84rem; color: var(--fg-mute); }
+.acc-link.is-danger { color: var(--acc-bad); text-decoration-color: currentColor; }
+
+/* trying a reward on: an unlocked picture or card design is tapped, shows live, and waits to be saved */
+.acct-reward.is-tryable { cursor: pointer; transition: border-color 0.2s, transform 0.2s var(--ease-out); }
+.acct-reward.is-tryable:hover { border-color: var(--accent); }
+.acct-reward.is-trying { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent), 6px 6px 0 -1px var(--accent); }
+.acct-reward-use { margin-top: 8px; justify-self: start; text-align: left; }
+.acct-reward-use.is-on { display: inline-block; font-family: var(--display); font-size: 0.82rem; font-weight: 800; font-style: italic; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-mute); }
+.acct-reward-use[aria-pressed="true"] { color: var(--fg); }
+.acct-tryon { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 16px; border: 2px solid var(--accent); background: var(--accent-soft, oklch(0.56 0.22 var(--h) / 0.12)); }
+.acct-tryon .acc-card3d-wrap { width: min(100%, 380px); padding: 0 10px 10px 0; }
+.acct-tryon .acc-card3d { --rx: 0deg; --ry: 0deg; }
+.acct-tryon-text { flex: 1 1 220px; min-width: 0; }
+.acct-tryon-text strong { display: block; font-family: var(--display); font-size: 1.05rem; font-weight: 900; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+.acct-tryon-text span { display: block; margin-top: 4px; font-size: 0.92rem; line-height: 1.5; color: var(--fg-dim); }
+.acct-keep > span.acct-card-mini { flex: none; width: 70px; }
+.acct-keep-problem { display: block; margin-top: 4px; font-style: normal; color: var(--acc-bad-text); }
+
+/* deleting orders from the history: a Select mode with tick boxes, and the warning window */
+.acc-oselect { padding: 8px 14px 7px; border: 1px solid var(--line-strong); font-family: var(--display); font-size: 0.8rem; font-weight: 800; font-style: italic; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-dim); cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+.acc-oselect:hover, .acc-oselect:focus-visible { color: var(--fg); border-color: var(--fg-mute); outline: 0; }
+.acc-opick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 16px; padding: 12px 14px; border: 2px solid var(--acc-bad); background: color-mix(in srgb, var(--acc-bad) 8%, var(--panel)); }
+.acc-opick-all, .acc-order-pick { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-family: var(--display); font-size: 0.86rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg); }
+.acc-opick-all small { min-width: 20px; padding: 1px 6px; text-align: center; font-style: normal; background: var(--panel-2); }
+.acc-opick-all input, .acc-order-pick input { position: absolute; opacity: 0; width: 22px; height: 22px; margin: 0; cursor: pointer; }
+.acc-opick-all > span, .acc-order-pick > span, .acc-orow-tick { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border: 2px solid var(--line-strong); background: var(--panel-2); }
+.acc-opick-all input:checked + span, .acc-order-pick input:checked + span, .acc-orow.is-picked .acc-orow-tick { border-color: var(--acc-bad); background: var(--acc-bad); }
+.acc-opick-all input:checked + span::after, .acc-order-pick input:checked + span::after, .acc-orow.is-picked .acc-orow-tick::after { content: '✓'; font-size: 0.8rem; font-weight: 800; color: var(--panel); }
+.acc-opick-all input:focus-visible + span, .acc-order-pick input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acc-opick-count { flex: 1; font-size: 0.92rem; color: var(--fg-dim); }
+.acc-order-pick { margin-right: 4px; }
+.acc-order-head.is-picking { align-items: center; justify-content: flex-start; gap: 14px; }
+.acc-order-head.is-picking .acc-order-right { margin-left: auto; }
+.acc-orow.is-picking { grid-template-columns: auto auto minmax(0, 1fr) auto auto 20px; }
+.acc-orow.is-picked { border-color: var(--acc-bad); background: color-mix(in srgb, var(--acc-bad) 7%, var(--panel)); }
+.acc-del-text p { margin: 10px 0 0; color: var(--fg-dim); line-height: 1.55; }
+.acc-del-warn b { color: var(--acc-bad); }
+.acc-del-copy { padding: 10px 12px; border: 1px dashed var(--gold, #ffd34d); background: color-mix(in srgb, var(--gold, #ffd34d) 8%, transparent); }
+.acc-del-copy span { margin-right: 6px; color: var(--gold-ink, #ffd34d); }
+.acc-del-copy b { color: var(--fg); overflow-wrap: anywhere; }
+@media (max-width: 599px) {
+  .acc-orow.is-picking { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+  .acc-orow.is-picking .acc-orow-tick { grid-row: span 2; }
+  .acc-orow.is-picking .acc-pill { grid-column: 3; }
+  .acc-orow.is-picking .acc-orow-total { grid-column: 4; }
+  .acc-opick .btn { flex: 1 1 auto; justify-content: center; }
+  .acct-tryon { padding: 12px; }
+}

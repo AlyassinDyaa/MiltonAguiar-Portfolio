@@ -8,7 +8,8 @@ import { CARRIERS, describeItem, ours, paidWithOf, piecesNow, setTrack } from '.
    the metadata of its Stripe payment.
 
    GET  answers { orders: [...] }, newest first, every completed checkout and the unfinished ones.
-   POST { paymentIntent, fulfilment, tracking, note } saves those three on the order.
+   POST { paymentIntent, fulfilment, tracking, note } saves those three on the order (a free order, a
+        100% code with no payment, is saved by its id in the database instead).
    POST { action: 'hide', orders: [{ id, paymentIntent }] } deletes orders: they are erased from the
         database (and so from the buyer's account). Stripe never lets a payment be deleted, so there
         the order is marked (ma_hidden) and left out.
@@ -84,7 +85,8 @@ const order = (s) => {
     tracking: meta.tracking || '',
     note: meta.admin_note || '',
     paymentIntent: pi ? pi.id : '',
-    paidWith: (charge && paidWithOf(charge.payment_method_details)) || (paid ? 'Card' : ''),
+    paidWith: (charge && paidWithOf(charge.payment_method_details)) || (paid ? (s.amount_total === 0 ? 'Free, with a code' : 'Card') : ''),
+    free: paid && !pi, // a 100% code: no payment, so where it is up to is kept in the database
     stripe: pi ? `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}payments/${pi.id}` : `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}checkout/sessions/${s.id}`,
   }
 }
@@ -97,7 +99,7 @@ const saved = (o) => {
     id: o.ref,
     provider: 'paypal',
     test: Boolean(o.test),
-    number: String(o.ref).replace(/^pp_/, '').slice(-8).toUpperCase(),
+    number: o.orderNo || String(o.ref).replace(/^pp_/, '').slice(-8).toUpperCase(),
     created: new Date(o.createdAt).getTime(),
     currency: String(o.currency || 'EUR').toUpperCase(),
     total: Number(o.amount) || 0,
@@ -129,12 +131,39 @@ const paypalOrders = async () => {
   } catch (e) { console.error('paypal orders not read:', e.message); return [] }
 }
 
+/* Each line with its piece: picture, size, signed or not, type, category, universe. A piece taken
+   off the site since keeps what its order saved when it was paid (and is marked gone). A free order
+   (no Stripe payment to keep the details on) takes where it is up to from the database. */
+const withPieces = async (list) => {
+  const pieces = piecesNow()
+  let rows = new Map()
+  if (dbReady() && list.length) {
+    try { rows = new Map((await (await db()).collection('orders').find({ ref: { $in: list.map((o) => o.id) } }).toArray()).map((r) => [r.ref, r])) } catch (e) { console.error('kept lines not read:', e.message) }
+  }
+  for (const o of list) {
+    const row = rows.get(o.id)
+    if (row && row.orderNo) o.number = row.orderNo // its order number (a member's carries their member number)
+    const kept = (row && Array.isArray(row.items) && row.items) || []
+    o.items = o.items.map((i, n) => {
+      const now = describeItem(i.name, pieces)
+      if (now.slug) return { ...i, ...now }
+      const k = kept[n] && kept[n].name === i.name ? kept[n] : kept.find((x) => x && x.name === i.name)
+      return k && k.slug ? { ...i, slug: k.slug, title: k.title || '', src: k.src || '', size: k.size || '', signed: k.signed ?? null, type: k.type || '', gone: true } : i
+    })
+    if (o.free && row && row.track) {
+      const t = row.track
+      Object.assign(o, { fulfilment: STAGES.includes(t.status) ? t.status : 'new', carrier: CARRIERS[t.carrier] ? t.carrier : '', tracking: t.tracking || '', note: t.note || '' })
+    }
+  }
+  return list
+}
+
 /* The work itself, without the login check (the local preview calls this directly). */
 export async function orders({ method, body }) {
   const b0 = body && typeof body === 'object' ? body : {}
   // without Stripe, the database alone can still answer for PayPal orders
   if (!process.env.STRIPE_SECRET_KEY && dbReady()) {
-    if (method === 'GET') { const pieces = piecesNow(); return { status: 200, json: { mode: 'test', orders: (await paypalOrders()).map((o) => ({ ...o, items: o.items.map((i) => ({ ...i, ...describeItem(i.name, pieces) })) })) } } }
+    if (method === 'GET') return { status: 200, json: { mode: 'test', orders: await withPieces(await paypalOrders()) } }
     if (method === 'POST' && (b0.action === 'hide' || /^pp_/.test(String(b0.id || '')))) return paypalOnly(b0)
   }
   if (!process.env.STRIPE_SECRET_KEY) return { status: 503, json: { code: 'no-stripe', message: 'Stripe is not connected yet: add STRIPE_SECRET_KEY in the Vercel project settings. Orders appear here once it is.' } }
@@ -146,9 +175,7 @@ export async function orders({ method, body }) {
       const list = all.filter((s) => ours(s) && !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
       list.push(...await paypalOrders())
       list.sort((x, y) => y.created - x.created)
-      // each line with its piece: picture, size, signed or not, type, category, universe
-      const pieces = piecesNow()
-      for (const o of list) o.items = o.items.map((i) => ({ ...i, ...describeItem(i.name, pieces) }))
+      await withPieces(list)
       return { status: 200, json: { mode: testKey() ? 'test' : 'live', orders: list } }
     }
     if (method === 'POST') {
@@ -170,8 +197,14 @@ export async function orders({ method, body }) {
         return { status: done || !list.length ? 200 : 502, json: { hidden: done, failed: list.length - done, message: done ? '' : 'Stripe would not take that order off the list. Try again in a moment.' } }
       }
       if (/^pp_[A-Z0-9]+$/.test(String(b.id || ''))) return paypalOnly(b)
-      if (!/^pi_[A-Za-z0-9]+$/.test(String(b.paymentIntent || ''))) return { status: 400, json: { message: 'That order has no payment to save to.' } }
       if (!STAGES.includes(b.fulfilment)) return { status: 400, json: { message: 'Unknown order status.' } }
+      if (!/^pi_[A-Za-z0-9]+$/.test(String(b.paymentIntent || ''))) {
+        // a free order (a 100% code): no payment to keep the details on, so the database keeps them
+        if (!/^cs_[A-Za-z0-9_]+$/.test(String(b.id || '')) || !dbReady()) return { status: 400, json: { message: 'That order has no payment to save to.' } }
+        if (!(await (await db()).collection('orders').findOne({ ref: b.id }))) return { status: 409, json: { message: 'That order is not in the database yet. Try again in a moment.' } }
+        await setTrack({ ref: b.id }, { status: b.fulfilment, carrier: b.carrier, tracking: String(b.tracking || '').slice(0, 200), note: String(b.note || '').slice(0, 480) })
+        return { status: 200, json: { ok: true } }
+      }
       const form = new URLSearchParams()
       form.set('metadata[fulfilment]', b.fulfilment)
       form.set('metadata[carrier]', CARRIERS[b.carrier] ? b.carrier : '')

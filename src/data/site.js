@@ -133,9 +133,8 @@ function assemble(content) {
   const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
   if (rw.rewardText) accountPage.rewardText = rw.rewardText
   const of = (key, kind) => (Array.isArray(rw[key]) ? rw[key] : []).map((r) => ({ ...r, kind }))
-  // discounts are codes now (Sales → Discounts in the admin), not rewards: any left in the file are passed over
-  accountPage.rewards = [...of('pictures', 'picture'), ...of('cards', 'card'),
-    ...(Array.isArray(rw.rewards) ? rw.rewards.filter((r) => r && r.kind !== 'discount') : []),
+  accountPage.rewards = [...of('pictures', 'picture'), ...of('cards', 'card'), ...of('discounts', 'discount'),
+    ...(Array.isArray(rw.rewards) ? rw.rewards : []),
     ...(rw.pictures || rw.rewards ? [] : (accountPage.verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))]
     .filter((r) => r && !r.hidden && (r.kind === 'card' ? r.cardLook || r.cardArt : r.kind === 'discount' ? Number(r.percent) > 0 : typeof r.picture === 'string' && r.picture))
     .map((r) => {

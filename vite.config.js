@@ -100,7 +100,7 @@ const adminBundle = () => ({
     ]
     // the keys for payments, customer accounts (the database) and their emails, from a .env.local
     // file beside package.json (never committed: *.local is ignored)
-    const KEYS = /^(STRIPE_|PAYPAL_|MONGODB_|SMTP_|RESEND_|MAIL_|SITE_URL$)/
+    const KEYS = /^(STRIPE_|PAYPAL_|MONGODB_|SMTP_|RESEND_|MAIL_|CONTACT_TO$|ORDER_EMAIL_TO$|SITE_URL$)/
     // read afresh each time, so an edit to .env.local counts without a restart (what was put in
     // last time is taken out first: Vite would otherwise prefer it to the file)
     const ours = new Set()

@@ -70,7 +70,7 @@
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
     'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
-    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs' }, half: [], inner: ['earnedBy', 'count', 'cardLook'] },
+    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
@@ -96,7 +96,7 @@
     'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
     'site/account': 'Customer accounts on or off, the membership card, your note on their page, and the free profile pictures.',
-    'site/rewards': 'Profile pictures and membership card designs customers earn: by confirming their email, every few orders, or the pieces they collect. Discount codes are made under Sales → Discounts.',
+    'site/rewards': 'Profile pictures, membership card designs and discounts customers earn: by confirming their email, every few orders, or the pieces they collect.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',

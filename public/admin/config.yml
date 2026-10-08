@@ -629,7 +629,8 @@ collections:
             label: Profile pictures
             label_singular: profile picture
             widget: list
-            collapsed: false
+            collapsed: true
+            minimize_collapsed: true
             required: false
             summary: '{{fields.name}}'
             hint: 'Pictures customers earn for their profile. The circle shows it as customers will see it: drag the picture in it, and zoom.'
@@ -651,7 +652,8 @@ collections:
             label: Membership card designs
             label_singular: card design
             widget: list
-            collapsed: false
+            collapsed: true
+            minimize_collapsed: true
             required: false
             summary: '{{fields.name}}'
             hint: 'Looks for the membership card that customers earn. The card below each one shows it as customers will see it.'
@@ -668,6 +670,29 @@ collections:
                   - { label: 'A picture of your choosing', value: art }
               - { name: cardArt, label: Picture across the card, widget: image, choose_url: false, required: false, hint: 'Needed for "A picture of your choosing", optional with the others. A picture with a quiet bottom half works best: the name sits there.' }
               - { name: preview, label: As customers see it, widget: cardpreview, required: false }
+              - name: earnedBy
+                label: How it is earned
+                widget: select
+                default: verify
+                options:
+                  - { label: 'Confirming their email', value: verify }
+                  - { label: 'A number of orders', value: orders }
+                  - { label: 'A number of pieces collected', value: pieces }
+              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders or pieces it takes: 1 for their first order, 3, 6, 10... Refunded and deleted orders do not count.' }
+              - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
+          - name: discounts
+            label: Discounts
+            label_singular: discount
+            widget: list
+            collapsed: true
+            minimize_collapsed: true
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'A personal code for one order, made the moment a customer earns it, that only their email can use. Codes are made in Stripe and show in Sales → Discounts too.'
+            fields:
+              - { name: name, label: Name, widget: string, hint: 'Shown to customers, e.g. "3 orders: 10% off".' }
+              - { name: percent, label: Discount (%), widget: number, value_type: float, min: 1, max: 100, default: 10 }
+              - { name: days, label: Days to use it, widget: number, value_type: int, min: 1, default: 60, hint: 'How long their code works after they earn it.' }
               - name: earnedBy
                 label: How it is earned
                 widget: select

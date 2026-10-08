@@ -324,21 +324,22 @@ a.pj-book:hover, a.pj-book:focus-visible { rotate: 0deg; scale: 1.03; outline: 0
 /* ---------- step by step ---------- */
 .spread-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px 40px; margin: 14px 0 clamp(20px, 2.6vw, 34px); }
 .spread-head p { max-width: 44ch; margin: 0; }
-.compare-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: clamp(24px, 3vw, 44px) var(--gap); max-width: 1040px; }
+.compare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 330px)); justify-content: start; gap: clamp(24px, 3vw, 40px) var(--gap); }
 .compare { margin: 0; }
-.compare-stage { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--panel); border: var(--rule) solid var(--frame); user-select: none; }
-.compare-stage .poster { position: absolute; inset: 0; aspect-ratio: auto; }
-.compare-then { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
-.compare-year { position: absolute; bottom: 12px; z-index: 2; padding: 5px 10px 4px; font-family: var(--display); font-size: 0.9rem; font-weight: 800; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; background: #fff; color: #0b0b0c; pointer-events: none; }
-.compare-year.then { left: 12px; }
-.compare-year.now { right: 12px; background: var(--accent); color: var(--on-accent); }
-.compare-line { position: absolute; z-index: 3; top: 0; bottom: 0; left: var(--pos); width: 4px; margin-left: -2px; background: #fff; pointer-events: none; }
-.compare-line i { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 46px; height: 46px; margin: -23px 0 0 -23px; font-style: normal; font-size: 1.1rem; background: #fff; color: #0b0b0c; border-radius: 50%; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); }
-.compare-stage input { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; touch-action: pan-y; }
-.compare-stage:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 4px; }
-.compare figcaption { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-top: 16px; }
-.compare figcaption p { margin: 6px 0 0; font-size: 0.97rem; }
-.compare-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.compare-stage { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--panel); border: var(--rule) solid var(--frame); user-select: none; -webkit-user-select: none; cursor: ew-resize; touch-action: pan-y; }
+.compare-stage .poster { position: absolute; inset: 0; aspect-ratio: auto; pointer-events: none; }
+.compare-then { position: absolute; inset: 0; pointer-events: none; }
+.compare-year { position: absolute; bottom: 10px; z-index: 2; padding: 4px 8px 3px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; background: #fff; color: #0b0b0c; pointer-events: none; }
+.compare-year.now { right: 10px; background: var(--accent); color: var(--on-accent); }
+/* a line between two stages: 3px to see, 28px to grab */
+.compare-line { position: absolute; z-index: 3; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 0 1px rgba(11, 11, 12, 0.35); cursor: ew-resize; outline: 0; }
+.compare-line::before { content: ''; position: absolute; inset: 0 -13px; }
+.compare-line i { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 32px; height: 32px; margin: -16px 0 0 -16px; font-style: normal; font-size: 0.85rem; background: #fff; color: #0b0b0c; border-radius: 50%; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45); transition: transform 0.15s; }
+.compare-line:hover i, .compare-line:focus-visible i { transform: scale(1.12); }
+.compare-line:focus-visible i { outline: 3px solid var(--accent); outline-offset: 2px; }
+.compare figcaption { margin-top: 12px; }
+.compare figcaption h3 { font-size: 1.15rem; }
+.compare figcaption p { margin: 4px 0 0; font-size: 0.88rem; }
 
 /* ---------- commissions: a red panel that shouts, and the offers beside it ---------- */
 .cm { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--gap); }

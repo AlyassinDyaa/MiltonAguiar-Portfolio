@@ -15,6 +15,7 @@
   "type": "Prints",
   "inShop": true,
   "hover": "/uploads/raptor-prelude-exclusive-frame.png",
+  "face": "49,55,100",
   "category": "Covers",
   "look": "default"
 }

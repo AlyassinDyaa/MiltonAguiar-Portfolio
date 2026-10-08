@@ -359,6 +359,17 @@ collections:
           - { name: open, label: Commissions are open, widget: boolean, default: true, hint: 'Switches the "Commissions open" light in the top bar and on the page.' }
           - { name: title, label: Heading, widget: string }
           - { name: intro, label: Introduction, widget: text }
+          - { name: processLabel, label: Small label, widget: string, required: false }
+          - { name: processTitle, label: Heading, widget: string }
+          - name: steps
+            label: Steps
+            label_singular: Step
+            widget: list
+            summary: '{{fields.title}}'
+            hint: 'Shown as numbered panels beside the pencils-to-colours set (pick which set under Page text → Home → The sets: "Show on the Commissions page"). A step that mentions pencils, inks or colours shows that stage when picked; the last step shows the finished piece.'
+            fields:
+              - { name: title, label: Step, widget: string }
+              - { name: text, label: Description, widget: text }
           - name: tiers
             label: Offers
             label_singular: Offer
@@ -371,17 +382,6 @@ collections:
               - { name: includes, label: What is included, widget: list, required: false, hint: 'Separate them with commas.' }
           - { name: quoteLabel, label: Wording of the quote button, widget: string, required: false, hint: 'On every offer and price tag. Empty reads "Get a quote".' }
           - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
-          - { name: processLabel, label: Small label, widget: string, required: false }
-          - { name: processTitle, label: Heading, widget: string }
-          - name: steps
-            label: Steps
-            label_singular: Step
-            widget: list
-            summary: '{{fields.title}}'
-            hint: 'Shown as numbered panels beside the pencils-to-colours set (pick which set under Page text → Home → The sets: "Show on the Commissions page"). A step that mentions pencils, inks or colours shows that stage when picked; the last step shows the finished piece.'
-            fields:
-              - { name: title, label: Step, widget: string }
-              - { name: text, label: Description, widget: text }
           - { name: requestLabel, label: Small label, widget: string, required: false }
           - { name: requestTitle, label: Heading while open, widget: string }
           - { name: closedTitle, label: Heading while closed, widget: string }

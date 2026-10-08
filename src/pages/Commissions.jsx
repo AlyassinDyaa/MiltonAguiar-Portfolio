@@ -46,37 +46,6 @@ export default function Commissions() {
         <div className={`status ${open ? 'on' : ''}`}><i />{open ? 'Commissions are open' : 'Commissions are closed right now'}</div>
       </PageTitle>
 
-      {tiers.length > 0 && (
-        <section className="spread">
-          <div className="container">
-            <Runner label="What I draw" page={++n} />
-            <div className="tiers">
-              {tiers.map((t, i) => (
-                <Reveal key={t.name} delay={i * 0.08} className="cell">
-                  <article className="hp tier">
-                    <div className="hp-in">
-                      {/* the head of the card: its number and what it is, in red */}
-                      <header className="tier-head">
-                        <span className="tier-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                        <h2 className="display">{t.name}</h2>
-                      </header>
-                      <div className="tier-body">
-                        <p>{t.text}</p>
-                        {t.includes?.length > 0 && <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>}
-                      </div>
-                      {/* the foot: the price if there is one, and the way to a quote */}
-                      {quote.url
-                        ? <a className="tier-go" href={quote.url} target="_blank" rel="noreferrer"><span>{t.price || quote.label}</span><i aria-hidden="true">↗</i></a>
-                        : <div className="tier-go"><span>{t.price || 'Ask for a quote'}</span></div>}
-                    </div>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {steps.length > 0 && (
         <section className="spread">
           <div className="container">
@@ -127,6 +96,37 @@ export default function Commissions() {
               ))}
             </ol>
             )}
+          </div>
+        </section>
+      )}
+
+      {tiers.length > 0 && (
+        <section className="spread">
+          <div className="container">
+            <Runner label="What I draw" page={++n} />
+            <div className="tiers">
+              {tiers.map((t, i) => (
+                <Reveal key={t.name} delay={i * 0.08} className="cell">
+                  <article className="hp tier">
+                    <div className="hp-in">
+                      {/* the head of the card: its number and what it is, in red */}
+                      <header className="tier-head">
+                        <span className="tier-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                        <h2 className="display">{t.name}</h2>
+                      </header>
+                      <div className="tier-body">
+                        <p>{t.text}</p>
+                        {t.includes?.length > 0 && <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>}
+                      </div>
+                      {/* the foot: the price if there is one, and the way to a quote */}
+                      {quote.url
+                        ? <a className="tier-go" href={quote.url} target="_blank" rel="noreferrer"><span>{t.price || quote.label}</span><i aria-hidden="true">↗</i></a>
+                        : <div className="tier-go"><span>{t.price || 'Ask for a quote'}</span></div>}
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
+            </div>
           </div>
         </section>
       )}

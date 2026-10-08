@@ -603,7 +603,7 @@ function Orders({ orders, problem, onRemoved }) {
   )
 }
 
-function Details({ owned = [], progress = null }) {
+function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const { user, call } = useAccount()
   const f = useForm({ name: user.name, phone: user.phone, marketing: user.marketing, avatar: user.avatar || '', card: user.card || '' })
   const prog = progress || { verified: Boolean(user.verified), orders: 0, pieces: 0 }
@@ -612,8 +612,15 @@ function Details({ owned = [], progress = null }) {
   const [saved, setSaved] = useState(false)
   const [resent, setResent] = useState('')
   const mine = owned.filter((p) => p.src)
+  // a picture or card design chosen but not saved: shown live at the top of the page (a preview),
+  // with a bar asking to keep it or go back; leaving without saving keeps the old one
+  const trying = f.values.avatar !== (user.avatar || '') || f.values.card !== (user.card || '')
+  useEffect(() => { onPreview(trying ? { avatar: f.values.avatar, card: f.values.card } : null) }, [trying, f.values.avatar, f.values.card]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => onPreview(null), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const undo = () => { f.set('avatar')(user.avatar || ''); f.set('card')(user.card || '') }
+  const submit = (e) => f.run(e, async () => { await call('profile', f.values); setSaved(true); setTimeout(() => setSaved(false), 2500) })
   return (
-    <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { await call('profile', f.values); setSaved(true); setTimeout(() => setSaved(false), 2500) })} noValidate>
+    <form className="acc-card lined" onSubmit={submit} noValidate>
       {/* the email, with whether it is confirmed (and a way to send the link again) */}
       <div className="acc-email">
         <div>
@@ -639,6 +646,13 @@ function Details({ owned = [], progress = null }) {
       </label>
       <fieldset className="acct-pick">
         <legend>Your picture</legend>
+        <div className={`acct-try ${trying ? 'is-trying' : ''}`} aria-live="polite">
+          <Avatar user={{ ...user, avatar: f.values.avatar }} size="lg" />
+          <div>
+            <strong>{trying ? 'Preview' : 'Your picture now'}</strong>
+            <span>{trying ? 'This is how it will look. Save to keep it, or go back to the one you had.' : 'Pick another below to try it on.'}</span>
+          </div>
+        </div>
         <p>Choose one for your profile and your collector card, or keep your initials.</p>
         <div className="acct-pick-group" role="radiogroup" aria-label="Free pictures">
           <span className="acct-pick-label">Free for everyone</span>
@@ -711,6 +725,17 @@ function Details({ owned = [], progress = null }) {
       )}
       <Problem text={f.problem.text} />
       <div className="acc-row"><Submit busy={f.busy}>Save</Submit>{saved && <span className="acc-saved" role="status">Saved</span>}</div>
+      {/* chosen but not saved: a bar at the bottom of the screen, to keep it or go back */}
+      <AnimatePresence>
+        {trying && (
+          <motion.div className="acct-keep" role="region" aria-label="Keep your new look?" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3, ease: EASE }}>
+            <Avatar user={{ ...user, avatar: f.values.avatar }} size="md" />
+            <span><b>Keep your new {f.values.avatar !== (user.avatar || '') ? (f.values.card !== (user.card || '') ? 'picture and card' : 'picture') : 'card'}?</b> It is only a preview until you save.</span>
+            <button type="button" className="btn ghost sm" onClick={undo} disabled={f.busy}>Go back</button>
+            <button type="button" className="btn sm" onClick={(e) => submit(e)} disabled={f.busy}>{f.busy ? 'Saving…' : 'Save'}</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </form>
   )
 }
@@ -943,6 +968,7 @@ function Home() {
   const { settle } = useCart()
   useEffect(() => { if (paid) settle() }, [paid, settle])
   const [leaving, setLeaving] = useState(false) // the 'log out?' window
+  const [preview, setPreview] = useState(null) // a picture or card being tried on under Details, not saved yet
   const owned = ownedIn(orders)
   const grid = useRef(null)
   // the browser tab's title follows the section, without the page's own scroll-to-top on a new title
@@ -1008,7 +1034,7 @@ function Home() {
             </div>
           </div>
           <div className="acct2-id">
-            <Avatar user={user} size="xl" />
+            <Avatar user={preview ? { ...user, avatar: preview.avatar } : user} size="xl" />
             <div className="acct2-who">
               <span className="label accent">{greeting()}</span>
               <h1 className="display">{user.name || first || 'Your account'}</h1>
@@ -1063,7 +1089,7 @@ function Home() {
             {tab === 'orders' && <Orders orders={orders} problem={problem} onRemoved={drop} />}
             {tab === 'rewards' && <Rewards go={go} />}
             {tab === 'saved' && <Saved />}
-            {tab === 'details' && <Details owned={owned} progress={orders ? { verified: Boolean(user.verified), orders: keptOrders(orders).length, pieces: piecesIn(orders) } : null} />}
+            {tab === 'details' && <Details onPreview={setPreview} owned={owned} progress={orders ? { verified: Boolean(user.verified), orders: keptOrders(orders).length, pieces: piecesIn(orders) } : null} />}
             {tab === 'security' && <Security />}
           </motion.div>
         </div>

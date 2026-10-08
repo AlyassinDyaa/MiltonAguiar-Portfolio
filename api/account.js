@@ -80,8 +80,10 @@ const rewardsList = () => {
   const of = (key, kind) => (Array.isArray(page[key]) ? page[key] : []).map((r) => ({ ...r, kind }))
   // the Rewards screen has a list for each kind; an older file kept them in one list ("rewards"),
   // and before that the pictures for confirming the email lived with the account page
-  const list = [...of('pictures', 'picture'), ...of('cards', 'card'), ...of('discounts', 'discount'),
-    ...(Array.isArray(page.rewards) ? page.rewards : []),
+  // discounts are no longer rewards (they are codes, made under Sales → Discounts): any left in
+  // the file are passed over
+  const list = [...of('pictures', 'picture'), ...of('cards', 'card'),
+    ...(Array.isArray(page.rewards) ? page.rewards.filter((r) => r && r.kind !== 'discount') : []),
     ...(page.pictures || page.rewards ? [] : ((readJson('content/pages/account.json') || {}).verifiedIcons || []).map((i) => ({ ...i, kind: 'picture', earnedBy: 'verify' })))]
   const kindOf = (r) => (['card', 'discount'].includes(r.kind) ? r.kind : 'picture')
   return list.filter((r) => r && !r.hidden && (kindOf(r) === 'card' ? r.cardLook || r.cardArt : kindOf(r) === 'discount' ? Number(r.percent) > 0 : r.picture))

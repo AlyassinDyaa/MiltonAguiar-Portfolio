@@ -164,8 +164,9 @@ export const emailHtml = ({ subject, kicker, title, lines, button, picture, afte
     <p style="margin:18px 0 0;font-family:${BODY};font-size:12px;line-height:1.6;color:#8a8a8f;">Button not working? Paste this into your browser:<br><a href="${esc(button.url)}" style="color:#ff5a52;word-break:break-all;">${esc(button.url)}</a></p>` : ''}
     ${after ? `<p style="margin:22px 0 0;padding-top:16px;border-top:1px dashed #3a3a40;font-family:${BODY};font-size:13px;line-height:1.6;color:#8a8a8f;">${esc(after)}</p>` : ''}
   </td></tr>
-  <tr><td align="center" style="padding:20px 10px 0;font-family:${BODY};font-size:12px;line-height:1.7;color:#f4d3d6;">
-    ${b.tagline ? `${esc(b.tagline)}<br>` : ''}<a href="${esc(home)}" style="color:#ffffff;text-decoration:underline;">${esc(home.replace(/^https?:\/\//, ''))}</a>${insta ? ` &middot; <a href="${esc(insta.url)}" style="color:#ffffff;text-decoration:underline;">Instagram</a>` : ''}
+  <tr><td style="height:14px;line-height:14px;font-size:0;">&nbsp;</td></tr>
+  <tr><td align="center" style="background:#0b0b0c;border:3px solid #0b0b0c;padding:18px 14px 16px;font-family:${BODY};font-size:13px;line-height:1.6;color:#b9b9be;">
+    ${b.tagline ? `<span style="display:block;margin-bottom:10px;">${esc(b.tagline)}</span>` : ''}<a href="${esc(home)}" style="font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:underline;">${esc(home.replace(/^https?:\/\//, ''))}</a>${insta ? `<span style="color:#ff2a36;font-weight:900;">&nbsp;&nbsp;/&nbsp;&nbsp;</span><a href="${esc(insta.url)}" style="font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;text-decoration:underline;">Instagram</a>` : ''}
   </td></tr>
 </table>
 </td></tr></table>

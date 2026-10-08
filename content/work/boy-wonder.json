@@ -1,0 +1,24 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/robin-cover-colors.webp",
+  "universe": "DC",
+  "hidden": false,
+  "date": "2026-08-26",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "new",
+  "title": "Boy Wonder",
+  "inShop": true,
+  "hover": "/uploads/robin-frame.png",
+  "face": "66,28,400",
+  "category": "Fan art",
+  "look": "default"
+}

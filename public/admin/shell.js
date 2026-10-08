@@ -83,7 +83,7 @@
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Customer accounts', 'site/rewards': 'Rewards', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, the pencils-to-colours sets, and the heading of each part below it.',
@@ -95,7 +95,7 @@
     'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
     'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
-    'site/account': 'Customer accounts on or off, the membership card, your note on their page, and the free profile pictures.',
+    'site/account': 'For members: accounts on or off, the membership card, your note on their page, and the free profile pictures. The people themselves are under Sales → Customers.',
     'site/rewards': 'Profile pictures, membership card designs and discounts customers earn: by confirming their email, every few orders, or the pieces they collect.',
   }
   Object.assign(ICONS, {

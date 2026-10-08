@@ -589,7 +589,7 @@ collections:
               - { name: note, label: Measurements, widget: string, required: false }
 
       - name: account
-        label: Customer accounts
+        label: Member settings
         file: content/pages/account.json
         fields:
           - name: accounts

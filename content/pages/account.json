@@ -1,11 +1,11 @@
 {
-  "accounts": "optional",
+  "cardLabel": "Collector",
   "noteTitle": "A note from Milton",
+  "accounts": "optional",
+  "savedTitle": "Saved for later",
   "note": "Thank you for being here. Every piece is checked and packed by hand before it leaves the studio. If anything is not quite right with an order, just write to me and I will sort it out.",
   "signature": "Milton",
   "collectionTitle": "Your collection",
-  "savedTitle": "Saved for later",
-  "cardLabel": "Collector",
   "icons": [
     {
       "picture": "/avatars/skull.svg",
@@ -38,6 +38,11 @@
     {
       "picture": "/avatars/eye.svg",
       "name": "Eye"
+    },
+    {
+      "picture": "/uploads/raptor-cutout.webp",
+      "face": "48,0,209",
+      "name": "raptor"
     }
   ]
 }

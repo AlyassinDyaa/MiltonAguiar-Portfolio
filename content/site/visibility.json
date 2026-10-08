@@ -13,7 +13,7 @@
     "type": true
   },
   "sales": {
-    "testOrders": false,
+    "testOrders": true,
     "testCustomers": false,
     "testCodes": false
   },

@@ -18,6 +18,13 @@ import { showLatest } from './data/site'
 import './styles/global.css'
 import './styles/components.css'
 
+/* The artwork is not handed out: right-click (computers) and press-and-hold (Android) on a
+   picture open no menu, so there is no "Save image as" or "Open image in new tab". Text, links
+   and the rest of the page keep their usual menu. */
+const PICTURE = 'img, picture, video, canvas, svg image, .pj-bg'
+document.addEventListener('contextmenu', (e) => { if (e.target instanceof Element && e.target.closest(PICTURE)) e.preventDefault() })
+document.addEventListener('dragstart', (e) => { if (e.target instanceof Element && e.target.closest(PICTURE)) e.preventDefault() })
+
 const start = () => createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Router basename={import.meta.env.VITE_ROUTER === 'hash' ? '/' : import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>

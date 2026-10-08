@@ -1622,3 +1622,5 @@ form.acc-modal-box { max-width: none; }
 .form-sent strong { display: block; font-family: var(--display); font-size: 1.3rem; font-weight: 900; font-style: italic; text-transform: uppercase; }
 .form-sent span { display: block; margin-top: 3px; color: var(--fg-dim); }
 .form-sent .btn { grid-column: 1 / -1; justify-self: start; }
+.acc-welcome { transition: opacity 0.6s ease, transform 0.6s ease; }
+.acc-welcome.is-fading { opacity: 0; transform: translateY(-6px); }

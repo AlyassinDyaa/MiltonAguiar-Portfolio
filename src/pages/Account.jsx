@@ -430,7 +430,7 @@ function OrderCard({ o, onRemove }) {
           {(o.tracking || o.trackUrl) && (
             <div>
               <div className="label">Tracking</div>
-              {o.tracking && <p><code>{o.tracking}</code></p>}
+              {(o.tracking || o.carrier) && <p>{o.carrier ? `${o.carrier}${o.tracking ? ' · ' : ''}` : ''}{o.tracking && <code>{o.tracking}</code>}</p>}
               {o.trackUrl && <a className="btn ghost sm" href={o.trackUrl} target="_blank" rel="noreferrer">Track the parcel <span className="arrow">↗</span></a>}
             </div>
           )}
@@ -947,6 +947,16 @@ function Home() {
   const grid = useRef(null)
   // the browser tab's title follows the section, without the page's own scroll-to-top on a new title
   useEffect(() => { const name = TABS.find(([k]) => k === tab)[1]; document.title = `${tab === 'overview' ? 'Your account' : name} — ${brand.name}` }, [tab])
+  // the line that says something just happened (email confirmed, welcome, new password, thank you)
+  // fades out on its own after a few seconds, and leaves the address
+  const flash = params.get('confirmed') || params.get('welcome') || params.get('reset') || params.get('thanks') || ''
+  const [fading, setFading] = useState(false)
+  useEffect(() => {
+    if (!flash) return
+    const fade = setTimeout(() => setFading(true), 6000)
+    const gone = setTimeout(() => { setFading(false); setParams(tab === 'overview' ? {} : { tab }, { replace: true }) }, 6700)
+    return () => { clearTimeout(fade); clearTimeout(gone) }
+  }, [flash]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!user) return <Navigate to="/account/login?next=/account" replace />
   const first = (user.name || '').split(' ')[0]
   const confirmed = params.get('confirmed')
@@ -1031,7 +1041,7 @@ function Home() {
 
         <div className="acct2-main">
           {note && (
-            <div className="acc-welcome is-closable" role="status">
+            <div className={`acc-welcome is-closable ${fading ? 'is-fading' : ''}`} role="status">
               <span>{note}</span>
               <button type="button" className="acc-welcome-x" aria-label="Dismiss" onClick={() => setParams(tab === 'overview' ? {} : { tab }, { replace: true })}>×</button>
             </div>

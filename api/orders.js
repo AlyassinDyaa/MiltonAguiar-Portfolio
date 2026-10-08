@@ -1,6 +1,6 @@
 import { configured, goodPass } from './_session.js'
 import { db, dbReady } from './_db.js'
-import { describeItem, ours, paidWithOf, piecesNow, setTrack } from './_orders.js'
+import { CARRIERS, describeItem, ours, paidWithOf, piecesNow, setTrack } from './_orders.js'
 
 /* The shop's orders, for the admin (Sales → Orders and Customers). There is no database: every
    purchase is a Stripe checkout, so this reads them from Stripe with STRIPE_SECRET_KEY, and keeps
@@ -80,6 +80,7 @@ const order = (s) => {
     discount: (s.total_details && s.total_details.amount_discount || 0) / 100,
     discountCode: (s.metadata && s.metadata.discount) || '',
     fulfilment: STAGES.includes(meta.fulfilment) ? meta.fulfilment : 'new',
+    carrier: CARRIERS[meta.carrier] ? meta.carrier : '',
     tracking: meta.tracking || '',
     note: meta.admin_note || '',
     paymentIntent: pi ? pi.id : '',
@@ -112,6 +113,7 @@ const saved = (o) => {
     discount: Number(o.discount) || 0,
     discountCode: o.discountCode || '',
     fulfilment: STAGES.includes(t.status) ? t.status : 'new',
+    carrier: CARRIERS[t.carrier] ? t.carrier : '',
     tracking: t.tracking || '',
     note: t.note || '',
     paymentIntent: '',
@@ -172,11 +174,12 @@ export async function orders({ method, body }) {
       if (!STAGES.includes(b.fulfilment)) return { status: 400, json: { message: 'Unknown order status.' } }
       const form = new URLSearchParams()
       form.set('metadata[fulfilment]', b.fulfilment)
+      form.set('metadata[carrier]', CARRIERS[b.carrier] ? b.carrier : '')
       form.set('metadata[tracking]', String(b.tracking || '').slice(0, 200))
       form.set('metadata[admin_note]', String(b.note || '').slice(0, 480))
       await stripe(`payment_intents/${b.paymentIntent}`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form.toString() })
       // the buyer's account shows it too
-      if (/^cs_[A-Za-z0-9_]+$/.test(String(b.id || ''))) { try { await setTrack({ ref: b.id }, { status: b.fulfilment, tracking: b.tracking, note: b.note }) } catch (e) { console.error('tracking not copied to the database:', e.message) } }
+      if (/^cs_[A-Za-z0-9_]+$/.test(String(b.id || ''))) { try { await setTrack({ ref: b.id }, { status: b.fulfilment, carrier: b.carrier, tracking: b.tracking, note: b.note }) } catch (e) { console.error('tracking not copied to the database:', e.message) } }
       return { status: 200, json: { ok: true } }
     }
     return { status: 405, json: { message: 'GET or POST only.' } }
@@ -196,7 +199,7 @@ async function paypalOnly(b) {
     return { status: 200, json: { hidden: refs.length, failed: 0 } }
   }
   if (!STAGES.includes(b.fulfilment)) return { status: 400, json: { message: 'Unknown order status.' } }
-  await setTrack({ ref: String(b.id) }, { status: b.fulfilment, tracking: String(b.tracking || '').slice(0, 200), note: String(b.note || '').slice(0, 480) })
+  await setTrack({ ref: String(b.id) }, { status: b.fulfilment, carrier: b.carrier, tracking: String(b.tracking || '').slice(0, 200), note: String(b.note || '').slice(0, 480) })
   return { status: 200, json: { ok: true } }
 }
 

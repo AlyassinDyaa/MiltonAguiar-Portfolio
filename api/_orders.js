@@ -13,6 +13,19 @@ export { dbReady }
 
 const text = (v, max = 200) => String(v ?? '').trim().slice(0, max)
 export const STAGES = ['new', 'packed', 'shipped', 'delivered', 'cancelled']
+// the carriers the admin picks from, and the page where a parcel is followed (the same list as public/admin/sales.js)
+export const CARRIERS = {
+  ctt: ['CTT', (n) => `https://www.ctt.pt/feapl_2/app/open/objectSearch/objectSearch.jspx?objects=${n}`],
+  dpd: ['DPD', (n) => `https://tracking.dpd.de/status/en_US/parcel/${n}`],
+  dhl: ['DHL', (n) => `https://www.dhl.com/pt-en/home/tracking.html?tracking-id=${n}`],
+  ups: ['UPS', (n) => `https://www.ups.com/track?tracknum=${n}`],
+  gls: ['GLS', (n) => `https://gls-group.com/PT/en/parcel-tracking?match=${n}`],
+  fedex: ['FedEx', (n) => `https://www.fedex.com/fedextrack/?trknbr=${n}`],
+  correos: ['Correos', (n) => `https://www.correos.es/es/en/tools/tracker/items/details?tracking-number=${n}`],
+  royalmail: ['Royal Mail', (n) => `https://www.royalmail.com/track-your-item#/tracking-results/${n}`],
+  usps: ['USPS', (n) => `https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`],
+  other: ['Another carrier', null],
+}
 export const shapeAddress = (a, name) => (a ? { name: text(name), line1: text(a.line1), line2: text(a.line2), city: text(a.city), state: text(a.state), postal_code: text(a.postal_code), country: text(a.country, 2) } : null)
 
 /* This site's own Stripe checkouts carry metadata site = SITE, so a Stripe account shared with
@@ -93,7 +106,7 @@ export const recordOrder = async (order) => {
 // where an order is up to: { status, tracking, note }; the note is the admin's own, never shown to the buyer
 export const setTrack = async (match, track) => {
   if (!dbReady()) return
-  await (await db()).collection('orders').updateOne(match, { $set: { track: { status: STAGES.includes(track.status) ? track.status : 'new', tracking: text(track.tracking), note: text(track.note, 480), at: new Date().toISOString() }, updatedAt: new Date() } })
+  await (await db()).collection('orders').updateOne(match, { $set: { track: { status: STAGES.includes(track.status) ? track.status : 'new', carrier: CARRIERS[track.carrier] ? track.carrier : '', tracking: text(track.tracking), note: text(track.note, 480), at: new Date().toISOString() }, updatedAt: new Date() } })
 }
 
 // a tracking number written as a web address is a link the buyer can follow
@@ -103,6 +116,8 @@ const linkOf = (t) => (/^https?:\/\/\S+$/i.test(t) ? t : '')
 export const forCustomer = (o) => {
   const t = o.track || {}
   const tracking = text(t.tracking)
+  const c = CARRIERS[t.carrier]
+  const byCarrier = c && c[1] && tracking && !linkOf(tracking) ? c[1](encodeURIComponent(tracking)) : ''
   return {
     number: String(o.ref || '').replace(/^(cs_(test|live)_|pp_)/, '').slice(-8).toUpperCase(),
     createdAt: o.createdAt,
@@ -114,7 +129,8 @@ export const forCustomer = (o) => {
     discount: o.discount || 0,
     currency: o.currency || 'EUR',
     address: o.address || null,
+    carrier: c ? c[0] : '',
     tracking: linkOf(tracking) ? '' : tracking,
-    trackUrl: linkOf(tracking),
+    trackUrl: linkOf(tracking) || byCarrier,
   }
 }

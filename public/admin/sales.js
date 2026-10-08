@@ -17,6 +17,21 @@ window.IASales = (() => {
     return n
   }
   const STAGES = [['new', 'New'], ['packed', 'Packed'], ['shipped', 'Shipped'], ['delivered', 'Delivered'], ['cancelled', 'Cancelled']]
+  /* The carriers to pick from, and where each one's parcels are followed (the same list as api/_orders.js). */
+  const CARRIERS = {
+    ctt: ['CTT', (n) => `https://www.ctt.pt/feapl_2/app/open/objectSearch/objectSearch.jspx?objects=${n}`],
+    dpd: ['DPD', (n) => `https://tracking.dpd.de/status/en_US/parcel/${n}`],
+    dhl: ['DHL', (n) => `https://www.dhl.com/pt-en/home/tracking.html?tracking-id=${n}`],
+    ups: ['UPS', (n) => `https://www.ups.com/track?tracknum=${n}`],
+    gls: ['GLS', (n) => `https://gls-group.com/PT/en/parcel-tracking?match=${n}`],
+    fedex: ['FedEx', (n) => `https://www.fedex.com/fedextrack/?trknbr=${n}`],
+    correos: ['Correos', (n) => `https://www.correos.es/es/en/tools/tracker/items/details?tracking-number=${n}`],
+    royalmail: ['Royal Mail', (n) => `https://www.royalmail.com/track-your-item#/tracking-results/${n}`],
+    usps: ['USPS', (n) => `https://tools.usps.com/go/TrackConfirmAction?tLabels=${n}`],
+    other: ['Another carrier', null],
+  }
+  const POSTING = [['new', 'To post'], ['packed', 'Packed'], ['shipped', 'Shipped'], ['delivered', 'Delivered']]
+  const trackLink = (carrier, number) => { if (/^https?:\/\//i.test(number || '')) return number; const c = CARRIERS[carrier]; return c && c[1] && number ? c[1](encodeURIComponent(number)) : '' }
   const stageName = Object.fromEntries(STAGES)
   const PAYMENT = { paid: 'Paid', 'part-refunded': 'Part refunded', refunded: 'Refunded', unpaid: 'Not paid', expired: 'Abandoned' }
   const PERIODS = [['all', 'All time'], ['today', 'Today'], ['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['year', 'This year']]
@@ -44,7 +59,9 @@ window.IASales = (() => {
     c: { q: '', kind: 'all', sort: 'spent', page: 1, per: perSaved() },
     open: null, // the order whose panel is open
     pieces: new Set(), // the orders whose pieces are shown under their row
-    saved: null, // the order just saved, to say so
+    opened: new Set(), // the orders open in place
+    drafts: {}, // posting details being edited, by order
+    saving: {}, saved: {}, // an order being saved; what its last save said
   }
   const done = (o) => o.payment !== 'unpaid' && o.payment !== 'expired' // a completed purchase
   const kept = (o) => done(o) ? o.total - (o.refunded || 0) : 0 // what it brought in
@@ -216,7 +233,6 @@ window.IASales = (() => {
     if (!r.ok) return r.json.message || 'Not deleted. Try again.'
     const gone = new Set(list.map((o) => o.id))
     state.orders = state.orders.filter((o) => !gone.has(o.id))
-    if (gone.has(state.open)) state.open = null
     return ''
   }
   const askOrder = (o) => ask({
@@ -295,7 +311,7 @@ window.IASales = (() => {
         block(places.size === 1 ? 'Address' : 'Addresses', places.size ? [el('div', { className: 'sl-addresses' }, [...places.values()].sort((a, b) => b.last - a.last).map((p) => el('p', { className: 'sl-address' }, [...p.lines.flatMap((line, i) => (i ? [el('br'), line] : [line])), el('small', { className: 'sl-hint', textContent: `Used on ${p.n} ${p.n === 1 ? 'order' : 'orders'}, last ${date(p.last)}` })])))] : [el('p', { className: 'sl-dim', textContent: 'No delivery address on their orders.' })]),
         block('Orders', [el('ul', { className: 'sl-items sl-their-orders' }, theirs.map((o) => {
           const li = el('li', {}, [el('span', { textContent: `#${o.number} · ${date(o.created)}` }), done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : badge(o.payment, PAYMENT[o.payment]), el('strong', { textContent: money(o.total, o.currency) })])
-          li.addEventListener('click', () => { state.modal = null; state.open = o.id; if (state.view !== 'orders') location.hash = '#/sales/orders'; else draw() })
+          li.addEventListener('click', () => { state.modal = null; state.opened.add(o.id); if (state.view !== 'orders') location.hash = '#/sales/orders'; else draw() })
           return li
         }))]),
         codes.length ? block('Discount codes for them', [el('ul', { className: 'sl-items' }, codes.map((d) => el('li', {}, [el('span', { textContent: d.code }), badge(`d-${d.status}`, D_STATUS[d.status]), el('strong', { textContent: `${d.percent}% off` })])))]) : null,
@@ -368,22 +384,8 @@ window.IASales = (() => {
       ]),
       f.customer ? el('div', { className: 'sl-filtering' }, [el('span', { textContent: `Orders from ${f.customer}` }), button('Show everyone', () => { state.o.customer = ''; history.replaceState(null, '', '#/sales/orders'); draw() }, 'sl-clear')]) : null,
       el('p', { className: 'sl-count', textContent: state.loading && !state.loaded ? 'Loading the orders…' : `${list.length} ${list.length === 1 ? 'order' : 'orders'}` }),
-      list.length ? el('div', { className: 'sl-table is-orders', role: 'table' }, [
-        headRow(['Order', 'Customer', 'Pieces', 'Total', 'Payment', 'Status']),
-        ...pageOf(list, f).flatMap((o) => {
-          const showing = state.pieces.has(o.id)
-          const look = o.items.length ? iconBtn('pieces', showing ? 'Hide the pieces' : 'See the pieces bought', () => { if (showing) state.pieces.delete(o.id); else state.pieces.add(o.id); draw() }) : null
-          if (look && showing) look.classList.add('on')
-          return [rowEl(state.open === o.id, [
-            el('span', { className: 'sl-c-order' }, [el('strong', { textContent: `#${o.number}` }), el('small', { textContent: date(o.created, true) })]),
-            el('span', { className: 'sl-c-who' }, [el('strong', { textContent: o.name || '—' }), el('small', { textContent: [o.email, country(o.country)].filter(Boolean).join(' · ') })]),
-            el('span', { className: 'sl-c-items' }, [el('strong', { textContent: o.items[0] ? `${o.items[0].name}${o.items[0].qty > 1 ? ` ×${o.items[0].qty}` : ''}` : '—' }), o.items.length > 1 ? el('small', { textContent: `+ ${o.items.length - 1} more` }) : null]),
-            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(o.total, o.currency) }), o.refunded ? el('small', { textContent: `${money(o.refunded, o.currency)} refunded` }) : null]),
-            el('span', { className: 'sl-c-pay' }, [badge(o.payment, PAYMENT[o.payment] || o.payment), o.paidWith ? el('small', { textContent: o.paidWith }) : null]),
-            el('span', {}, [done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : el('small', { className: 'sl-dim', textContent: '—' })]),
-          ], () => { state.open = o.id; draw() }, [look, iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: keyOf(o) }; draw() }), iconBtn('trash', `Delete order #${o.number}`, () => askOrder(o))]), showing ? piecesPanel(o) : null]
-        }),
-      ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: state.orders.length ? 'No orders match' : 'No orders yet' }), el('p', { textContent: state.orders.length ? 'Try another chip, period or search.' : 'Purchases made through the shop show up here.' })]) : null),
+      list.length ? el('div', { className: 'sl-orders' }, pageOf(list, f).map(orderCard))
+        : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: state.orders.length ? 'No orders match' : 'No orders yet' }), el('p', { textContent: state.orders.length ? 'Try another chip, period or search.' : 'Purchases made through the shop show up here.' })]) : null),
       pager(list, f, ['order', 'orders']),
     ]
   }
@@ -410,58 +412,106 @@ window.IASales = (() => {
     ]),
   ])))
 
-  // the panel of one order
-  const orderPanel = (o) => {
-    const close = () => { state.open = null; state.saved = null; draw() }
-    let stage = o.fulfilment
-    const stages = el('div', { className: 'sl-stages', role: 'radiogroup', ariaLabel: 'Status' }, STAGES.map(([k, t]) => {
-      const b = el('button', { type: 'button', className: `sl-stage is-${k} ${k === stage ? 'on' : ''}`, role: 'radio', ariaChecked: String(k === stage), textContent: t })
-      // a new stage is saved at once (with the tracking number and note as they are), so the buyer sees it
-      b.addEventListener('click', () => { if (busy || k === stage) return; stage = k; stages.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)) }); store() })
+  /* One order: a row that opens in place. The row: when, who, what and how it was paid, the
+     total, where it is up to, and its icons (the pieces bought, the customer, delete). Open: on the
+     left what was ordered, the buyer and where it goes; on the right where it is up to (a new step
+     saves at once), the carrier, the tracking number and a note of the admin's own. */
+  const waitingDays = (o) => (done(o) && o.payment !== 'refunded' && ['new', 'packed'].includes(o.fulfilment) ? Math.floor((Date.now() - o.created) / 864e5) : 0)
+  const orderCard = (o) => {
+    const open = state.opened.has(o.id)
+    const first = o.items[0] ? o.items[0].name : 'Payment'
+    const what = o.items.length > 1 ? `${first} + ${o.items.length - 1} more` : first
+    const wait = waitingDays(o)
+    const pill = !done(o) ? badge(o.payment, PAYMENT[o.payment] || o.payment) : o.payment === 'refunded' ? badge('refunded', 'Refunded') : badge(o.fulfilment, o.fulfilment === 'new' ? 'To post' : stageName[o.fulfilment])
+    const chev = el('span', { className: 'sl-chev', ariaHidden: 'true' })
+    chev.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>'
+    const headBtn = el('button', { type: 'button', className: 'sl-order-head', ariaExpanded: String(open) }, [
+      el('span', { className: 'sl-order-date' }, [el('strong', { textContent: new Date(o.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) }), el('small', { textContent: `#${o.number}` })]),
+      el('span', { className: 'sl-order-who' }, [el('strong', { textContent: o.name || o.email || 'No name given' }), el('small', {}, [o.paidWith ? `${what} · ${o.paidWith}` : what, wait >= 2 ? el('em', { textContent: `waiting ${wait} days` }) : null])]),
+      el('span', { className: 'sl-order-total', textContent: money(o.total, o.currency) }),
+      pill,
+      chev,
+    ])
+    headBtn.addEventListener('click', () => { if (open) state.opened.delete(o.id); else state.opened.add(o.id); draw() })
+    const showing = state.pieces.has(o.id)
+    const look = o.items.length ? iconBtn('pieces', showing ? 'Hide the pieces' : 'See the pieces bought', () => { if (showing) state.pieces.delete(o.id); else state.pieces.add(o.id); draw() }) : null
+    if (look && showing) look.classList.add('on')
+    return el('article', { className: `sl-order ${open ? 'is-open' : ''}` }, [
+      el('div', { className: 'sl-order-line' }, [headBtn, el('span', { className: 'sl-acts' }, [look, iconBtn('info', 'Customer details', () => { state.modal = { kind: 'customer', key: keyOf(o) }; draw() }), iconBtn('trash', `Delete order #${o.number}`, () => askOrder(o))])]),
+      showing ? piecesPanel(o) : null,
+      open ? orderBody(o) : null,
+    ])
+  }
+  const copyBtn = (text, what) => {
+    const b = el('button', { type: 'button', className: 'sl-link', textContent: `Copy ${what}` })
+    b.addEventListener('click', async () => { try { await navigator.clipboard.writeText(text); b.textContent = 'Copied' } catch { b.textContent = 'Could not copy' } setTimeout(() => { b.textContent = `Copy ${what}` }, 1600) })
+    return b
+  }
+  const orderBody = (o) => {
+    const h = (t) => el('h4', { className: 'sl-h4', textContent: t })
+    const address = o.shipTo.length ? [o.name, ...o.shipTo.slice(0, -1), country(o.shipTo[o.shipTo.length - 1])].filter(Boolean) : []
+    const theirs = state.orders.filter((x) => keyOf(x) === keyOf(o)).length
+    const left = el('div', { className: 'sl-order-col' }, [
+      h('Ordered'),
+      el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: `${i.qty} × ${i.name}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
+      o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,
+      el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Paid' }), el('strong', { textContent: money(o.total, o.currency) })]),
+      o.paidWith ? el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'Paid with' }), el('strong', { textContent: o.paidWith })]) : null,
+      o.refunded ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: o.payment === 'refunded' ? 'Refunded in full' : 'Refunded' }), el('strong', { textContent: `− ${money(o.refunded, o.currency)}` })]) : null,
+      el('p', { className: 'sl-dim sl-when', textContent: date(o.created, true) }),
+      h('Buyer'),
+      el('p', { className: 'sl-who' }, [el('strong', { textContent: o.name || '—' }), o.email ? el('a', { href: `mailto:${o.email}?subject=${encodeURIComponent(`Your order #${o.number}`)}`, textContent: o.email }) : null, o.phone ? el('span', { textContent: o.phone }) : null]),
+      o.email ? button(theirs > 1 ? `See all ${theirs} of their orders` : 'See them in Customers', () => { if (theirs > 1) { state.o.customer = o.email; state.o.page = 1; history.replaceState(null, '', `#/sales/orders?customer=${encodeURIComponent(o.email)}`); draw() } else { state.modal = { kind: 'customer', key: keyOf(o) }; draw() } }, 'sl-link') : null,
+      address.length ? h('Post to') : null,
+      address.length ? el('p', { className: 'sl-address' }, address.flatMap((line, i) => (i ? [el('br'), line] : [line]))) : null,
+      address.length ? copyBtn(address.join('\n'), 'address') : null,
+      o.stripe ? el('a', { className: 'sl-link', href: o.stripe, target: '_blank', rel: 'noopener', textContent: o.provider === 'paypal' ? 'Open in PayPal ↗' : 'Open in Stripe ↗' }) : null,
+    ])
+    return el('div', { className: 'sl-order-body' }, [left, done(o) && o.payment !== 'refunded' ? postingCol(o) : el('div', { className: 'sl-order-col sl-quiet' }, [el('p', { textContent: o.payment === 'refunded' ? 'Refunded: nothing to post.' : 'Not paid: nothing to post.' })])])
+  }
+  const postingCol = (o) => {
+    const d = state.drafts[o.id] || (state.drafts[o.id] = { fulfilment: o.fulfilment, carrier: o.carrier || '', tracking: o.tracking || '', note: o.note || '' })
+    const saving = state.saving[o.id]
+    const steps = el('div', { className: 'sl-steps', role: 'radiogroup', ariaLabel: 'Where it is up to' }, [...POSTING, ...(o.fulfilment === 'cancelled' ? [['cancelled', 'Cancelled']] : [])].map(([k, t]) => {
+      const b = el('button', { type: 'button', role: 'radio', ariaChecked: String(d.fulfilment === k), className: `sl-step ${d.fulfilment === k ? 'on' : ''}`, textContent: t })
+      // a new step is saved at once (with the carrier, number and note as they are), so the buyer sees it
+      b.addEventListener('click', () => { if (saving || (d.fulfilment === k && o.fulfilment === k)) return; d.fulfilment = k; storeOrder(o) })
       return b
     }))
-    const tracking = el('input', { className: 'sl-input', value: o.tracking, placeholder: 'For example CTT RR123456789PT', maxLength: 200 })
-    const note = el('textarea', { className: 'sl-input', value: o.note, placeholder: 'Only you see this', maxLength: 480, rows: 3 })
-    const save = el('button', { type: 'button', className: 'ia-btn', textContent: 'Save', disabled: true })
-    const said = el('span', { className: 'sl-said', textContent: state.saved === o.id ? 'Saved ✓' : '' })
-    state.saved = null
-    const dirty = () => { save.disabled = stage === o.fulfilment && tracking.value === o.tracking && note.value === o.note; said.textContent = '' }
-    tracking.addEventListener('input', dirty); note.addEventListener('input', dirty)
-    let busy = false
-    const store = async () => {
-      busy = true; save.disabled = true; said.textContent = 'Saving…'
-      const r = await api('POST', { id: o.id, paymentIntent: o.paymentIntent, fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() })
-      busy = false
-      if (r.ok) { Object.assign(o, { fulfilment: stage, tracking: tracking.value.trim(), note: note.value.trim() }); state.saved = o.id; draw() }
-      else { said.textContent = r.json.message || 'Not saved. Try again.'; save.disabled = false }
-    }
-    save.addEventListener('click', store)
-    const block = (title, kids) => el('section', { className: 'sl-block' }, [el('h3', { textContent: title }), ...kids])
-    const panel = el('aside', { className: 'sl-panel', role: 'dialog', ariaModal: 'true', ariaLabel: `Order #${o.number}` }, [
-      el('header', { className: 'sl-panel-head' }, [
-        el('div', {}, [el('div', { className: 'ia-kicker', textContent: date(o.created, true) }), el('h2', { textContent: `Order #${o.number}` }), el('div', { className: 'sl-badges' }, [badge(o.payment, PAYMENT[o.payment] || o.payment), done(o) ? badge(o.fulfilment, stageName[o.fulfilment]) : null])]),
-        button('×', close, 'sl-x'),
-      ]),
-      el('div', { className: 'sl-panel-body' }, [
-        done(o) && (o.paymentIntent || o.provider === 'paypal') ? block('Where it is up to', [stages, el('label', { className: 'sl-label' }, [el('span', { textContent: 'Tracking number' }), tracking]), el('label', { className: 'sl-label' }, [el('span', { textContent: 'Note' }), note]), el('div', { className: 'sl-save' }, [save, said])]) : null,
-        block('Pieces', [
-          el('ul', { className: 'sl-items' }, o.items.map((i) => el('li', {}, [el('span', { textContent: i.name }), el('small', { textContent: `× ${i.qty}` }), el('strong', { textContent: money(i.total, o.currency) })]))),
-          o.discount ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Discount${o.discountCode ? ` · ${o.discountCode}` : ''}` }), el('strong', { textContent: `− ${money(o.discount, o.currency)}` })]) : null,
-          el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Total' }), el('strong', { textContent: money(o.total, o.currency) })]),
-          o.paidWith ? el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'Paid with' }), el('strong', { textContent: o.paidWith })]) : null,
-          o.refunded ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: 'Refunded' }), el('strong', { textContent: `− ${money(o.refunded, o.currency)}` })]) : null,
-        ]),
-        block('Customer', [
-          el('p', { className: 'sl-who' }, [el('strong', { textContent: o.name || '—' }), o.email ? el('a', { href: `mailto:${o.email}?subject=${encodeURIComponent(`Your order #${o.number}`)}`, textContent: o.email }) : null, o.phone ? el('span', { textContent: o.phone }) : null]),
-          o.email ? button('All orders from this customer', () => { state.open = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(o.email)}` }, 'sl-link') : null,
-        ]),
-        o.shipTo.length ? block('Ship to', [el('p', { className: 'sl-address' }, [o.name, ...o.shipTo.slice(0, -1), country(o.shipTo[o.shipTo.length - 1])].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line])))]) : null,
-        block('Payment', [o.stripe ? el('a', { className: 'ia-btn ghost', href: o.stripe, target: '_blank', rel: 'noopener', textContent: o.provider === 'paypal' ? 'Open in PayPal ↗' : 'Open in Stripe ↗' }) : null, el('p', { className: 'sl-dim', textContent: o.provider === 'paypal' ? 'Paid with PayPal. Refunds are done in PayPal.' : 'Refunds and receipts are done in Stripe.' })]),
-      ]),
+    const field = (label, control) => el('label', { className: 'sl-label' }, [el('span', { textContent: label }), control])
+    const carrier = el('select', { className: 'sl-input' }, [el('option', { value: '', textContent: 'Choose…' }), ...Object.entries(CARRIERS).map(([v, [t]]) => el('option', { value: v, textContent: t, selected: d.carrier === v }))])
+    carrier.addEventListener('change', () => { d.carrier = carrier.value; draw() })
+    const number = el('input', { className: 'sl-input', value: d.tracking, placeholder: 'For example RR123456789PT', maxLength: 200 })
+    number.addEventListener('input', () => { d.tracking = number.value })
+    const note = el('textarea', { className: 'sl-input', value: d.note, rows: 2, placeholder: 'Only you see this', maxLength: 480 })
+    note.addEventListener('input', () => { d.note = note.value })
+    const save = button(saving ? 'Saving…' : 'Save', () => storeOrder(o), 'ia-btn')
+    save.disabled = Boolean(saving)
+    const said = state.saved[o.id]
+    const url = trackLink(o.carrier, o.tracking)
+    const carrierName = CARRIERS[o.carrier] ? CARRIERS[o.carrier][0] : ''
+    const mail = o.email && o.tracking ? `mailto:${o.email}?subject=${encodeURIComponent('Your order is on its way')}&body=${encodeURIComponent(`Hi ${(o.name || '').split(' ')[0] || 'there'},\n\nYour order #${o.number} has been posted${carrierName && o.carrier !== 'other' ? ` with ${carrierName}` : ''}. The tracking number is ${o.tracking}.${url ? `\nFollow it here: ${url}` : ''}\n\nThank you!`)}` : ''
+    return el('div', { className: 'sl-order-col sl-posting' }, [
+      el('h4', { className: 'sl-h4', textContent: 'Posting' }),
+      steps,
+      el('div', { className: 'sl-pair' }, [field('Carrier', carrier), field('Tracking number', number)]),
+      field('Note', note),
+      el('div', { className: 'sl-save' }, [save, said ? el('span', { className: `sl-said ${said.ok ? '' : 'is-bad'}`, textContent: said.text }) : null]),
+      url || mail ? el('div', { className: 'sl-links' }, [
+        url ? el('a', { className: 'sl-link', href: url, target: '_blank', rel: 'noopener', textContent: 'Track the parcel ↗' }) : null,
+        mail ? el('a', { className: 'sl-link', href: mail, textContent: 'Email the tracking to the buyer' }) : null,
+      ]) : null,
     ])
-    const shade = el('div', { className: 'sl-shade' })
-    shade.addEventListener('click', close)
-    return [shade, panel]
+  }
+  const storeOrder = async (o) => {
+    const d = state.drafts[o.id]
+    state.saving[o.id] = true; delete state.saved[o.id]; draw()
+    const r = await api('POST', { id: o.id, paymentIntent: o.paymentIntent, fulfilment: d.fulfilment, carrier: d.carrier, tracking: d.tracking.trim(), note: d.note.trim() })
+    state.saving[o.id] = false
+    if (r.ok) { Object.assign(o, { fulfilment: d.fulfilment, carrier: d.carrier, tracking: d.tracking.trim(), note: d.note.trim() }); state.saved[o.id] = { ok: true, text: 'Saved ✓' } }
+    else state.saved[o.id] = { ok: false, text: (r.json && r.json.message) || 'Not saved. Try again.' }
+    draw()
+    if (r.ok) setTimeout(() => { if (state.saved[o.id] && state.saved[o.id].ok) { delete state.saved[o.id]; draw() } }, 2500)
   }
 
   // ---------- Customers ----------
@@ -718,10 +768,9 @@ window.IASales = (() => {
     const scroll = root.scrollTop
     const focusedSearch = document.activeElement && document.activeElement.classList.contains('sl-search')
     const caret = focusedSearch ? document.activeElement.selectionStart : null
-    const open = state.view === 'orders' && state.open && state.orders.find((o) => o.id === state.open)
     const views = { orders: ordersView, customers: customersView, discounts: discountsView }
-    const panels = open ? orderPanel(open) : state.view === 'discounts' && dState.editing ? discountPanel(dState.editing) : []
-    const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea') // typing in a panel: leave it as it is
+    const panels = state.view === 'discounts' && dState.editing ? discountPanel(dState.editing) : []
+    const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea, .sl-posting input, .sl-posting textarea') // typing: leave it as it is
     if (keep) return
     root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels, ...modalLayer())
     root.scrollTop = scroll
@@ -730,7 +779,7 @@ window.IASales = (() => {
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return
     if (state.modal) { state.modal = null; draw(); return }
-    if (state.open || dState.editing) { state.open = null; dState.editing = null; draw() }
+    if (dState.editing) { dState.editing = null; draw() }
   })
 
   /* Called by shell.js whenever the address changes to a Sales screen. */
@@ -738,7 +787,7 @@ window.IASales = (() => {
     const before = state.view
     state.view = ['customers', 'discounts'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
-    if (before !== state.view) { state.open = null; dState.editing = null; state.modal = null }
+    if (before !== state.view) { dState.editing = null; state.modal = null }
     // the discounts screen also wants the customers, to offer them in its drop-down
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()
     if (!state.loaded && !state.loading) load()

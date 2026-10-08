@@ -71,7 +71,8 @@ const PERKS = [
 /* the collector card: the name, the year they joined, a card number, and what they have collected */
 /* Rewards: how each is earned, whether this customer has, and the card design they chose. */
 const earnText = (r) => (r.earnedBy === 'verify' ? 'Confirm your email' : r.earnedBy === 'orders' ? (r.count === 1 ? 'Place your first order' : `Place ${r.count} orders`) : `Collect ${r.count} pieces`)
-const hasEarned = (r, p) => Boolean(p) && (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
+// a reward is theirs when they have earned it, or when the admin gave it to them as a gift
+const hasEarned = (r, p) => Boolean(p) && ((p.gifts || []).includes(r.id) || (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count))
 const cardDesigns = () => accountPage.rewards.filter((r) => r.kind === 'card')
 const designOf = (id) => cardDesigns().find((r) => r.id === id) || null
 const designStyle = (d) => (d && d.cardArt ? { '--card-art': `url("${asset(d.cardArt)}")` } : undefined)
@@ -619,7 +620,7 @@ function PanelStrip({ pieces }) {
   }, [pieces.length])
   return (
     <div className="acct2-strip" ref={box}>
-      <div ref={track} className={`acct2-track ${shift > 0 ? 'is-gliding' : ''}`} style={{ '--shift': `${shift}px`, '--glide': `${Math.max(12, Math.round(shift / 18))}s` }}>
+      <div ref={track} className={`acct2-track ${shift > 0 ? 'is-gliding' : ''}`} style={{ '--shift': `${shift}px`, '--glide': `${Math.max(5, Math.round(shift / 45))}s` }}>
         {pieces.map((p) => <span key={p.slug} className="acct2-panel"><img src={asset(p.src)} alt="" loading="eager" /></span>)}
       </div>
     </div>
@@ -629,7 +630,7 @@ function PanelStrip({ pieces }) {
 function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const { user, call } = useAccount()
   const f = useForm({ name: user.name, phone: user.phone, marketing: user.marketing, avatar: user.avatar || '', card: user.card || '' })
-  const prog = progress || { verified: Boolean(user.verified), orders: 0, pieces: 0 }
+  const prog = { verified: Boolean(user.verified), orders: 0, pieces: 0, ...(progress || {}), gifts: user.gifts || [] }
   const rewardPics = accountPage.rewards.filter((r) => r.kind === 'picture')
   const designs = cardDesigns()
   const [saved, setSaved] = useState(false)
@@ -933,7 +934,7 @@ function Rewards({ go }) {
               <div className="acct-reward-body">
                 <span className="acct-reward-kind">{r.kind === 'picture' ? 'Profile picture' : r.kind === 'card' ? 'Card design' : 'Discount'}</span>
                 <strong>{r.name}</strong>
-                <span className="acct-reward-how">{r.earned ? 'Unlocked' : `${earnText(r)} to unlock it`}</span>
+                <span className="acct-reward-how">{r.gifted ? 'A gift, just for you' : r.earned ? 'Unlocked' : `${earnText(r)} to unlock it`}</span>
                 {!r.earned && r.earnedBy !== 'verify' && (
                   <div className="acct-meter" role="progressbar" aria-valuemin={0} aria-valuemax={need(r)} aria-valuenow={Math.min(have(r), need(r))} aria-label={`${Math.min(have(r), need(r))} of ${need(r)}`}>
                     <i style={{ width: `${pct}%` }} /><small>{Math.min(have(r), need(r))} / {need(r)} {r.earnedBy}</small>

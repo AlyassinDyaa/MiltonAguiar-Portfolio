@@ -302,8 +302,19 @@ window.IASales = (() => {
           return li
         }))]),
         codes.length ? block('Discount codes for them', [el('ul', { className: 'sl-items' }, codes.map((d) => el('li', {}, [el('span', { textContent: d.code }), badge(`d-${d.status}`, D_STATUS[d.status]), el('strong', { textContent: `${d.percent}% off` })])))]) : null,
+        (() => {
+          const mem = c && c.email ? memberOf(c.email) : null
+          if (!mState.loaded || mState.problem) return null
+          if (!mem) return block('Gifts', [el('p', { className: 'sl-dim', textContent: 'They have no account on the site, so they cannot be given a reward. Rewards go to members.' })])
+          return block(`Gifts · member ${memberNo(mem.memberNo)}`, mem.gifts.length ? [el('ul', { className: 'sl-items' }, mem.gifts.map((g) => {
+            const r = rewardOf(g.id)
+            const back = button('Take back', () => askUngift(mem, g), 'sl-link')
+            return el('li', { className: 'is-static' }, [el('span', { textContent: `${r ? r.name : g.id} · ${date(g.at)}` }), r ? badge('new', KIND_NAME[r.kind]) : null, back])
+          }))] : [el('p', { className: 'sl-dim', textContent: 'No gifts given yet.' })])
+        })(),
       ]),
       el('div', { className: 'sl-modal-foot' }, [
+        c && c.email && memberOf(c.email) ? button('Gift a reward', () => { state.modal = { kind: 'gift', email: c.email.toLowerCase(), fixed: true, back: key }; draw() }, 'ia-btn ghost') : null,
         c && c.email ? el('a', { className: 'ia-btn ghost', href: `mailto:${c.email}`, textContent: 'Email them' }) : null,
         button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent((c && c.email) || first.email || first.name)}`; draw() }, 'ia-btn ghost'),
         button('Close', closeModal, 'ia-btn'),
@@ -313,7 +324,7 @@ window.IASales = (() => {
   const modalLayer = () => {
     const m = state.modal
     if (!m) return []
-    const inside = m.kind === 'customer' ? customerModal(m.key) : confirmModal(m)
+    const inside = m.kind === 'customer' ? customerModal(m.key) : m.kind === 'gift' ? giftModal(m) : confirmModal(m)
     if (!inside) { state.modal = null; return [] }
     const shade = el('div', { className: 'sl-modal-shade' }, [el('div', { className: `sl-modal ${m.kind === 'confirm' ? 'is-small' : ''}`, role: m.kind === 'confirm' ? 'alertdialog' : 'dialog', ariaModal: 'true' }, inside)])
     shade.addEventListener('click', (e) => { if (e.target === shade) closeModal() })
@@ -470,6 +481,104 @@ window.IASales = (() => {
     return [shade, panel]
   }
 
+
+  // ---------- Members and gifts ----------
+  /* The site's member accounts (api/account.js), and the rewards the admin gives them as gifts
+     (Sales → Customers → Gift a reward). A gift is theirs at once, whatever their progress; they
+     get an email about it, and a discount gets its personal code. */
+  const mState = { loaded: false, loading: false, list: [], rewards: [], problem: '' }
+  const mApi = async (body) => {
+    try {
+      const r = await fetch('/api/account', { method: 'POST', cache: 'no-store', headers: { Authorization: `token ${pass()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) })
+      return { ok: r.ok, status: r.status, json: await r.json().catch(() => ({})) }
+    } catch { return { ok: false, status: 0, json: { message: 'Could not reach the site. Check the connection and try again.' } } }
+  }
+  const loadMembers = async () => {
+    mState.loading = true
+    const r = await mApi({ action: 'adminMembers' })
+    mState.loading = false; mState.loaded = true
+    if (r.ok) { mState.list = r.json.members || []; mState.rewards = r.json.rewards || []; mState.problem = '' }
+    else mState.problem = r.status === 503 || r.status === 403 ? 'Member accounts are not set up on this site, so there is nobody to give a gift to.' : (r.json.message || 'The members could not be loaded.')
+    draw()
+  }
+  const memberOf = (email) => mState.list.find((m) => m.email === String(email || '').toLowerCase())
+  const rewardOf = (id) => mState.rewards.find((r) => r.id === id)
+  const KIND_NAME = { picture: 'Profile picture', card: 'Card design', discount: 'Discount' }
+  const memberNo = (n) => (n ? `#${String(n).padStart(4, '0')}` : '')
+  const askUngift = (m, g) => {
+    const r = rewardOf(g.id)
+    ask({
+      title: `Take back "${r ? r.name : g.id}"?`,
+      text: `${m.name || m.email} · given ${date(g.at)}`,
+      more: 'It leaves their account (unless they have earned it on their own since). A discount code already sent to them keeps working until it runs out.',
+      yes: 'Take it back',
+      run: async () => {
+        const res = await mApi({ action: 'adminUngift', email: m.email, reward: g.id })
+        if (!res.ok) return res.json.message || 'Not taken back. Try again.'
+        m.gifts = m.gifts.filter((x) => x.id !== g.id)
+        return ''
+      },
+    })
+  }
+  // the gift window: who, which reward, a note, and Send
+  const giftModal = (m) => {
+    const said = el('p', { className: `sl-said ${m.bad ? 'is-bad' : ''}`, textContent: m.said || '' })
+    if (!mState.loaded) return [el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: 'Loading the members…' })])]
+    if (mState.problem) return [
+      el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: 'Not possible here' })]),
+      el('div', { className: 'sl-modal-body' }, [el('p', { textContent: mState.problem })]),
+      el('div', { className: 'sl-modal-foot' }, [button('Close', closeModal, 'ia-btn')]),
+    ]
+    const member = memberOf(m.email)
+    const has = new Set(member ? member.gifts.map((g) => g.id) : [])
+    // who: one member, or a choice of every member
+    const who = m.fixed && member
+      ? el('div', { className: 'sl-gift-who' }, [el('i', { className: 'sl-initials', ariaHidden: 'true', textContent: initials(member.name || member.email) }), el('span', {}, [el('strong', { textContent: member.name || member.email }), el('small', { textContent: `${memberNo(member.memberNo)} · ${member.email}` })])])
+      : (() => {
+        const pick = el('select', { className: 'sl-select', ariaLabel: 'Member' }, [el('option', { value: '', textContent: mState.list.length ? 'Choose a member…' : 'No members yet' }), ...mState.list.map((x) => el('option', { value: x.email, selected: x.email === m.email, textContent: `${memberNo(x.memberNo)}  ${x.name || '(no name)'} · ${x.email}` }))])
+        pick.addEventListener('change', () => { m.email = pick.value; m.reward = ''; m.said = ''; draw() })
+        return el('label', { className: 'sl-field' }, [el('span', { textContent: 'Member' }), pick])
+      })()
+    // which reward: a tile for each, its picture, kind and name
+    const tiles = mState.rewards.length ? el('div', { className: 'sl-gift-grid', role: 'radiogroup', ariaLabel: 'Reward' }, mState.rewards.map((r) => {
+      const given = has.has(r.id)
+      const b = el('button', { type: 'button', className: `sl-gift is-${r.kind} ${m.reward === r.id ? 'on' : ''}`, role: 'radio', ariaChecked: String(m.reward === r.id), disabled: given || !member }, [
+        r.kind === 'discount' ? el('b', { className: 'sl-gift-pic is-off', textContent: `${r.percent}%` }) : el('img', { className: 'sl-gift-pic', src: r.kind === 'card' ? (r.cardArt || '') : r.picture, alt: '' }),
+        el('span', {}, [el('small', { textContent: given ? 'Already given' : KIND_NAME[r.kind] }), el('strong', { textContent: r.name })]),
+      ])
+      if (r.kind === 'card' && !r.cardArt) b.querySelector('img').replaceWith(el('b', { className: 'sl-gift-pic is-card', textContent: 'Card' }))
+      b.addEventListener('click', () => { m.reward = r.id; m.said = ''; draw() })
+      return b
+    })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Shop → Rewards.' })
+    const note = el('textarea', { className: 'sl-input', rows: 3, maxLength: 300, placeholder: 'A line from you, in the email (optional). E.g. "Thank you for the kind words at the convention."', value: m.note || '' })
+    note.addEventListener('input', () => { m.note = note.value })
+    const send = button(m.busy ? 'Sending…' : 'Send the gift', async () => {
+      if (!member) { m.said = 'Choose a member first.'; m.bad = true; return draw() }
+      if (!m.reward) { m.said = 'Choose a reward to give.'; m.bad = true; return draw() }
+      m.busy = true; m.said = ''; draw()
+      const r = await mApi({ action: 'adminGift', email: member.email, reward: m.reward, note: m.note || '' })
+      m.busy = false
+      if (!r.ok) { m.said = r.json.message || 'The gift was not given. Try again.'; m.bad = true; return draw() }
+      member.gifts = [...member.gifts, { id: m.reward, at: Date.now(), note: m.note || '' }]
+      const rw = rewardOf(m.reward)
+      m.said = `"${rw ? rw.name : 'The reward'}" is in ${member.name || member.email}'s account${r.json.code ? `, with the code ${r.json.code}` : ''}. ${r.json.mailed ? 'They have been emailed about it.' : 'The email to them could not be sent, so tell them yourself.'}`
+      m.bad = !r.json.mailed; m.reward = ''; m.note = ''
+      draw()
+    }, 'ia-btn')
+    send.disabled = Boolean(m.busy)
+    return [
+      el('div', { className: 'sl-modal-head' }, [el('div', { className: 'ia-kicker', textContent: 'Gift a reward' }), el('h2', { textContent: member && m.fixed ? `A gift for ${member.name || member.email}` : 'Give a member a reward' })]),
+      el('div', { className: 'sl-modal-body sl-gift-body' }, [
+        who,
+        el('div', { className: 'sl-field' }, [el('span', { textContent: 'Reward' }), tiles]),
+        el('label', { className: 'sl-field' }, [el('span', { textContent: 'Your note' }), note]),
+        el('p', { className: 'sl-hint', textContent: 'It is theirs at once, whatever they have bought, and they get an email about it. A discount gets its own code, for their email only.' }),
+        said,
+      ]),
+      el('div', { className: 'sl-modal-foot' }, [button('Close', closeModal, 'ia-btn ghost'), send]),
+    ]
+  }
+
   // ---------- Customers ----------
   const customers = () => {
     const by = new Map()
@@ -496,8 +605,9 @@ window.IASales = (() => {
     const cur = currency()
     const total = all.reduce((t, c) => t + c.spent, 0)
     return [
-      head('Customers', 'Everyone who has bought from the shop, worked out from the orders. Open one to see their orders.', [
-        button(state.loading ? 'Loading…' : 'Refresh', load),
+      head('Customers', 'Everyone who has bought from the shop, worked out from the orders. Open one to see their orders, or give a member a reward.', [
+        button('Gift a reward', () => { state.modal = { kind: 'gift', email: '' }; draw() }, 'ia-btn'),
+        button(state.loading ? 'Loading…' : 'Refresh', () => { load(); loadMembers() }),
         button('Export CSV', () => csv([['Name', 'Email', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, country(c.country), c.orders, c.spent, c.currency, date(c.first), date(c.last)])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
       ]),
       notices(),
@@ -747,6 +857,7 @@ window.IASales = (() => {
     if (before !== state.view) { state.open = null; dState.editing = null; state.modal = null }
     // the discounts screen also wants the customers, to offer them in its drop-down
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()
+    if (state.view === 'customers' && !mState.loaded && !mState.loading) loadMembers()
     if (!state.loaded && !state.loading) load()
     else draw()
     if (before !== view || !state.loaded) readSwitch().then(draw)

@@ -4,6 +4,7 @@ import { db, dbReady } from './_db.js'
 import { forCustomer } from './_orders.js'
 import { accountsMode } from './_buyer.js'
 import { packEmails, stripe } from './_discounts.js'
+import { goodPass } from './_session.js'
 import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
@@ -86,7 +87,7 @@ const rewardsList = () => {
       return {
         id: slug(r.name) || slug(r.picture), name: String(r.name || ''), kind: kindOf(r), earnedBy: by,
         count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)),
-        picture: String(r.picture || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
+        picture: String(r.picture || ''), cardArt: String(r.cardArt || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
       }
     })
 }
@@ -94,9 +95,12 @@ const rewardsList = () => {
 const progressOf = async (d, user) => {
   const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
   const orders = await d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true } }).limit(500).toArray()
-  return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0) }
+  return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0), gifts: giftsOf(user) }
 }
-const earns = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
+// rewards the admin has given this customer (Sales → Customers → Gift a reward): theirs whatever their progress
+const giftsOf = (user) => (Array.isArray(user && user.gifts) ? user.gifts.map((g) => g && g.id).filter(Boolean) : [])
+const earnedOnItsOwn = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
+const earns = (r, p) => (p.gifts || []).includes(r.id) || earnedOnItsOwn(r, p)
 // a discount reward earned: its personal code, made once in Stripe (one use, only with this email, for
 // the days the admin set) and kept with the customer
 const rewardCode = async (d, user, r) => {
@@ -174,6 +178,67 @@ const sendVerify = async (req, user) => {
   })
 }
 
+/* ---------- the admin's side: members and gifted rewards
+   { action: 'adminMembers' }                     every account: { members, rewards }
+   { action: 'adminGift', email, reward, note }   gives a reward (emails them; a discount gets its code)
+   { action: 'adminUngift', email, reward }       takes a gift back (a discount code already made keeps working)
+   Only with the admin's pass (on this computer, the admin has no login, so none is asked). */
+const isAdmin = (req) => {
+  const pass = String(req.headers.authorization || '').replace(/^(token|bearer)\s+/i, '')
+  if (pass && goodPass(pass)) return true
+  return !process.env.VERCEL && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(String(req.headers.host || ''))
+}
+const adminAction = async (req, d, users, action, body) => {
+  const rewards = rewardsList()
+  if (action === 'adminMembers') {
+    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, createdAt: 1, gifts: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    return [200, {
+      rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, cardArt: r.cardArt, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
+      members: all.map((u) => ({ email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt, gifts: (Array.isArray(u.gifts) ? u.gifts : []).map((g) => ({ id: g.id, at: g.at, note: g.note || '' })) })),
+    }]
+  }
+  const user = await users.findOne({ email: tidyEmail(body.email) })
+  if (!user) return [404, { message: 'There is no account with that email.' }]
+  const r = rewards.find((x) => x.id === String(body.reward || ''))
+  if (!r) return [400, { message: 'That reward is no longer offered. Reload and pick another.' }]
+  if (action === 'adminUngift') {
+    await users.updateOne({ _id: user._id }, { $pull: { gifts: { id: r.id } } })
+    return [200, { ok: true }]
+  }
+  if (action !== 'adminGift') return [400, { message: 'Unknown action.' }]
+  const p = await progressOf(d, user)
+  if (p.gifts.includes(r.id)) return [409, { message: `${user.name || user.email} already has "${r.name}" as a gift.` }]
+  if (earnedOnItsOwn(r, p)) return [409, { message: `${user.name || user.email} has already earned "${r.name}".` }]
+  const note = clean(body.note, 300)
+  await users.updateOne({ _id: user._id }, { $push: { gifts: { id: r.id, at: Date.now(), note } } })
+  // a discount: its personal code now, so the email can carry it
+  let code = null
+  if (r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('gift code not made:', e.message) } }
+  const what = r.kind === 'picture' ? 'a profile picture' : r.kind === 'card' ? 'a membership card design' : `${r.percent}% off an order`
+  const pic = r.kind === 'picture' && r.picture ? { src: r.picture === '/avatars/confirmed.svg' ? '/email/confirmed.png' : r.picture, title: r.name, text: ' Yours to use as your profile picture.' }
+    : r.kind === 'card' && r.cardArt ? { src: r.cardArt, title: r.name, text: ' A new look for your membership card.' } : null
+  let mailed = false
+  try {
+    await sendMail({
+      to: user.email,
+      subject: `A gift for you: ${r.name}`,
+      kicker: 'A gift',
+      title: 'A gift for you',
+      lines: [
+        `Hi${user.name ? ` ${user.name.split(' ')[0]}` : ''},`,
+        `You have been given ${what}: "${r.name}". It is already in your account.`,
+        ...(note ? [note] : []),
+        ...(code ? [`Your code: ${code.code}. It takes ${code.percent}% off one order, until ${new Date(code.until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}. Only your email can use it.`] : []),
+      ],
+      picture: pic,
+      button: { label: r.kind === 'discount' ? 'Go to the shop' : 'See your rewards', url: `${siteUrl(req)}${r.kind === 'discount' ? '/shop' : '/account?tab=rewards'}` },
+      after: 'Thank you for being a member.',
+    })
+    mailed = true
+  } catch (e) { console.error('gift email not sent:', e.message) }
+  return [200, { ok: true, mailed, code: code ? code.code : null }]
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (!dbReady()) return say(res, req.method === 'GET' ? 200 : 503, req.method === 'GET' ? { enabled: false, user: null } : { message: 'Accounts are not set up yet.' })
@@ -194,6 +259,12 @@ export default async function handler(req, res) {
     const body = req.body && typeof req.body === 'object' ? req.body : {}
     const ip = clientIp(req)
     const action = String(body.action || '')
+
+    // ---------- the admin (Sales → Customers): the members, and rewards given to them as gifts
+    if (action.startsWith('admin')) {
+      if (!isAdmin(req)) return say(res, 401, { message: 'Your login has run out. Sign out of the admin and sign in again.' })
+      return say(res, ...(await adminAction(req, d, users, action, body)))
+    }
 
     // ---------- without a login
     if (action === 'signup') {
@@ -302,7 +373,7 @@ export default async function handler(req, res) {
         const earned = earns(r, p)
         let code = null
         if (earned && r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('reward code not made:', e.message) } }
-        list.push({ id: r.id, name: r.name, kind: r.kind, earnedBy: r.earnedBy, count: r.count, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined, earned, code })
+        list.push({ id: r.id, name: r.name, kind: r.kind, earnedBy: r.earnedBy, count: r.count, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined, earned, gifted: p.gifts.includes(r.id) && !earnedOnItsOwn(r, p), code })
       }
       return say(res, 200, { progress: p, rewards: list })
     }

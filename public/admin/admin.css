@@ -1300,3 +1300,23 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .ia-notice .ia-update-actions .ia-btn:hover { background: #ff2a36; color: #fff; }
 .ia-notice .ia-update-actions .ia-btn.ghost { background: var(--panel-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ia-notice .ia-update-actions .ia-btn.ghost:hover { background: var(--fg); color: #0b0b0c; box-shadow: none; }
+
+/* Gift a reward (Sales → Customers): the member, a tile for each reward, a note */
+.sl-gift-body { display: grid; gap: 18px; }
+.sl-gift-who { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel-2); }
+.sl-gift-who > span { display: grid; gap: 2px; }
+.sl-gift-who small { color: var(--dim); }
+.sl-gift-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.sl-gift { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--panel-2); border: 2px solid transparent; transition: border-color 0.15s, background 0.15s; }
+.sl-gift:hover:not(:disabled) { border-color: var(--line-strong); }
+.sl-gift.on { border-color: var(--accent); background: rgba(216, 35, 47, 0.12); box-shadow: 4px 4px 0 var(--accent); }
+.sl-gift:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sl-gift:disabled { cursor: default; opacity: 0.45; }
+.sl-gift > span { display: grid; gap: 2px; min-width: 0; }
+.sl-gift small { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.sl-gift strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.sl-gift-pic { flex: none; width: 44px; height: 44px; object-fit: cover; object-position: 50% 25%; border-radius: 50%; border: 2px solid #0b0b0c; background: #0b0b0c; }
+.sl-gift.is-card .sl-gift-pic { width: 56px; height: 36px; border-radius: 5px; }
+b.sl-gift-pic { display: grid; place-items: center; font-family: var(--display); font-size: 0.9rem; font-weight: 900; font-style: italic; color: #fff; background: linear-gradient(135deg, #d8232f 35%, #6d0d14); }
+b.sl-gift-pic.is-card { font-size: 0.7rem; text-transform: uppercase; }
+.sl-items li.is-static { cursor: default; }

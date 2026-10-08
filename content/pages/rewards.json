@@ -23,7 +23,7 @@
   ],
   "cards": [
     {
-      "name": "Raptor card",
+      "name": "Raptor Card",
       "cardLook": "art",
       "cardArt": "/uploads/raptor-desktop.webp",
       "earnedBy": "verify"

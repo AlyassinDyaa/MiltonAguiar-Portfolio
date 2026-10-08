@@ -16,7 +16,7 @@
       "name": "Dead Arrow",
       "picture": "/uploads/dead-arrow-showcase.webp",
       "face": "49,10,366",
-      "earnedBy": "orders",
+      "earnedBy": "pieces",
       "count": 5,
       "hidden": false
     }

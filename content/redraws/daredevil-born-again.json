@@ -1,0 +1,20 @@
+{
+  "order": 10,
+  "hidden": false,
+  "stages": [
+    {
+      "src": "/uploads/daredevil-pencils_01.webp",
+      "year": "Pencils"
+    },
+    {
+      "src": "/uploads/daredevil-inks_01.webp",
+      "year": "Inks"
+    },
+    {
+      "src": "/uploads/daredevil.webp",
+      "year": "Colors"
+    }
+  ],
+  "title": "Daredevil: Born Again",
+  "text": "Stages of drawing Daredevil"
+}

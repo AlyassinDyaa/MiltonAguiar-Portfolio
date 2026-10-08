@@ -13,7 +13,8 @@
       "earnedBy": "verify",
       "picture": "/uploads/raptor.webp",
       "face": "46,5,372",
-      "cardArt": "/uploads/robins.webp"
+      "cardArt": "/uploads/robins.webp",
+      "cardLook": "art"
     },
     {
       "name": "Ink card",

@@ -20,6 +20,7 @@
   "type": "Prints",
   "inShop": true,
   "hover": "/uploads/superman-frame.png",
+  "face": "47,17,299",
   "category": "Fan art",
   "look": "default"
 }

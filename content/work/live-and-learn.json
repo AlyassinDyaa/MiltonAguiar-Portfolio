@@ -14,7 +14,7 @@
       "price": 10
     }
   ],
-  "status": "sale",
+  "status": "none",
   "title": "Live and Learn",
   "type": "Prints",
   "inShop": true,

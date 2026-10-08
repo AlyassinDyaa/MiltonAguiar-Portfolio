@@ -19,6 +19,7 @@
   "type": "Prints",
   "inShop": true,
   "hover": "/uploads/sonic-frame.webp",
+  "face": "51,50,191",
   "category": "Fan art",
   "look": "default"
 }

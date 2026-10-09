@@ -93,7 +93,7 @@ const rewardsList = () => {
       return {
         id: slug(r.name) || slug(r.picture), name: String(r.name || ''), kind: kindOf(r), earnedBy: by,
         count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)),
-        picture: String(r.picture || ''), face: String(r.face || ''), cardLook: String(r.cardLook || 'art'), cardArt: String(r.cardArt || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
+        picture: String(r.picture || ''), face: String(r.face || ''), cardLook: String(r.cardLook || 'art'), cardArt: String(r.cardArt || ''), cardCrop: String(r.cardCrop || ''), percent: Math.min(100, Math.max(1, Number(r.percent) || 10)), days: Math.max(1, Math.round(Number(r.days) || 60)),
       }
     })
 }
@@ -265,7 +265,7 @@ const adminAction = async (req, d, users, action, body) => {
       } catch (e) { console.error('kept pictures not read:', e.message) }
     }
     return [200, {
-      rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, face: r.face, cardLook: r.cardLook, cardArt: r.cardArt, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
+      rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, face: r.face, cardLook: r.cardLook, cardArt: r.cardArt, cardCrop: r.cardCrop, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
       members,
     }]
   }

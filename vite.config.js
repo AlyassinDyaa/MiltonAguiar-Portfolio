@@ -202,6 +202,8 @@ const adminBundle = () => ({
 const ART_MAX = 1400
 const ART_FOLDERS = ['work', 'gallery-sections', 'redraws'] // whose pictures get the watermark
 const readBrand = () => { try { return JSON.parse(readFileSync(resolve('content/site/brand.json'), 'utf8')) } catch { return {} } }
+// the logo on the artwork can be switched off (Show / hide → Artwork); on unless switched off
+const watermarkOn = () => { try { return (JSON.parse(readFileSync(resolve('content/site/visibility.json'), 'utf8')).art || {}).watermark !== false } catch { return true } }
 // every /uploads picture named in the Shop, Work and before-and-after content
 const artPictures = () => {
   const art = new Set()
@@ -229,7 +231,7 @@ const artCopy = async (sharp, source, url, art, brand) => {
   const logoFile = brand.logo && existsSync(resolve(`public${brand.logo}`)) ? resolve(`public${brand.logo}`) : null
   const meta = await sharp(source).metadata()
   const big = Math.max(meta.width || 0, meta.height || 0) > ART_MAX
-  const isArt = art.has(url) && Boolean(logoFile)
+  const isArt = art.has(url) && Boolean(logoFile) && watermarkOn()
   if (!big && !isArt) return null
   let img = sharp(source)
   let w = meta.width, h = meta.height
@@ -283,10 +285,11 @@ const protectArt = () => ({
         const { default: sharp } = await import('sharp')
         sharp.cache(false)
         const at = statSync(file).mtimeMs
+        const mark = watermarkOn()
         let hit = made.get(url)
-        if (!hit || hit.at !== at) {
+        if (!hit || hit.at !== at || hit.mark !== mark) {
           const copy = await artCopy(sharp, readFileSync(file), url, artPictures(), readBrand())
-          hit = { at, buffer: copy && copy.buffer }
+          hit = { at, mark, buffer: copy && copy.buffer }
           made.set(url, hit)
         }
         if (!hit.buffer) return next()

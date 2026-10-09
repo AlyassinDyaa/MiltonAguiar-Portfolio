@@ -1569,7 +1569,11 @@ form.acc-modal-box { max-width: none; }
 .acc-card3d.is-gold .acc-card3d-foot small, .acc-card3d.is-chrome .acc-card3d-foot small { color: rgba(11, 11, 12, 0.6); }
 .acc-card3d.is-gold .acc-card3d-mark, .acc-card3d.is-chrome .acc-card3d-mark { -webkit-text-stroke-color: rgba(11, 11, 12, 0.14); }
 .acc-card3d.is-gold .acc-card3d-dots, .acc-card3d.is-chrome .acc-card3d-dots { background-image: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0 2.2px, transparent 2.8px); }
-.acc-card3d.has-art { background: linear-gradient(180deg, rgba(11, 11, 12, 0.15), rgba(11, 11, 12, 0.75)), var(--card-art) center 25% / cover, #0b0b0c; }
+/* a design's own picture, placed and zoomed as set in the admin (--art-x, --art-y, --art-zoom):
+   drawn under everything on the card, with the shade over it that keeps the writing readable */
+.acc-card3d.has-art { isolation: isolate; background: #0b0b0c; }
+.acc-card3d.has-art::before, .acct-card-mini.has-art::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--card-art) var(--art-x, 50%) var(--art-y, 25%) / cover no-repeat; transform: scale(var(--art-zoom, 1)); transform-origin: var(--art-x, 50%) var(--art-y, 25%); }
+.acc-card3d.has-art::after, .acct-card-mini.has-art::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(11, 11, 12, 0.15), rgba(11, 11, 12, 0.75)); }
 .acc-card3d.has-art .acc-card3d-dots { opacity: 0.6; }
 
 /* choosing the card design (Details) */
@@ -1586,7 +1590,8 @@ form.acc-modal-box { max-width: none; }
 .acct-card-mini.is-ink { background: linear-gradient(140deg, #26262b, #0b0b0c 70%); border-color: var(--accent); }
 .acct-card-mini.is-gold { background: linear-gradient(135deg, #fff1b8, #f2c94c 30%, #b8860b 58%, #f6d77a); color: #0b0b0c; }
 .acct-card-mini.is-chrome { background: linear-gradient(135deg, #ffffff, #c9ccd2 30%, #8d929b 58%, #eef0f3); color: #0b0b0c; }
-.acct-card-mini.has-art { background: linear-gradient(180deg, rgba(11, 11, 12, 0.1), rgba(11, 11, 12, 0.6)), var(--card-art) center 25% / cover; }
+.acct-card-mini.has-art { isolation: isolate; background: #0b0b0c; }
+.acct-card-mini.has-art::after { background: linear-gradient(180deg, rgba(11, 11, 12, 0.1), rgba(11, 11, 12, 0.6)); }
 .acct-card-name { font-family: var(--display); font-size: 0.95rem; font-weight: 900; font-style: italic; text-transform: uppercase; }
 .acct-card-pick small { font-size: 0.78rem; color: var(--fg-mute); }
 .acct-card-pick.on small { color: var(--accent); }
@@ -1837,3 +1842,11 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .acc-del-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 8px 12px; border: 1px solid var(--line-strong); background: var(--panel); }
 .acc-del-list b { font-family: var(--display); font-weight: 800; font-style: italic; font-size: 1.05rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--fg); }
 .acc-del-list small { font-size: 0.82rem; color: var(--fg-mute); }
+/* a card design with a picture across it: light writing over the (shaded) picture, whatever its
+   look, as in the admin's preview */
+.acc-card3d.has-art.is-gold, .acc-card3d.has-art.is-chrome { color: #fff; }
+.acc-card3d.has-art.is-gold .acc-card3d-name, .acc-card3d.has-art.is-chrome .acc-card3d-name { text-shadow: 0.05em 0.05em 0 rgba(11, 11, 12, 0.9); }
+.acc-card3d.has-art.is-gold .acc-card3d-brand .wordmark, .acc-card3d.has-art.is-chrome .acc-card3d-brand .wordmark { color: #fff; }
+.acc-card3d.has-art.is-gold .acc-card3d-brand .wordmark b, .acc-card3d.has-art.is-chrome .acc-card3d-brand .wordmark b { color: #ff2a36; }
+.acc-card3d.has-art.is-gold .acc-card3d-foot small, .acc-card3d.has-art.is-chrome .acc-card3d-foot small { color: rgba(255, 255, 255, 0.7); }
+.acc-card3d.has-art.is-gold .acc-card3d-mark, .acc-card3d.has-art.is-chrome .acc-card3d-mark { -webkit-text-stroke-color: rgba(255, 255, 255, 0.14); }

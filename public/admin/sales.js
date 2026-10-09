@@ -537,7 +537,14 @@ window.IASales = (() => {
     if (r.kind === 'card') {
       const art = r.cardArt && (r.cardLook === 'art' || !r.cardLook)
       const t = el('span', { className: `sl-rthumb is-design is-${r.cardLook || 'ink'} ${art ? 'has-art' : ''}` })
-      if (art) t.style.setProperty('--card-art', `url("${r.cardArt}")`)
+      if (art) {
+        // placed and zoomed as set under the design: "x,y,zoom" in percent
+        const [x, y, z] = String(r.cardCrop || '').split(',').map((n) => (n.trim() === '' ? NaN : Number(n)))
+        t.style.setProperty('--card-art', `url("${r.cardArt}")`)
+        t.style.setProperty('--art-x', `${Number.isFinite(x) ? x : 50}%`)
+        t.style.setProperty('--art-y', `${Number.isFinite(y) ? y : 25}%`)
+        t.style.setProperty('--art-zoom', String(Number.isFinite(z) && z >= 100 ? z / 100 : 1))
+      }
       return t
     }
     return el('span', { className: 'sl-rthumb is-off', textContent: `${r.percent || '?'}%` })

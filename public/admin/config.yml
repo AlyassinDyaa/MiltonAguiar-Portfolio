@@ -656,7 +656,7 @@ collections:
             minimize_collapsed: true
             required: false
             summary: '{{fields.name}}'
-            hint: 'Looks for the membership card that customers earn. The card below each one shows it as customers will see it.'
+            hint: 'Looks for the membership card that customers earn. The card under each one shows it as customers will see it: drag its picture to put it in place.'
             fields:
               - { name: name, label: Name, widget: string, hint: 'Shown to customers. Keep it once customers have it.' }
               - name: cardLook
@@ -669,7 +669,7 @@ collections:
                   - { label: 'Chrome', value: chrome }
                   - { label: 'A picture of your choosing', value: art }
               - { name: cardArt, label: Picture across the card, widget: image, choose_url: false, required: false, hint: 'Needed for "A picture of your choosing", optional with the others. A picture with a quiet bottom half works best: the name sits there.' }
-              - { name: preview, label: As customers see it, widget: cardpreview, required: false }
+              - { name: cardCrop, label: Picture on the card, widget: cardcrop, required: false, hint: 'The card as customers see it. Drag the picture on it to put it in place, and zoom in with the slider.' }
               - name: earnedBy
                 label: How it is earned
                 widget: select
@@ -727,6 +727,13 @@ collections:
             fields:
               - { name: dark, label: Dark mode, widget: boolean, default: true, required: false }
               - { name: light, label: Light mode, widget: boolean, default: true, required: false }
+          - name: art
+            label: Artwork
+            widget: object
+            collapsed: false
+            hint: 'The Milton Aguiar logo inside the pictures of the Work, Shop and Gallery pages and the pencils-to-colours sets: clear in a corner, faint and large in the middle, so nobody can pass the art off as theirs. It is put on when the site is rebuilt, a minute or two after you save. Pictures stay web-sized either way. Your uploads are never changed.'
+            fields:
+              - { name: watermark, label: Logo on the artwork (watermark), widget: boolean, default: true, required: false }
           - name: shop
             label: Parts of the Shop page
             widget: object

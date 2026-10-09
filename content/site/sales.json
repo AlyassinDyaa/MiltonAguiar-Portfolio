@@ -1,3 +1,11 @@
 {
-  "sales": []
+  "sales": [
+    {
+      "percent": 10,
+      "appliesTo": "all",
+      "on": true,
+      "name": "All",
+      "ends": "2026-10-10T23:24:00.000-04:00"
+    }
+  ]
 }

@@ -42,6 +42,9 @@ export default function Compare({ set, show = null }) {
   }
   const down = (e) => {
     if (e.button !== undefined && e.button !== 0) return
+    // on a touch screen only a line's handle moves it: a swipe across the picture scrolls the page
+    // or the row of sets, as a finger expects (with a mouse, anywhere on the picture moves the nearest line)
+    if (e.pointerType !== 'mouse' && !e.target.closest('.compare-line')) return
     const at = percentAt(e)
     // the nearest line follows the pointer
     let i = 0

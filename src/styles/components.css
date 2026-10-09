@@ -326,7 +326,7 @@ a.pj-book:hover, a.pj-book:focus-visible { rotate: 0deg; scale: 1.03; outline: 0
 .spread-head p { max-width: 44ch; margin: 0; }
 .compare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 330px)); justify-content: start; gap: clamp(24px, 3vw, 40px) var(--gap); }
 .compare { margin: 0; }
-.compare-stage { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--panel); border: var(--rule) solid var(--frame); user-select: none; -webkit-user-select: none; cursor: ew-resize; touch-action: pan-y; }
+.compare-stage { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--panel); border: var(--rule) solid var(--frame); user-select: none; -webkit-user-select: none; cursor: ew-resize; touch-action: pan-x pan-y; }
 .compare-stage .poster { position: absolute; inset: 0; aspect-ratio: auto; pointer-events: none; }
 .compare-then { position: absolute; inset: 0; pointer-events: none; }
 .compare-year { position: absolute; bottom: 10px; z-index: 2; padding: 4px 8px 3px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; background: #fff; color: #0b0b0c; pointer-events: none; }
@@ -334,6 +334,8 @@ a.pj-book:hover, a.pj-book:focus-visible { rotate: 0deg; scale: 1.03; outline: 0
 /* a line between two stages: 3px to see, 28px to grab */
 .compare-line { position: absolute; z-index: 3; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 0 1px rgba(11, 11, 12, 0.35); cursor: ew-resize; outline: 0; }
 .compare-line::before { content: ''; position: absolute; inset: 0 -13px; }
+.compare-line { touch-action: none; } /* the handle takes the finger; the rest of the picture scrolls */
+@media (pointer: coarse) { .compare-line::before { inset: 0 -22px; } .compare-line i { width: 40px; height: 40px; margin: -20px 0 0 -20px; font-size: 1rem; } }
 .compare-line i { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 32px; height: 32px; margin: -16px 0 0 -16px; font-style: normal; font-size: 0.85rem; background: #fff; color: #0b0b0c; border-radius: 50%; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45); transition: transform 0.15s; }
 .compare-line:hover i, .compare-line:focus-visible i { transform: scale(1.12); }
 .compare-line:focus-visible i { outline: 3px solid var(--accent); outline-offset: 2px; }
@@ -1998,9 +2000,6 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .srow-track:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
 .srow-track::-webkit-scrollbar { height: 6px; }
 .srow-track::-webkit-scrollbar-thumb { background: var(--line-strong); }
-.srow.can-scroll:not(.at-end) .srow-track { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 70px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 70px), transparent); }
-.srow.can-scroll:not(.at-start):not(.at-end) .srow-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 70px, #000 calc(100% - 70px), transparent); mask-image: linear-gradient(90deg, transparent, #000 70px, #000 calc(100% - 70px), transparent); }
-.srow.can-scroll.at-end:not(.at-start) .srow-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 70px); mask-image: linear-gradient(90deg, transparent, #000 70px); }
 .srow-arrow { position: absolute; z-index: 3; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin-top: -24px; padding: 0 0 3px; font-size: 1.7rem; line-height: 1; color: var(--on-accent, #fff); background: var(--accent); border: 2px solid var(--k, #0b0b0c); box-shadow: 3px 3px 0 var(--k, #0b0b0c); cursor: pointer; transition: opacity 0.2s, transform 0.2s; }
 .srow-arrow.is-prev { left: calc(var(--gutter) * -0.5); }
 .srow-arrow.is-next { right: calc(var(--gutter) * -0.5); }
@@ -2010,3 +2009,8 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .compare-row .compare-slot { width: min(330px, 78vw); }
 .comic-row .srow-track > li { width: min(230px, 44vw); }
 @media (max-width: 599px) { .srow-arrow { width: 40px; height: 40px; margin-top: -20px; font-size: 1.4rem; } .srow-arrow.is-prev { left: 0; } .srow-arrow.is-next { right: 0; } }
+.srow::before, .srow::after { content: ''; position: absolute; z-index: 2; top: 0; bottom: 0; width: 56px; pointer-events: none; opacity: 0; transition: opacity 0.25s; }
+.srow::before { left: calc(var(--gutter) * -1); background: linear-gradient(90deg, var(--bg, #0b0b0c), transparent); }
+.srow::after { right: calc(var(--gutter) * -1); background: linear-gradient(270deg, var(--bg, #0b0b0c), transparent); }
+.srow.can-scroll:not(.at-start)::before, .srow.can-scroll:not(.at-end)::after { opacity: 1; }
+.srow-track { -webkit-overflow-scrolling: touch; }

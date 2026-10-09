@@ -26,7 +26,7 @@
     "events": true
   },
   "themes": {
-    "dark": false,
+    "dark": true,
     "light": true
   },
   "art": {

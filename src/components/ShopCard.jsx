@@ -15,6 +15,12 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const [added, setAdded] = useState(false)
   const [altReady, setAltReady] = useState(false) // the second picture fades in only once it has fully loaded
   useEffect(() => { if (!added) return; const t = setTimeout(() => setAdded(false), 1600); return () => clearTimeout(t) }, [added])
+  // on a touch screen there is no pointing at a card: the first tap shows its second picture (what
+  // pointing at it does with a mouse), the next tap opens the piece; after a few seconds it turns back
+  const [alt, setAlt] = useState(false)
+  useEffect(() => { if (!alt) return; const t = setTimeout(() => setAlt(false), 4000); return () => clearTimeout(t) }, [alt])
+  const touch = () => typeof matchMedia === 'function' && matchMedia('(hover: none)').matches
+  const tapOpen = () => { if (p.hover && altReady && !alt && touch()) { setAlt(true); return } setAlt(false); onOpen() }
   const tag = badge(p)
   const gone = soldOut(p)
   const sizes = sizesOf(p)
@@ -29,13 +35,14 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const what = [p.type, filedUnder(p), sizes.length > 1 ? `${sizes.length} sizes` : sizes[0]?.name].filter(Boolean).join(' · ')
   const look = p.src ? p.look || 'poster' : 'plain'
   return (
-    <article className={`pc look-${look} ${gone ? 'is-gone' : ''}`}>
+    <article className={`pc look-${look} ${gone ? 'is-gone' : ''} ${alt ? 'is-alt' : ''}`}>
       <div className="pc-art">
-        <button type="button" className="pc-open" onClick={onOpen} aria-label={`Open ${p.title}`}>
+        <button type="button" className="pc-open" onClick={tapOpen} aria-label={`Open ${p.title}`}>
           <span className="pc-frame">
             {p.src ? <img src={asset(p.src)} alt="" loading={eager ? 'eager' : 'lazy'} draggable="false" /> : <Poster title={p.title} />}
             {p.hover && <span className={`pc-alt ${altReady ? 'is-ready' : ''}`} aria-hidden="true"><img src={asset(p.hover)} alt="" decoding="async" draggable="false" onLoad={() => setAltReady(true)} /></span>}
             {look === 'board' && <span className="pc-note" aria-hidden="true">{brand.artist || brand.name}</span>}
+            {alt && <span className="pc-tap" aria-hidden="true">Tap again to open</span>}
           </span>
         </button>
         {tag && shop.tagPlace !== 'below' && <span className={`sc-tag is-${tag.kind}`}>{tag.text}</span>}

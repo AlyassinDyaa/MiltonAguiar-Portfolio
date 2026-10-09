@@ -398,9 +398,11 @@ function GiftPopup({ gifts, onSee, onClose }) {
 /* ---------- the account ---------- */
 // the piece an order line is about ("Born Again — A3 (signed)" → Born Again); the longest title wins
 const pieceFor = (name) => everything.filter((p) => p.title && String(name || '').startsWith(p.title)).sort((a, b) => b.title.length - a.title.length)[0] || null
-/* The pieces a customer holds: from their orders, leaving out refunded ones (orders the admin
-   deleted never reach the page). The member card, the profile line and their pictures use these. */
-const keptOrders = (orders) => (orders || []).filter((o) => o.status !== 'refunded')
+/* The orders that count, the same rule as the server's (api/account.js countedOrders): paid, not
+   refunded, not cancelled, and still in the account (orders the admin deleted, or the customer
+   deleted from their history, never reach the page). The Overview, the member card, the profile
+   line, the Orders tab's count, Details and Rewards all count these. */
+const keptOrders = (orders) => (orders || []).filter((o) => o.status !== 'refunded' && o.status !== 'cancelled')
 const piecesIn = (orders) => keptOrders(orders).reduce((n, o) => n + o.items.reduce((m, i) => m + (i.qty || 1), 0), 0)
 // a piece taken off the site since keeps the picture its order saved (marked gone)
 const pieceOrSaved = (i) => pieceFor(i.name) || (i.slug && i.src ? { slug: i.slug, title: i.title || i.name, src: i.src, face: { x: 50, y: 22, zoom: 100 }, gone: true } : null)
@@ -410,9 +412,10 @@ const monthYear = (d) => new Date(d).toLocaleDateString('en-GB', { month: 'long'
 const initialsOf = (u) => ((u.name || u.email || '?').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join(''))
 
 /* the customer's picture: one of the artist's pieces they chose, or their initials */
-function Avatar({ user, size = 'md' }) {
+// owned: the pieces they bought, for one taken off the site since (its order kept the picture)
+function Avatar({ user, size = 'md', owned = [] }) {
   const icon = user.avatar && user.avatar.startsWith('icon:') ? user.avatar.slice(5) : ''
-  const piece = user.avatar && !icon ? everything.find((p) => p.slug === user.avatar && p.src) : null
+  const piece = user.avatar && !icon ? everything.find((p) => p.slug === user.avatar && p.src) || owned.find((p) => p.slug === user.avatar && p.src) : null
   return (
     <span className={`acct-avatar is-${size}`} aria-hidden="true">
       {icon ? <img src={asset(icon)} alt="" style={faceLook([...accountPage.icons, ...accountPage.rewards.filter((r) => r.kind === 'picture')].find((i) => i.picture === icon))} /> : piece ? <img src={asset(piece.src)} alt="" style={faceLook(piece)} /> : <b>{initialsOf(user)}</b>}
@@ -558,6 +561,7 @@ function RemoveOrder({ orders = [], onClose, onRemoved }) {
             <h2 id="acc-del-title">{one ? `Delete order ${orders[0].number}?` : `Delete ${orders.length} orders?`}</h2>
             <div id="acc-del-text" className="acc-del-text">
               <p className="acc-del-warn"><b>This cannot be undone.</b> {one ? 'It leaves' : 'They leave'} your account for good: {one ? 'its' : 'their'} pieces, tracking and details will no longer show here.</p>
+              {orders.some((o) => o.status !== 'refunded' && o.status !== 'cancelled') && <p>{one ? 'It' : 'They'} will no longer count toward your rewards, your member card or your collection: rewards earned by orders or pieces stay unlocked only while you still have enough. Discount codes you already have keep working.</p>}
               {onTheWay > 0 && <p>{one ? 'It has' : onTheWay === orders.length ? 'They have' : `${onTheWay} of them ${onTheWay === 1 ? 'has' : 'have'}`} not reached you yet: still posted to you, but the tracking will only be in the copy.</p>}
               <p className="acc-del-copy"><span aria-hidden="true">✉</span> First, a copy of {one ? 'it' : 'each'} is emailed to you at <b>{user.email}</b>. If the copy cannot be sent, nothing is deleted.</p>
               <p>The shop keeps its own record of every sale. Type your password to be sure.</p>
@@ -571,6 +575,53 @@ function RemoveOrder({ orders = [], onClose, onRemoved }) {
               <button type="submit" className="btn sm acc-modal-yes" disabled={f.busy || !f.values.password}>{f.busy ? 'Emailing the copy…' : one ? 'Delete and email me a copy' : `Delete ${orders.length} and email me a copy`}</button>
             </div>
           </motion.form>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+/* Deleting archived gifts: one, or all of them. Asked first, in a window that lists them and says
+   what happens to a code that still works (it goes with it) and to a picture or card design (it stays). */
+function DeleteGifts({ items = [], onClose, onYes }) {
+  const open = items.length > 0
+  const box = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const before = document.activeElement
+    const key = (e) => { if (e.key === 'Escape') onClose() }
+    addEventListener('keydown', key)
+    const t = setTimeout(() => box.current?.querySelector('.acc-modal-actions .btn.ghost')?.focus(), 60)
+    window.__lenis?.stop?.()
+    return () => { removeEventListener('keydown', key); clearTimeout(t); window.__lenis?.start?.(); before?.focus?.() }
+  }, [open, onClose])
+  const one = items.length === 1
+  const working = items.filter((x) => x.works && !x.stays).length // a discount that still works
+  const kept = items.filter((x) => x.stays).length // a picture or card design
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+          <motion.div ref={box} className="acc-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="acc-gdel-title" aria-describedby="acc-gdel-text"
+            initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
+            <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close">×</button>
+            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6" /></svg></span>
+            <h2 id="acc-gdel-title">{one ? `Delete ${items[0].name}?` : `Delete all ${items.length} archived gifts?`}</h2>
+            <div id="acc-gdel-text" className="acc-del-text">
+              {!one && (
+                <ul className="acc-del-list">
+                  {items.map((x) => <li key={x.key}><b>{x.name}</b><small>{x.note}</small></li>)}
+                </ul>
+              )}
+              <p className="acc-del-warn"><b>This cannot be undone.</b> {one ? 'It leaves' : 'They leave'} your Rewards page for good and cannot be restored.</p>
+              {working > 0 && <p>{one ? 'This discount code still works.' : `${working === 1 ? 'One discount code still works' : `${working} discount codes still work`}.`} Once deleted, {working === 1 ? 'it is' : 'they are'} gone from your account, so you will not be able to use {working === 1 ? 'it' : 'them'}.</p>}
+              {kept > 0 && <p>{one ? 'This picture or card design stays yours' : 'Gifted pictures and card designs stay yours'}: you can still choose {kept === 1 ? 'it' : 'them'} under Details.</p>}
+            </div>
+            <div className="acc-modal-actions">
+              <button type="button" className="btn ghost sm" onClick={onClose}>Keep {one ? 'it' : 'them'}</button>
+              <button type="button" className="btn sm acc-modal-yes" onClick={() => { onYes(items); onClose() }}>{one ? 'Delete' : `Delete all ${items.length}`}</button>
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -724,7 +775,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const designs = cardDesigns()
   const [saved, setSaved] = useState(false)
   const [resent, setResent] = useState('')
-  const mine = owned.filter((p) => p.src && !p.gone) // a piece taken off the site can no longer be a picture
+  const mine = owned.filter((p) => p.src) // a piece taken off the site since stays theirs, with the picture its order kept
   // a picture or card design chosen but not saved: shown live at the top of the page (a preview),
   // with a bar asking to keep it or go back; leaving without saving keeps the old one
   const trying = f.values.avatar !== (user.avatar || '') || f.values.card !== (user.card || '')
@@ -760,7 +811,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
       <fieldset className="acct-pick">
         <legend>Your picture</legend>
         <div className={`acct-try ${trying ? 'is-trying' : ''}`} aria-live="polite">
-          <Avatar user={{ ...user, avatar: f.values.avatar }} size="lg" />
+          <Avatar user={{ ...user, avatar: f.values.avatar }} size="lg" owned={owned} />
           <div>
             <strong>{trying ? 'Preview' : 'Your picture now'}</strong>
             <span>{trying ? 'This is how it will look. Save to keep it, or go back to the one you had.' : 'Pick another below to try it on.'}</span>
@@ -842,7 +893,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
       <AnimatePresence>
         {trying && (
           <motion.div className="acct-keep" role="region" aria-label="Keep your new look?" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ duration: 0.3, ease: EASE }}>
-            <Avatar user={{ ...user, avatar: f.values.avatar }} size="md" />
+            <Avatar user={{ ...user, avatar: f.values.avatar }} size="md" owned={owned} />
             <span><b>Keep your new {f.values.avatar !== (user.avatar || '') ? (f.values.card !== (user.card || '') ? 'picture and card' : 'picture') : 'card'}?</b> It is only a preview until you save.</span>
             <button type="button" className="btn ghost sm" onClick={undo} disabled={f.busy}>Go back</button>
             <button type="button" className="btn sm" onClick={(e) => submit(e)} disabled={f.busy}>{f.busy ? 'Saving…' : 'Save'}</button>
@@ -904,12 +955,12 @@ function Security() {
 /* the first thing a customer sees: hello, how things stand, their pieces, what is new */
 function Overview({ orders, go }) {
   const { user } = useAccount()
-  const shopOrders = orders || []
+  const shopOrders = keptOrders(orders)
   const collected = piecesIn(orders)
   // the pieces they own, once each, newest first
   const owned = ownedIn(orders)
   const saved = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug)).filter(Boolean)
-  const latest = shopOrders[0]
+  const latest = (orders || [])[0] // the newest, refunded or not
   return (
     <div className="acct-overview">
       <div className="acct-top">
@@ -922,7 +973,7 @@ function Overview({ orders, go }) {
         />
       <div className="acct-stats is-stacked">
         <button type="button" onClick={() => go('orders')}><strong>{orders ? shopOrders.length : '–'}</strong><span>{shopOrders.length === 1 ? 'Order' : 'Orders'}</span></button>
-        <button type="button" onClick={() => go('orders')}><strong>{orders ? collected : '–'}</strong><span>{collected === 1 ? 'Print collected' : 'Prints collected'}</span></button>
+        <button type="button" onClick={() => go('orders')}><strong>{orders ? collected : '–'}</strong><span>{collected === 1 ? 'Piece collected' : 'Pieces collected'}</span></button>
         <button type="button" onClick={() => go('saved')}><strong>{saved.length}</strong><span>Saved for later</span></button>
       </div>
       </div>
@@ -1002,6 +1053,8 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   const [adding, setAdding] = useState('')
   const [codeProblem, setCodeProblem] = useState({ code: '', text: '' })
   const [shelfOpen, setShelfOpen] = useState(false) // the archived gifts, folded away
+  const [dropping, setDropping] = useState([]) // archived gifts waiting for a yes before they are deleted
+  const stopDropping = useCallback(() => setDropping([]), [])
   // a picture or card design being tried on: { id, kind, value } (value: 'icon:<picture>' or the card's id)
   const [pick, setPick] = useState(null)
   const [keeping, setKeeping] = useState(false)
@@ -1149,22 +1202,24 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
 
   /* Gifts can be put away: archived ones fold into a list below (and can come back), deleted ones
      are gone from view. A gifted picture or card design stays theirs either way (under Details). */
+  // one gift (an id) or several at once (a list: every archived gift deleted)
   const shelf = (id, to) => {
+    const ids = [].concat(id)
     setData((d) => {
-      const archived = (d.archived || []).filter((x) => x !== id)
-      const deleted = (d.deleted || []).filter((x) => x !== id)
-      if (to === 'archive') archived.push(id)
-      if (to === 'delete') deleted.push(id)
+      const archived = (d.archived || []).filter((x) => !ids.includes(x))
+      const deleted = (d.deleted || []).filter((x) => !ids.includes(x))
+      if (to === 'archive') archived.push(...ids)
+      if (to === 'delete') deleted.push(...ids)
       return { ...d, archived, deleted }
     })
-    if (to !== 'restore' && pick && pick.id === id) setPick(null)
-    call('giftShelf', { id, to }).catch(() => {})
+    if (to !== 'restore' && pick && ids.includes(pick.id)) setPick(null)
+    call('giftShelf', { ids, to }).catch(() => {})
   }
   const archived = data.archived || []
   const deleted = data.deleted || []
   const gifts = [
     ...giftCodes.map((g) => ({ key: `code:${g.id}`, name: g.label || `${g.percent}% off`, note: g.state === 'ready' ? 'Discount code, still works' : g.state === 'used' ? 'Discount code, used' : 'Discount code, ended', works: g.state === 'ready', card: (tools) => codeCard(g, tools) })),
-    ...gifted.map((r) => ({ key: r.id, name: r.name, note: r.kind === 'picture' ? 'Profile picture (still yours)' : r.kind === 'card' ? 'Card design (still yours)' : 'Discount', works: true, card: (tools) => rewardCard(r, tools) })),
+    ...gifted.map((r) => ({ key: r.id, name: r.name, note: r.kind === 'picture' ? 'Profile picture (still yours)' : r.kind === 'card' ? 'Card design (still yours)' : 'Discount', works: true, stays: r.kind !== 'discount', card: (tools) => rewardCard(r, tools) })),
   ].filter((x) => !deleted.includes(x.key))
   const shown = gifts.filter((x) => !archived.includes(x.key))
   const putAway = gifts.filter((x) => archived.includes(x.key))
@@ -1198,19 +1253,21 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
             Archived <small>{putAway.length}</small>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </button>
+          {shelfOpen && putAway.length > 1 && <button type="button" className="acc-link is-danger acct-shelf-all" onClick={() => setDropping(putAway)}>Delete all</button>}
           {shelfOpen && (
             <ul className="acct-shelf-list">
               {putAway.map((x) => (
                 <li key={x.key}>
                   <span><b>{x.name}</b><small>{x.note}</small></span>
                   <button type="button" className="acc-link" onClick={() => shelf(x.key, 'restore')}>Restore</button>
-                  <button type="button" className="acc-link is-danger" onClick={() => { if (!x.works || window.confirm(`Delete ${x.name}? ${x.key.startsWith('code:') ? 'The code will be gone from your account, so you will not be able to use it.' : 'It stays yours to use under Details.'}`)) shelf(x.key, 'delete') }}>Delete</button>
+                  <button type="button" className="acc-link is-danger" onClick={() => setDropping([x])}>Delete</button>
                 </li>
               ))}
             </ul>
           )}
         </div>
       )}
+      <DeleteGifts items={dropping} onClose={stopDropping} onYes={(list) => shelf(list.map((x) => x.key), 'delete')} />
       {earnable.length > 0 && (
         <section className="acct-reward-group">
           <header className="acct-group-head">
@@ -1330,12 +1387,12 @@ function Home() {
     const y = window.scrollY + top - 90
     if (window.__lenis) window.__lenis.scrollTo(y, { duration: 0.6 }); else window.scrollTo({ top: y, behavior: 'smooth' })
   }
-  const shopOrders = orders || []
+  const shopOrders = keptOrders(orders)
   const counts = { orders: shopOrders.length, saved: (user.saved || []).length, rewards: newGifts.length }
   const prints = piecesIn(orders)
   // the banner: a strip of comic panels. Their own art first (the piece they picked as their picture,
   // the pieces they own, the ones they saved), then the newest work, so it is never empty
-  const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) : null
+  const chosen = user.avatar && !user.avatar.startsWith('icon:') ? everything.find((p) => p.slug === user.avatar) || owned.find((p) => p.slug === user.avatar) : null
   const savedPieces = (user.saved || []).map((slug) => everything.find((p) => p.slug === slug))
   const newest = everything.filter((p) => !p.rough).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
   // each picture once: the same art listed twice (a shop copy "Brand New Day" of the work
@@ -1375,7 +1432,7 @@ function Home() {
             <PanelStrip pieces={strip} />
           </div>
           <div className="acct2-id">
-            <Avatar user={preview ? { ...user, avatar: preview.avatar } : user} size="xl" />
+            <Avatar user={preview ? { ...user, avatar: preview.avatar } : user} size="xl" owned={owned} />
             <div className="acct2-who">
               <span className="label accent">{greeting()}</span>
               <h1 className="display">{user.name || first || 'Your account'}</h1>

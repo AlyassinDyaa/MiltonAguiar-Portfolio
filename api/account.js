@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
-import { forCustomer, numberOrder, stripeCodes, usesHere } from './_orders.js'
+import { forCustomer, numberMember, stripeCodes, usesHere } from './_orders.js'
 import { accountsMode } from './_buyer.js'
 import { adminOk } from './_session.js'
 import { randomBytes } from 'node:crypto'
@@ -97,10 +97,16 @@ const rewardsList = () => {
       }
     })
 }
-// how far a customer has come: email confirmed, orders, pieces (refunded and deleted orders do not count)
-const progressOf = async (d, user) => {
+/* The orders that count, the same everywhere (rewards and pictures here; the member card, the
+   profile line and the Overview on the account page): paid (not refunded), not cancelled, and still
+   in their account (an order the admin deleted, or they deleted from their history, no longer counts). */
+const countedOrders = async (d, user) => {
   const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
-  const orders = await d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true } }).limit(500).toArray()
+  return d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true }, customerRemoved: { $ne: true }, 'track.status': { $ne: 'cancelled' } }).sort({ createdAt: -1 }).limit(500).toArray()
+}
+// how far a customer has come: email confirmed, orders, pieces
+const progressOf = async (d, user) => {
+  const orders = await countedOrders(d, user)
   return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0), gifts: giftsOf(user) }
 }
 // rewards the admin has given this customer (Sales → Customers → Gift a reward): theirs whatever their progress
@@ -157,11 +163,11 @@ const pieces = () => {
 }
 // the pieces this customer has bought (an order line "Born Again — A3 (signed)" is Born Again)
 const ownedSlugs = async (d, user) => {
-  const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
-  const orders = await d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true } }).sort({ createdAt: -1 }).limit(200).toArray()
+  const orders = await countedOrders(d, user)
   const all = pieces().sort((a, b) => b.title.length - a.title.length)
   const owned = new Set()
-  for (const o of orders) for (const i of o.items || []) { const p = all.find((x) => String(i.name || '').startsWith(x.title)); if (p) owned.add(p.slug) }
+  // a piece taken off the site since is still theirs: its order kept its slug and picture
+  for (const o of orders) for (const i of o.items || []) { const p = all.find((x) => String(i.name || '').startsWith(x.title)); if (p) owned.add(p.slug); else if (i.slug && i.src) owned.add(i.slug) }
   return owned
 }
 const pictureAllowed = async (d, user, avatar) => {
@@ -247,9 +253,20 @@ const adminAction = async (req, d, users, action, body) => {
   const rewards = rewardsList()
   if (action === 'adminMembers') {
     const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    const members = all.map(memberOf)
+    // a piece taken off the site since: the picture its order kept
+    const lost = all.filter((u, n) => !members[n].picture && /^[a-z0-9-]{1,80}$/.test(String(u.avatar || '')))
+    if (lost.length) {
+      try {
+        const kept = new Map()
+        const orders = await d.collection('orders').find({ $or: [{ userId: { $in: lost.map((u) => u._id) } }, { email: { $in: lost.map((u) => u.email) } }] }).limit(1000).toArray()
+        for (const o of orders) for (const i of o.items || []) if (i && i.slug && i.src && !kept.has(i.slug)) kept.set(i.slug, i.src)
+        all.forEach((u, n) => { if (!members[n].picture && kept.has(u.avatar)) members[n].picture = { src: kept.get(u.avatar), face: '' } })
+      } catch (e) { console.error('kept pictures not read:', e.message) }
+    }
     return [200, {
       rewards: rewards.map((r) => ({ id: r.id, name: r.name, kind: r.kind, picture: r.picture, face: r.face, cardLook: r.cardLook, cardArt: r.cardArt, percent: r.kind === 'discount' ? r.percent : undefined, days: r.kind === 'discount' ? r.days : undefined })),
-      members: all.map(memberOf),
+      members,
     }]
   }
   const user = await users.findOne({ email: tidyEmail(body.email) })
@@ -433,7 +450,9 @@ export default async function handler(req, res) {
       const p = await progressOf(d, user)
       const list = []
       for (const r of rewardsList()) {
-        const earned = earns(r, p)
+        // a discount whose code is made stays theirs, even with fewer orders now (one deleted, or refunded)
+        const made = r.kind === 'discount' && user.rewardCodes && user.rewardCodes[r.id] && user.rewardCodes[r.id].promoId
+        const earned = earns(r, p) || Boolean(made)
         let code = null
         if (earned && r.kind === 'discount') { try { code = await rewardCode(d, user, r) } catch (e) { console.error('reward code not made:', e.message) } }
         // the code as the customer sees it (null while it is being made: the page asks again)
@@ -463,13 +482,14 @@ export default async function handler(req, res) {
     }
 
     if (action === 'giftShelf') {
-      // only tidies their list: a gifted picture or card design stays theirs, a code works until it is deleted from view
-      const id = clean(body.id, 120)
-      if (!/^(code:promo_[A-Za-z0-9]+|[a-z0-9-]{1,60})$/.test(id)) return say(res, 400, { message: 'That is not one of your gifts.' })
-      const archived = (Array.isArray(user.archivedGifts) ? user.archivedGifts : []).filter((g) => g !== id)
-      const deleted = (Array.isArray(user.deletedGifts) ? user.deletedGifts : []).filter((g) => g !== id)
-      if (body.to === 'archive') archived.push(id)
-      else if (body.to === 'delete') deleted.push(id)
+      // only tidies their list: a gifted picture or card design stays theirs, a code works until it is deleted from view.
+      // One gift (id), or several at once (ids: every archived gift deleted)
+      const ids = [...new Set((Array.isArray(body.ids) ? body.ids : [body.id]).map((x) => clean(x, 120)))].slice(0, 200)
+      if (!ids.length || !ids.every((id) => /^(code:promo_[A-Za-z0-9]+|[a-z0-9-]{1,60})$/.test(id))) return say(res, 400, { message: 'That is not one of your gifts.' })
+      const archived = (Array.isArray(user.archivedGifts) ? user.archivedGifts : []).filter((g) => !ids.includes(g))
+      const deleted = (Array.isArray(user.deletedGifts) ? user.deletedGifts : []).filter((g) => !ids.includes(g))
+      if (body.to === 'archive') archived.push(...ids)
+      else if (body.to === 'delete') deleted.push(...ids)
       else if (body.to !== 'restore') return say(res, 400, { message: 'Nothing to do.' })
       await users.updateOne({ _id: user._id }, { $set: { archivedGifts: archived.slice(-200), deletedGifts: deleted.slice(-200) } })
       return say(res, 200, { archived, deleted })
@@ -529,9 +549,9 @@ export default async function handler(req, res) {
     if (action === 'orders') {
       // orders placed while logged in, and (once the address is confirmed) any placed with it as a guest
       const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
-      const list = await d.collection('orders').find({ ...match, status: { $in: ['paid', 'refunded'] }, customerRemoved: { $ne: true }, hidden: { $ne: true } }).sort({ createdAt: -1 }).limit(100).toArray()
       // orders from before order numbers get theirs now, oldest first (member 3's first is 0003-01)
-      for (const o of list.filter((x) => x.status === 'paid' && !x.orderNo).reverse()) { try { o.orderNo = await numberOrder(o.ref) } catch (e) { console.error('order not numbered:', e.message) } }
+      try { await numberMember(d, await withMemberNo(d, user)) } catch (e) { console.error('orders not numbered:', e.message) }
+      const list = await d.collection('orders').find({ ...match, status: { $in: ['paid', 'refunded'] }, customerRemoved: { $ne: true }, hidden: { $ne: true } }).sort({ createdAt: -1 }).limit(100).toArray()
       return say(res, 200, { orders: list.map(forCustomer) })
     }
 

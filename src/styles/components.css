@@ -752,7 +752,13 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .pc-alt { position: absolute; z-index: 1; inset: 0; box-sizing: border-box; padding: var(--mat) var(--mat) var(--mat-b); overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
 .pc-alt img { display: block; box-sizing: border-box; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
 .pc:hover .pc-alt.is-ready, .pc:focus-within .pc-alt.is-ready { opacity: 1; }
-@media (hover: none) { .pc-alt { display: none; } }
+/* a touch screen: the first tap shows the second picture (ShopCard), with a word to tap again */
+@media (hover: none) {
+  .pc:focus-within .pc-alt.is-ready { opacity: 0; }
+  .pc.is-alt .pc-alt.is-ready { opacity: 1; }
+}
+.pc-tap { position: absolute; z-index: 3; left: 50%; bottom: 14px; translate: -50% 0; padding: 5px 10px 4px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; background: #0b0b0c; color: #fff; box-shadow: 3px 3px 0 var(--accent); pointer-events: none; animation: pc-tap-in 0.3s var(--ease-out) both; }
+@keyframes pc-tap-in { from { opacity: 0; translate: -50% 6px; } }
 .pc.is-gone .pc-frame > img, .pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.7); }
 /* the tag, and the cart button that shows when the card is pointed at */
 .sc-tag { position: absolute; z-index: 3; top: 20px; left: 20px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 7px 12px; font-family: var(--display); font-size: 1.02rem; font-weight: 900; font-style: italic; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent); color: #fff; border: 2px solid #0b0b0c; box-shadow: 3px 3px 0 #0b0b0c; transform: rotate(-2deg); pointer-events: none; }
@@ -1824,3 +1830,10 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
   .acc-opick .btn { flex: 1 1 auto; justify-content: center; }
   .acct-tryon { padding: 12px; }
 }
+
+/* deleting archived gifts: "Delete all" beside Archived, and the list in the confirmation window */
+.acct-shelf-all { margin-left: 16px; font-size: 0.86rem; }
+.acc-del-list { display: grid; gap: 4px; max-height: 220px; margin: 14px 0 0; padding: 0; overflow-y: auto; list-style: none; overscroll-behavior: contain; }
+.acc-del-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 8px 12px; border: 1px solid var(--line-strong); background: var(--panel); }
+.acc-del-list b { font-family: var(--display); font-weight: 800; font-style: italic; font-size: 1.05rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--fg); }
+.acc-del-list small { font-size: 0.82rem; color: var(--fg-mute); }

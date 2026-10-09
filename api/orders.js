@@ -1,6 +1,6 @@
 import { configured, goodPass } from './_session.js'
 import { db, dbReady } from './_db.js'
-import { CARRIERS, describeItem, ours, paidWithOf, piecesNow, setTrack } from './_orders.js'
+import { CARRIERS, describeItem, numberOrder, ours, paidWithOf, piecesNow, setTrack } from './_orders.js'
 
 /* The shop's orders, for the admin (Sales → Orders and Customers). There is no database: every
    purchase is a Stripe checkout, so this reads them from Stripe with STRIPE_SECRET_KEY, and keeps
@@ -142,7 +142,9 @@ const withPieces = async (list) => {
   }
   for (const o of list) {
     const row = rows.get(o.id)
-    if (row && row.orderNo) o.number = row.orderNo // its order number (a member's carries their member number)
+    // its order number (a member's carries their member number); an older order is given its number now
+    if (row && row.orderNo) o.number = row.orderNo
+    else if (row && ['paid', 'refunded'].includes(row.status)) { try { o.number = (await numberOrder(row.ref)) || o.number } catch (e) { console.error('order not numbered:', e.message) } }
     const kept = (row && Array.isArray(row.items) && row.items) || []
     o.items = o.items.map((i, n) => {
       const now = describeItem(i.name, pieces)
@@ -158,6 +160,12 @@ const withPieces = async (list) => {
   return list
 }
 
+/* Checkouts deleted that Stripe would not mark (a free order has no payment to mark): the database remembers them. */
+const deletedHere = async () => {
+  if (!dbReady()) return new Set()
+  try { return new Set((await (await db()).collection('hiddenOrders').find({}).limit(5000).toArray()).map((h) => h.ref)) } catch (e) { console.error('deleted orders not read:', e.message); return new Set() }
+}
+
 /* The work itself, without the login check (the local preview calls this directly). */
 export async function orders({ method, body }) {
   const b0 = body && typeof body === 'object' ? body : {}
@@ -170,9 +178,10 @@ export async function orders({ method, body }) {
   try {
     if (method === 'GET') {
       const all = await listSessions()
+      const gone = await deletedHere()
       // a checkout still open (the buyer is on the payment page, or left it) is not an order yet
       // this site's checkouts only: a Stripe sandbox shared with another site keeps their orders apart
-      const list = all.filter((s) => ours(s) && !hidden(s) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
+      const list = all.filter((s) => ours(s) && !hidden(s) && !gone.has(s.id) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
       list.push(...await paypalOrders())
       list.sort((x, y) => y.created - x.created)
       await withPieces(list)
@@ -188,7 +197,11 @@ export async function orders({ method, body }) {
             // erased from the database, so it leaves the buyer's account too (orders, count, pictures);
             // Stripe never deletes a payment, so there the payment is only marked
             if (/^pp_[A-Z0-9]+$/.test(String(o.id || ''))) { await (await db()).collection('orders').deleteOne({ ref: o.id }) } else {
-              await hide(o)
+              try { await hide(o) } catch (e) {
+                // a checkout with no payment (a free order) Stripe would not mark: the database remembers it instead
+                if (!(dbReady() && !o.paymentIntent && /^cs_[A-Za-z0-9_]+$/.test(String(o.id || '')))) throw e
+                await (await db()).collection('hiddenOrders').updateOne({ ref: o.id }, { $setOnInsert: { ref: o.id, at: new Date() } }, { upsert: true })
+              }
               if (dbReady() && /^cs_[A-Za-z0-9_]+$/.test(String(o.id || ''))) { try { await (await db()).collection('orders').deleteOne({ ref: o.id }) } catch (e) { console.error('not erased from the database:', e.message) } }
             }
             done++

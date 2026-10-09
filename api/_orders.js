@@ -106,10 +106,43 @@ export const withPiece = (item, pieces = piecesNow()) => {
    else the address the site sends from). */
 /* ---------- order numbers: a member's orders carry their member number, then which order of theirs
    it is (member 3's first order is 0003-01, the next 0003-02); an order without an account is
-   G-0001, G-0002... Given once, when the order is paid, and kept. Orders from before keep the
-   number they had (the end of the payment's id). */
+   G-0001, G-0002... Given once, when the order is paid (a refunded one too), and kept: deleting an
+   order never renumbers the others. A member's older orders without a number get theirs first,
+   oldest first, so their numbers follow the order they were placed in. */
 const pad = (n, w) => String(n).padStart(w, '0')
 const after = (got) => (got && got.value !== undefined && got.ok !== undefined ? got.value : got) // older drivers wrap the document
+const NUMBERED = ['paid', 'refunded']
+// the buyer's account: the one they were logged in to, else one with the same (confirmed) email
+const ownerOf = async (d, o) => {
+  const users = d.collection('users')
+  return (o.userId && await users.findOne({ _id: o.userId })) || (o.email ? await users.findOne({ email: String(o.email).toLowerCase(), verified: true }) : null)
+}
+/* The member's next order number. A member number freed by a deleted account can be given again,
+   and that account's orders keep their numbers: the new member's count starts after them. */
+const nextMemberOrder = async (d, u) => {
+  const users = d.collection('users')
+  const head = pad(u.memberNo, 4)
+  if (!u.orderSeq) {
+    const taken = await d.collection('orders').find({ orderNo: { $in: Array.from({ length: 999 }, (_, i) => `${head}-${pad(i + 1, 2)}`) } }).limit(1000).toArray()
+    const top = taken.reduce((n, o) => Math.max(n, Number(String(o.orderNo).split('-')[1]) || 0), 0)
+    if (top) await users.updateOne({ _id: u._id, orderSeq: { $exists: false } }, { $set: { orderSeq: top } })
+  }
+  const doc = after(await users.findOneAndUpdate({ _id: u._id }, { $inc: { orderSeq: 1 } }, { returnDocument: 'after' }))
+  return `${head}-${pad((doc && doc.orderSeq) || 1, 2)}`
+}
+// every order of this member without a number gets the next ones, oldest first
+export const numberMember = async (d, u) => {
+  if (!u || !u.memberNo) return
+  const orders = d.collection('orders')
+  const match = u.verified ? { $or: [{ userId: u._id }, { email: u.email }] } : { userId: u._id }
+  const list = (await orders.find({ ...match, status: { $in: NUMBERED }, orderNo: { $exists: false } }).limit(500).toArray())
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+  for (const o of list) {
+    const no = await nextMemberOrder(d, (await d.collection('users').findOne({ _id: u._id })) || u)
+    // should two calls race, the first number given stays
+    await orders.updateOne({ ref: o.ref, orderNo: { $exists: false } }, { $set: { orderNo: no } })
+  }
+}
 export const numberOrder = async (ref) => {
   if (!dbReady()) return ''
   const d = await db()
@@ -117,44 +150,43 @@ export const numberOrder = async (ref) => {
   const o = await orders.findOne({ ref })
   if (!o) return ''
   if (o.orderNo) return o.orderNo
-  if (o.status !== 'paid') return ''
-  const users = d.collection('users')
-  // the buyer's account: the one they were logged in to, else one with the same (confirmed) email
-  const u = (o.userId && await users.findOne({ _id: o.userId })) || (o.email ? await users.findOne({ email: String(o.email).toLowerCase(), verified: true }) : null)
-  let no
-  if (u && u.memberNo) {
-    const doc = after(await users.findOneAndUpdate({ _id: u._id }, { $inc: { orderSeq: 1 } }, { returnDocument: 'after' }))
-    no = `${pad(u.memberNo, 4)}-${pad((doc && doc.orderSeq) || 1, 2)}`
-  } else {
+  if (!NUMBERED.includes(o.status)) return ''
+  const u = await ownerOf(d, o)
+  if (u && u.memberNo) await numberMember(d, u)
+  else {
     const doc = after(await d.collection('counters').findOneAndUpdate({ _id: 'guestOrders' }, { $inc: { seq: 1 } }, { upsert: true, returnDocument: 'after' }))
-    no = `G-${pad((doc && doc.seq) || 1, 4)}`
+    await orders.updateOne({ ref, orderNo: { $exists: false } }, { $set: { orderNo: `G-${pad((doc && doc.seq) || 1, 4)}` } })
   }
-  // should two calls race, the first number given stays
-  const set = await orders.updateOne({ ref, orderNo: { $exists: false } }, { $set: { orderNo: no } })
-  if (!set.modifiedCount) { const now = await orders.findOne({ ref }); return (now && now.orderNo) || no }
-  return no
+  const now = await orders.findOne({ ref })
+  return (now && now.orderNo) || ''
 }
 // the number an order shows: its order number, or (from before) the end of the payment's id
 export const numberOf = (o) => o.orderNo || String(o.ref || '').replace(/^(cs_(test|live)_|pp_)/, '').slice(-8).toUpperCase()
 
 /* ---------- the buyer's email for a paid order (once, however often the payment is reported):
-   the order number, what they bought, the discount, the total, how it was paid and where it goes */
+   the order number, what they bought, the discount, the total, how it was paid and where it goes.
+   If it cannot be sent, it is tried again the next time Stripe or PayPal reports the payment. */
 export const tellBuyer = async (ref, site) => {
   if (!dbReady()) return
   const d = await db()
-  const order = after(await d.collection('orders').findOneAndUpdate({ ref, status: 'paid', buyerTold: { $ne: true } }, { $set: { buyerTold: true } }))
+  const orders = d.collection('orders')
+  const order = after(await orders.findOneAndUpdate({ ref, status: 'paid', buyerTold: { $ne: true }, email: { $exists: true, $ne: '' } }, { $set: { buyerTold: true } }))
   if (!order || !order.email) return
   const cur = order.currency || 'EUR'
   const price = (n) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(Number(n) || 0) } catch { return `${n} ${cur}` } }
-  const member = (order.userId && await d.collection('users').findOne({ _id: order.userId })) || await d.collection('users').findOne({ email: String(order.email).toLowerCase() })
+  // the account the order shows in (an account not confirmed yet only shows orders placed in it)
+  const member = await ownerOf(d, order)
+  // an account with this email, not confirmed yet: the order shows there once it is
+  const unconfirmed = !member && await d.collection('users').findOne({ email: String(order.email).toLowerCase() })
   const no = order.orderNo || numberOf(order)
   const first = String(order.name || (member && member.name) || '').split(' ')[0]
   const a = order.address
   const code = order.discountCode || order.code || ''
   const home = String(site || '').replace(/\/$/, '')
   const when = new Date(order.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const untold = () => orders.updateOne({ ref }, { $unset: { buyerTold: '' } })
   try {
-    await sendMail({
+    const sent = await sendMail({
       to: order.email,
       subject: `Your Milton Aguiar order ${no}`,
       kicker: 'Thank you',
@@ -162,7 +194,9 @@ export const tellBuyer = async (ref, site) => {
       lines: [
         `Hi${first ? ` ${first}` : ''},`,
         'Thank you for your order. Every piece is checked and packed by hand before it leaves the studio.',
-        member ? 'You can follow it in your account, from packing to your door, with the tracking number once it is posted.' : 'Make an account with this email address and you can follow it there, from packing to your door, with the tracking number once it is posted.',
+        member ? 'You can follow it in your account, from packing to your door, with the tracking number once it is posted.'
+          : unconfirmed ? 'Confirm the email address of your account and you can follow it there, from packing to your door, with the tracking number once it is posted.'
+            : 'Make an account with this email address and you can follow it there, from packing to your door, with the tracking number once it is posted.',
       ],
       orders: [{
         title: `Order ${no}`,
@@ -174,11 +208,12 @@ export const tellBuyer = async (ref, site) => {
         total: price(order.amount),
         foot: [order.amount > 0 ? `Paid by ${order.paidWith || (order.provider === 'paypal' ? 'PayPal' : 'card')}` : 'Free, with a code', a ? `Posting to ${[a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), a.country].filter(Boolean).join(', ')}` : ''].filter(Boolean).join(' · '),
       }],
-      button: member ? { label: 'See your order', url: `${home}/account?tab=orders` } : { label: 'Make an account', url: `${home}/account/signup` },
+      button: member ? { label: 'See your order', url: `${home}/account?tab=orders` } : unconfirmed ? { label: 'Open your account', url: `${home}/account` } : { label: 'Make an account', url: `${home}/account/signup` },
       after: 'Questions about your order? Just reply to this email.',
       replyTo: artistInbox() || undefined,
     })
-  } catch (e) { console.error('buyer email not sent:', e.message) }
+    if (!sent) await untold()
+  } catch (e) { console.error('buyer email not sent:', e.message); await untold() }
 }
 
 export const tellAdmin = async (ref, site) => {

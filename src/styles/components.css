@@ -2045,3 +2045,8 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 /* a spread at rest: one picture across both pages, no fold down its middle */
 .reader-cell.is-whole { grid-column: 1 / -1; }
 .reader-book.is-spread .reader-face::after { content: none; }
+/* a spread being turned to (or from): its two halves meet with no fold and no shadow between them,
+   so it reads as one splash page all through the turn */
+.reader-face.is-half { box-shadow: none; }
+.reader-face.is-half::after { content: none !important; }
+.reader-book.is-spreading::before { content: ''; position: absolute; inset: 0; z-index: -1; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); pointer-events: none; }

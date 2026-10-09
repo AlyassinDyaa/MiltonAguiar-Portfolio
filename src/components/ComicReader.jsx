@@ -293,7 +293,7 @@ function Reader({ comic, onClose }) {
 
   // one page box's picture: a whole page, a half of a spread, or nothing
   const face = (c, cls = '') => (
-    <div className={`reader-face ${cls} ${c ? '' : 'is-blank'}`}>
+    <div className={`reader-face ${cls} ${c ? '' : 'is-blank'} ${c && c.part !== 'whole' ? 'is-half' : ''}`}>
       {c && <img src={asset(c.src)} className={`is-${c.part}`} alt={c.part === 'right' ? '' : `${comic.title}, ${c.name.toLowerCase()}`} draggable="false" />}
     </div>
   )
@@ -310,8 +310,10 @@ function Reader({ comic, onClose }) {
     style: { '--r': r, '--turn': `${flip ? angle : 0}deg`, '--turn-ms': `${TURN_MS}ms` },
     onTransitionEnd: (e) => { if (e.target === e.currentTarget && e.propertyName === '--turn') landed() },
   })
-  const pair = (L, R, leafEl, under) => (
-    <div className={`reader-book is-pair ${turning}`} {...bookProps(2 * ratio)}>
+  // a spread (or half of one) in the book: no fold or shadow where its halves meet, one shadow round it
+  const spreading = (...cs) => cs.some((c) => c && c.part !== 'whole')
+  const pair = (L, R, leafEl, under, also = []) => (
+    <div className={`reader-book is-pair ${turning} ${L && R && spreading(L, R, ...also) ? 'is-spreading' : ''}`} {...bookProps(2 * ratio)}>
       <div className={`reader-cell is-left ${under === 'L' ? 'is-under' : ''}`}>{face(L)}</div>
       <div className={`reader-cell is-right ${under === 'R' ? 'is-under' : ''}`}>{face(R)}</div>
       {leafEl}
@@ -340,7 +342,7 @@ function Reader({ comic, onClose }) {
     } else if (!flip) { const h = halvesOf(shown); book = pair(h.L, h.R) }
     else {
       const a = halvesOf(sheetsAt(flip.from)), b = halvesOf(sheetsAt(flip.to))
-      book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L), 'R') : pair(b.L, a.R, leaf('is-back', a.L, b.R), 'L')
+      book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L), 'R', [a.R, b.L]) : pair(b.L, a.R, leaf('is-back', a.L, b.R), 'L', [a.L, b.R])
     }
   } else if (!flip) book = one(view[0])
   else {

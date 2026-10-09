@@ -23,21 +23,29 @@ const sheetsOf = (comic) => {
 const nameOf = (s) => (s.cover ? 'Cover' : s.spread ? `Pages ${s.from}–${s.to}` : `Page ${s.from}`)
 const shortOf = (s) => (s.cover ? 'Cover' : s.spread ? `${s.from}–${s.to}` : String(s.from))
 
-/* What is seen at once. On a wide screen, like a printed comic: the cover alone, then facing pairs.
-   A spread fills a whole pair, so a page left without a partner just before it stands alone and the
-   spread lines up. On a narrow screen, one picture at a time. Each view is a list of sheet indexes. */
+/* What is seen at once. On a wide screen, like a printed comic: the cover alone (it is not a page),
+   then page 1 alone on the right, as inside a comic, then facing pairs, 2–3, 4–5... Even pages are
+   left-hand pages and odd ones right-hand pages. A spread fills a whole pair; a left-hand page left
+   without its partner just before one stands alone. On a narrow screen, one picture at a time. Each
+   view is a list of sheet indexes. */
 const viewsOf = (sheets, wide) => {
   if (!wide) return sheets.map((s, i) => [i])
   const views = [[0]]
-  let left = null
+  let left = null // a left-hand (even) page waiting for the right-hand page beside it
   sheets.forEach((s, i) => {
     if (i === 0) return
     if (s.spread) {
       if (left != null) views.push([left])
       left = null
       views.push([i])
-    } else if (left == null) left = i
-    else { views.push([left, i]); left = null }
+    } else if (s.from % 2 === 1) {
+      // a right-hand page: beside the left-hand one waiting, or alone (page 1)
+      views.push(left != null ? [left, i] : [i])
+      left = null
+    } else {
+      if (left != null) views.push([left])
+      left = i
+    }
   })
   if (left != null) views.push([left])
   return views
@@ -53,7 +61,8 @@ const half = (s, part) => (s ? { src: s.src, part, name: nameOf(s) } : null)
 const halvesOf = (shown) => {
   if (shown[0].spread) return { L: half(shown[0], 'left'), R: half(shown[0], 'right') }
   if (shown.length === 2) return { L: half(shown[0], 'whole'), R: half(shown[1], 'whole') }
-  return shown[0].cover ? { L: null, R: half(shown[0], 'whole') } : { L: half(shown[0], 'whole'), R: null }
+  // a page alone: the cover and odd pages on the right, even pages on the left
+  return shown[0].cover || shown[0].from % 2 === 1 ? { L: null, R: half(shown[0], 'whole') } : { L: half(shown[0], 'whole'), R: null }
 }
 const TURN_MS = 850
 /* How far a page has turned, in degrees, as a CSS variable the page and its shadows follow. On a

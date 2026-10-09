@@ -11,6 +11,7 @@ import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
 import Lightbox from '../components/Lightbox'
 import ShopCard from '../components/ShopCard'
+import Pager, { usePaged } from '../components/Pager'
 import Magnetic from '../components/Magnetic'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -57,6 +58,7 @@ export default function Shop() {
     return [...list.filter((p) => !soldOut(p)), ...list.filter(soldOut)]
   }, [pick])
   const choose = (field, value) => { setSel(null); setPick((was) => ({ ...was, [field]: value })) }
+  const paged = usePaged(shown, 'shop', JSON.stringify(pick)) // a page at a time: 10 to 50, as the visitor picks
   const clear = () => { setSel(null); setPick(NONE) }
   const filtering = FILTERS.some((f) => pick[f.field] !== 'All')
   // each count reads with the other drop-downs' choices, so it says what picking it would show
@@ -107,15 +109,18 @@ export default function Shop() {
           ) : shown.length === 0 ? (
             <p className="shop-none">Nothing in that combination. <button type="button" onClick={clear}>Show everything</button></p>
           ) : (
-            <motion.ul className="shop-grid" layout>
-              <AnimatePresence mode="popLayout" initial={false}>
-                {shown.map((p, i) => (
-                  <motion.li key={p.slug} layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.4, delay: Math.min(i, 8) * 0.04, ease: EASE }}>
-                    <ShopCard p={p} onOpen={() => setSel(i)} eager={i < 4} />
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </motion.ul>
+            <>
+              <motion.ul ref={paged.top} className="shop-grid" layout>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {paged.rows.map((p, n) => (
+                    <motion.li key={p.slug} layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.4, delay: Math.min(n, 8) * 0.04, ease: EASE }}>
+                      <ShopCard p={p} onOpen={() => setSel(paged.from + n)} eager={n < 4} />
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </motion.ul>
+              <Pager paged={paged} />
+            </>
           )}
         </div>
       </section>

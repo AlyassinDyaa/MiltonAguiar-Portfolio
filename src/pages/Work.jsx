@@ -10,6 +10,7 @@ import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
 import ShopTags from '../components/ShopTags'
 import ComicShelf from '../components/ComicShelf'
+import Pager, { usePaged } from '../components/Pager'
 
 export default function Work() {
   const [filter, setFilter] = useState('All')
@@ -17,6 +18,7 @@ export default function Work() {
   const shown = useMemo(() => (filter === 'All' ? work : work.filter((p) => p.category === filter)), [filter])
   const count = (c) => (c === 'All' ? work.length : work.filter((p) => p.category === c).length)
   const choose = (c) => { setSel(null); setFilter(c) }
+  const paged = usePaged(shown, 'work', filter) // a page at a time: 10 to 50, as the visitor picks
   return (
     <Page title="Work">
       <PageTitle label={pages.work.label} title={pages.work.title} lead={pages.work.intro} slides={work}>
@@ -34,21 +36,22 @@ export default function Work() {
       <section className="spread">
         <div className="container">
           <Runner label={filter === 'All' ? 'Every piece' : filter} page={2} />
-          <motion.ul className="grid" layout>
+          <motion.ul ref={paged.top} className="grid" layout>
             <AnimatePresence mode="popLayout" initial={false}>
-              {shown.map((p, i) => (
+              {paged.rows.map((p, n) => { const i = paged.from + n; return (
                 <motion.li key={p.slug} layout initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
                   <button type="button" className="hp tile" onClick={() => setSel(i)} aria-label={`Open ${p.title}`}>
                     <span className="hp-in">
-                      <Poster title={p.title} src={p.src} eager={i < 4} />
+                      <Poster title={p.title} src={p.src} eager={n < 4} />
                       <ShopTags p={p} place="art" />
                       <span className="caption"><strong>{p.title}</strong><small>{[catOf(p), day(p.date)].filter(Boolean).join(' · ')}</small><ShopTags p={p} place="cap" /></span>
                     </span>
                   </button>
                 </motion.li>
-              ))}
+              ) })}
             </AnimatePresence>
           </motion.ul>
+          <Pager paged={paged} />
         </div>
       </section>
 

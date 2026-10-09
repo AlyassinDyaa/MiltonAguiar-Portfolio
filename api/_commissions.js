@@ -37,7 +37,9 @@ export const WORK_STAGES = ['sketch', 'inks', 'colours', 'delivered', 'cancelled
    an inked piece is inked too, full colour (and anything bigger) gets its colours. A quote from
    before this goes through all of them. */
 export const STAGE_SETS = { sketch: ['sketch', 'delivered'], inks: ['sketch', 'inks', 'delivered'], full: ['sketch', 'inks', 'colours', 'delivered'] }
-export const stagesOf = (c) => STAGE_SETS[(c && c.quote && c.quote.stages) || 'full'] || STAGE_SETS.full
+// set on the quote; until there is one (or on a quote from before), what the kind of piece asked for
+// goes through: an inked piece never shows colours, a sketch neither inks nor colours
+export const stagesOf = (c) => STAGE_SETS[(c && c.quote && c.quote.stages) || guessStages(c && c.details && c.details.kind)] || STAGE_SETS.full
 // the likely one for a kind of piece, from the offer's name and what it includes: colour, ink, sketch or pencil
 export const guessStages = (kind) => {
   const tier = ((read('content/pages/commissions.json') || {}).tiers || []).find((t) => t && String(t.name || '').trim() === String(kind || '').trim()) || {}

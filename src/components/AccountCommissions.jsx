@@ -371,8 +371,28 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
     load()
     // just back from paying: Stripe tells the site a moment later, so asked again a few times
     const soon = paid ? [2500, 6000, 12000, 20000].map((ms) => setTimeout(load, ms)) : []
-    const every = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20000)
-    return () => { soon.forEach(clearTimeout); clearInterval(every) }
+    // new messages show almost as they are sent: asked again every 3 seconds while the conversation
+    // is open and in view, every 10 once nothing has changed for a minute, and at once on coming back
+    let timer = 0
+    let gone = false
+    let lastSeen = ''
+    let quietSince = Date.now()
+    const tick = async () => {
+      if (gone) return
+      if (document.visibilityState === 'visible') {
+        const s = await askCommissions('get', { id }).catch(() => null)
+        if (gone) return
+        if (s && s.commission) {
+          const k = `${(s.commission.messages || []).length}:${s.commission.status}:${s.commission.updatedAt || ''}`
+          if (k !== lastSeen) { lastSeen = k; quietSince = Date.now(); setC(s.commission); setWays(s.payWays || {}); onChange() }
+        }
+      }
+      timer = setTimeout(tick, Date.now() - quietSince > 60000 ? 10000 : 3000)
+    }
+    timer = setTimeout(tick, 3000)
+    const back = () => { if (document.visibilityState === 'visible') { quietSince = Date.now(); clearTimeout(timer); tick() } }
+    document.addEventListener('visibilitychange', back)
+    return () => { gone = true; soon.forEach(clearTimeout); clearTimeout(timer); document.removeEventListener('visibilitychange', back) }
   }, [load, paid])
   // back from PayPal: the payment is taken now (only the order opened for this quote)
   useEffect(() => {

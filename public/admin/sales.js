@@ -1133,11 +1133,14 @@ window.IASales = (() => {
     draw()
   }
   // one commission, in full (opening it marks the customer's messages read)
+  // what a commission's window shows, to tell whether anything changed (the window is only drawn again when it did)
+  const cKey = (d) => (d ? `${d.id}:${(d.messages || []).length}:${d.status}:${d.updatedAt || ''}:${JSON.stringify(d.quote || null)}:${JSON.stringify(d.payment || null)}` : '')
   const loadCommission = async (id) => {
+    const before = `${cKey(cState.detail)}|${cState.detailProblem || ''}`
     const r = await cApi({ action: 'adminGet', id })
     if (cState.open !== id) return
     if (r.ok) { cState.detail = r.json.commission; cState.detailProblem = ''; const row = cState.list.find((x) => x.id === id); if (row) row.unread = 0 } else cState.detailProblem = r.json.message || 'It could not be opened.'
-    draw()
+    if (`${cKey(cState.detail)}|${cState.detailProblem || ''}` !== before) draw()
   }
   const openCommission = (id) => {
     cState.open = id; cState.detail = cState.detail && cState.detail.id === id ? cState.detail : null; cState.detailProblem = ''; cState.said = ''; cState.stick = true
@@ -1157,13 +1160,28 @@ window.IASales = (() => {
     const fresh = { id: c.id, number: c.number, title: c.title, kind: c.kind, status: c.status, price: c.price, currency: c.currency, ship: c.ship, paid: c.paid, updatedAt: c.updatedAt, lastAt: last ? last.at : c.lastAt, lastFrom: last ? last.from : '', lastText: last ? last.text : '', unread: 0, email: c.email, name: c.name, userId: c.userId, test: c.test, createdAt: c.createdAt }
     if (row) Object.assign(row, fresh); else cState.list.unshift(fresh)
   }
-  // every 20 seconds while the Commissions tab shows (and this browser tab is in view)
-  setInterval(() => {
-    if (!root || !root.isConnected || document.visibilityState !== 'visible' || state.view !== 'orders' || state.ordersTab !== 'commissions') return
-    if (!document.documentElement.hasAttribute('data-ia-sales')) return
-    loadCommissions(true)
-    if (cState.open) loadCommission(cState.open)
-  }, 20000)
+  // while the Commissions tab shows (and this browser tab is in view): the open conversation is asked
+  // again every 3 seconds (every 10 once nothing has changed for a minute), the list every 15
+  let cQuietSince = Date.now()
+  let cSeen = ''
+  let cListAt = 0
+  const cTick = async () => {
+    try {
+      const on = root && root.isConnected && document.visibilityState === 'visible' && state.view === 'orders' && state.ordersTab === 'commissions' && document.documentElement.hasAttribute('data-ia-sales')
+      if (on) {
+        if (Date.now() - cListAt > 15000) { cListAt = Date.now(); loadCommissions(true) }
+        if (cState.open) {
+          await loadCommission(cState.open)
+          const d = cState.detail
+          const k = d ? `${(d.messages || []).length}:${d.status}:${d.updatedAt || ''}` : ''
+          if (k !== cSeen) { cSeen = k; cQuietSince = Date.now() }
+        }
+      }
+    } catch { /* asked again next time */ }
+    setTimeout(cTick, Date.now() - cQuietSince > 60000 ? 10000 : 3000)
+  }
+  setTimeout(cTick, 3000)
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cQuietSince = Date.now() })
 
   const ago = (t) => {
     const mins = Math.round((Date.now() - new Date(t)) / 60000)

@@ -45,6 +45,14 @@
       "colours": "/uploads/daredevil.webp",
       "commissions": true,
       "hidden": false
+    },
+    {
+      "commissions": false,
+      "hidden": false,
+      "title": "Robin",
+      "pencils": "/uploads/robin-cover-pencils.webp",
+      "inks": "/uploads/robin-cover-inks.webp",
+      "colours": "/uploads/robin-cover-colors.webp"
     }
   ],
   "text": "Pencils, inks and colours for superhero comics: covers, pages, pin-ups and the characters I make up myself.",

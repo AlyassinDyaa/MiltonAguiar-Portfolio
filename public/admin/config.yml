@@ -737,6 +737,38 @@ collections:
                   - { label: 'A number of pieces collected', value: pieces }
               - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders or pieces it takes: 1 for their first order, 3, 6, 10... Refunded and deleted orders do not count.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
+      - name: sales
+        label: Shop sales
+        file: content/site/sales.json
+        fields:
+          - name: sales
+            label: Sales
+            label_singular: sale
+            widget: list
+            collapsed: true
+            minimize_collapsed: true
+            required: false
+            summary: '{{fields.name}} — {{fields.percent}}% off'
+            hint: 'Price cuts that switch themselves on and off: no code needed. A sale runs while it is On and between its start and its end. A piece in more than one sale gets the biggest cut, never two. A piece with its own sale price gets whichever is cheaper. Discount codes still come off on top at the checkout. Sold-out pieces are left alone.'
+            fields:
+              - { name: name, label: Name, widget: string, hint: 'Shown to visitors, on the Shop page and beside the price: Black Friday, Summer sale...' }
+              - { name: percent, label: Price cut (%), widget: number, value_type: int, min: 1, max: 90, default: 10, hint: 'Usual cuts: 5, 10, 15, 20, 25, 30 or 50. Up to 90.' }
+              - name: appliesTo
+                label: On what
+                widget: select
+                default: all
+                options:
+                  - { label: 'Everything in the shop', value: all }
+                  - { label: 'A category', value: category }
+                  - { label: 'A sub category', value: subcategory }
+                  - { label: 'A type', value: type }
+              - { name: category, label: Which category, widget: relation, collection: site, file: categories, value_field: 'categories.*.name', search_fields: ['categories.*.name'], display_fields: ['categories.*.name'], required: false, hint: 'From your list under Shop → Categories & sizes.' }
+              - { name: subcategory, label: Which sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'From your list under Shop → Categories & sizes.' }
+              - { name: type, label: Which type, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'From your list under Shop → Settings & payments.' }
+              - { name: starts, label: Starts, widget: datetime, required: false, hint: 'Empty: straight away.' }
+              - { name: ends, label: Ends, widget: datetime, required: false, hint: 'Empty: until you switch it off.' }
+              - { name: 'on', label: 'On', widget: boolean, default: true, required: false }
+              - { name: banner, label: Line on the Shop page, widget: string, required: false, hint: 'Shown after the name, in a red band above the pieces while the sale runs. Empty: made for you, e.g. "10% off everything until 31 Oct" or "15% off Fan art".' }
       - name: visibility
         label: Show or hide
         file: content/site/visibility.json

@@ -87,13 +87,14 @@ export default function CartDrawer() {
                         <div className="cart-info">
                           <strong>{l.piece.title}</strong>
                           <small>{[l.size, shop.signedChoice ? (l.signed ? 'Signed' : 'Unsigned') : '', l.piece.type].filter(Boolean).join(' · ')}</small>
+                          {l.deal && <span className="cart-sale">{l.deal.name || 'Sale'} −{l.deal.percent}%</span>}
                           <div className="cart-row">
                             <div className="cart-qty" role="group" aria-label={`How many of ${l.piece.title}`}>
                               <button type="button" onClick={() => (l.qty > 1 ? cart.setQty(l.slug, l.signed, l.qty - 1, l.size) : cart.remove(l.slug, l.signed, l.size))} aria-label="One fewer">−</button>
                               <span aria-live="polite">{l.qty}</span>
                               <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label="One more">+</button>
                             </div>
-                            <span className="cart-price">{money(l.each * l.qty, true)}</span>
+                            <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{money(l.each * l.qty, true)}</span>
                           </div>
                         </div>
                         <button type="button" className="cart-remove" onClick={() => cart.remove(l.slug, l.signed, l.size)} aria-label={`Remove ${l.piece.title}`}>×</button>

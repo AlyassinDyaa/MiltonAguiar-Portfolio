@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { canBuy, everything, nowPrice, shop, sizeOf, sizesOf } from '../data/site'
+import { canBuy, everything, priceOf, shop, sizeOf, sizesOf } from '../data/site'
 import { useAccount } from './useAccount'
 
 /* The cart. What a visitor has added is kept in their browser (so it survives a reload), as
@@ -61,8 +61,10 @@ export function CartProvider({ children }) {
     const size = sizesOf(piece).length ? sizeOf(piece, l.size)?.name : ''
     if (sizesOf(piece).length ? size !== l.size : l.size) return null
     const signed = Boolean(shop.signedChoice && l.signed)
-    const each = nowPrice(piece, size) + (signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0)
-    return { key: `${l.slug}:${size}:${signed ? 's' : 'u'}`, slug: l.slug, size, signed, qty: clamp(l.qty), piece, each }
+    // what one costs now (a sale price, or a shop sale, included) and what it usually costs
+    const row = priceOf(piece, size), extra = signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0
+    const each = row.now + extra, was = row.price + extra
+    return { key: `${l.slug}:${size}:${signed ? 's' : 'u'}`, slug: l.slug, size, signed, qty: clamp(l.qty), piece, each, was, deal: row.deal }
   }).filter(Boolean), [raw])
 
   const add = useCallback((slug, signed = false, size = '') => setRaw((r) => {

@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Page from '../components/Page'
-import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fromPrice, manyPrices, money, nowPrice, sizesOf, soldOut } from '../data/site'
+import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, sizesOf, soldOut } from '../data/site'
 import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
 import { useAccount } from '../hooks/useAccount'
@@ -443,7 +443,7 @@ function PieceCard({ p }) {
       </button>
       <div className="acct-piece-cap">
         <strong>{p.title}</strong>
-        <small>{soldOut(p) ? 'Sold out' : canBuy(p) ? (manyPrices(p) ? `From ${money(fromPrice(p), true)}` : money(nowPrice(p, one), true)) : p.type || ''}</small>
+        <small>{soldOut(p) ? 'Sold out' : canBuy(p) ? (manyPrices(p) ? `From ${money(fromPrice(p), true)}` : <>{onSale(p, one) && <s>{money(fullPrice(p, one), true)}</s>} {money(nowPrice(p, one), true)}</>) : p.type || ''}</small>
       </div>
     </div>
   )

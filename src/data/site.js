@@ -11,6 +11,8 @@
    exported as `let`: it can be put together a second time.
    --------------------------------------------------------------------- */
 
+import { liveSales, priceWith, readSales, saleFor } from './sales'
+
 const files = import.meta.glob('../../content/**/*.json', { eager: true })
 // keyed the way the repository names them: "content/work/venom.json"
 const built = Object.fromEntries(Object.entries(files).map(([path, m]) => [path.replace('../../', ''), m.default ?? m]))
@@ -61,6 +63,10 @@ export let redraws
    after the cover, a spread counting as two. */
 export let comics
 export let events
+/* Shop sales (Shop → Sales): every sale the admin has set, live or not (see data/sales.js). Which
+   are running is worked out in the browser each time, so a sale starts and ends by itself
+   without the site being rebuilt. */
+export let sales = []
 /* True when the page is showing an admin their newest saved changes rather than only the built-in content. */
 export let previewing = false
 
@@ -160,6 +166,7 @@ function assemble(content) {
     emptyTitle: 'The shop opens soon.', emptyText: 'Prints and originals are on their way. Follow along on Instagram to hear first.',
     ...given(site('shop')),
   }
+  sales = readSales(site('sales'))
   shop.accounts = accountPage.accounts || shop.accounts // off, optional or required (Shop → Customer accounts)
   social = links || []
   const insta = social.find((s) => /instagram/i.test(s.label || ''))
@@ -281,34 +288,46 @@ export const filedUnder = (p) => [p.universe, p.category].map((x) => String(x ||
 /* A piece shows its price while online purchases are switched on, it is in the Shop ("Sell it in
    the Shop" in the admin, or added under Shop) and it has a price. */
 export function buyable(piece) { return Boolean(shop?.enabled && piece && piece.slug && piece.inShop && (Number(piece.price) > 0 || sizesOf(piece).length > 0)) } // a declaration, so assemble() above can use it
+/* The shop sale running on a piece right now with the biggest cut ({ name, percent, ... }), or
+   null. Whether it beats the piece's own sale price is up to each price (see `by` below). A
+   sold-out piece is left as it is. */
+export function saleOf(piece) { return soldOut(piece) ? null : saleFor(piece, sales) } // declarations, so assemble() above can use them
+/* The shop sales running right now, for the band on the Shop page. */
+export const salesNow = () => liveSales(sales)
 /* A piece's print sizes, each with its price and, when it is discounted, its lower price
-   ({ name, price, sale, now }), in the order the admin put the rows in. Each size is picked from
+   ({ name, price, sale, now, by, deal }), in the order the admin put the rows in. Each size is picked from
    the list under Shop → Categories & sizes; its price is set on the piece. Rows without a size or a price are left out. With none, the piece has the one
-   price of its own. */
+   price of its own. A size costs the lower of its own sale price and the shop sale running on
+   the piece: `by` says which ('own', 'sale', or '' for neither), `deal` is that shop sale. */
 export function sizesOf(piece) {
+  const deal = saleOf(piece)
   const rows = (Array.isArray(piece?.sizes) ? piece.sizes : [])
     .map((r) => {
-      const name = String((r && r.size) || '').trim(), price = Number(r && r.price), sale = Number(r && r.salePrice)
-      const off = sale > 0 && sale < price
-      return { name, price, sale: off ? sale : 0, now: off ? sale : price }
+      const name = String((r && r.size) || '').trim(), price = Number(r && r.price)
+      const { now, by } = priceWith(price, r && r.salePrice, deal)
+      return { name, price, sale: by ? now : 0, now, by, deal: by === 'sale' ? deal : null }
     })
     .filter((r) => r.name && r.price > 0)
   return rows.filter((r, i) => rows.findIndex((x) => x.name === r.name) === i) // a size typed twice counts once
 }
 /* One size of a piece, by name (the first when none is named or the name is gone). */
 export const sizeOf = (piece, name) => { const all = sizesOf(piece); return all.find((r) => r.name === name) || all[0] || null }
-/* Its status, set in the admin: "new", "sale" (with a sale price below the price) or "soldout". */
-export const soldOut = (piece) => piece?.status === 'soldout'
-/* On sale: the chosen size is discounted, or (a piece without sizes) its tag is "On sale" with a
-   sale price below its price. */
-export const onSale = (piece, size) => {
-  const r = sizeOf(piece, size)
-  if (r) return r.sale > 0
-  return piece?.status === 'sale' && Number(piece.salePrice) > 0 && Number(piece.salePrice) < Number(piece.price)
+/* A piece without sizes, as one such row: its own sale price counts while its tag is "On sale". */
+const single = (piece) => {
+  const price = Number(piece?.price) || 0, deal = saleOf(piece)
+  const { now, by } = priceWith(price, piece?.status === 'sale' ? piece.salePrice : 0, deal)
+  return { name: '', price, sale: by ? now : 0, now, by, deal: by === 'sale' ? deal : null }
 }
+/* The price row of the chosen size, or of the piece itself. */
+export const priceOf = (piece, size) => sizeOf(piece, size) || single(piece)
+/* Its status, set in the admin: "new", "sale" (with a sale price below the price) or "soldout". */
+export function soldOut(piece) { return piece?.status === 'soldout' }
+/* On sale: the chosen size (or the piece) costs less than usual, through its own sale price or a
+   shop sale. */
+export const onSale = (piece, size) => priceOf(piece, size).sale > 0
 /* The usual price and what it costs now, of the chosen size (or of the piece). */
-export const fullPrice = (piece, size) => { const r = sizeOf(piece, size); return r ? r.price : Number(piece.price) }
-export const nowPrice = (piece, size) => { const r = sizeOf(piece, size); return r ? r.now : (onSale(piece) ? Number(piece.salePrice) : Number(piece.price)) }
+export const fullPrice = (piece, size) => priceOf(piece, size).price
+export const nowPrice = (piece, size) => priceOf(piece, size).now
 /* The lowest price it can be had for, and whether there is more than one ("from €20"). */
 export const fromPrice = (piece) => { const all = sizesOf(piece); return all.length ? Math.min(...all.map((r) => r.now)) : nowPrice(piece) }
 export const manyPrices = (piece) => new Set(sizesOf(piece).map((r) => r.now)).size > 1
@@ -322,7 +341,7 @@ export const badge = (piece) => {
   if (buyable(piece)) {
     // the biggest discount among its sizes (or on the piece itself)
     const all = sizesOf(piece)
-    const cut = all.length ? Math.max(0, ...all.filter((r) => r.sale).map((r) => 1 - r.sale / r.price)) : onSale(piece) ? 1 - Number(piece.salePrice) / Number(piece.price) : 0
+    const cut = all.length ? Math.max(0, ...all.filter((r) => r.sale).map((r) => 1 - r.sale / r.price)) : onSale(piece) ? 1 - nowPrice(piece) / fullPrice(piece) : 0
     if (cut > 0) return { kind: 'sale', text: `${all.length > 1 && all.some((r) => !r.sale) ? 'Up to ' : 'Sale '}−${Math.round(cut * 100)}%` }
   }
   if (piece.status === 'new') return { kind: 'new', text: 'New' }

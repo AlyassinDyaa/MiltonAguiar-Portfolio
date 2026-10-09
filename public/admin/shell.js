@@ -73,19 +73,20 @@
     },
     'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
+    'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
   /* The navigation and the Home screen list the sections in these groups, in this order. */
   const GROUPS = [
     { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
-    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' || s.key === 'site/rewards' },
+    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' || s.key === 'site/rewards' || s.key === 'site/sales' },
     { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && s.key !== 'site/shop' && s.key !== 'site/categories' && s.key !== 'site/account' && s.key !== 'site/rewards' },
+    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && !['site/shop', 'site/categories', 'site/account', 'site/rewards', 'site/sales'].includes(s.key) },
   ]
   /* The navigation is narrow, and under "Page text" every name would end in "page": there the
      pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Sales', 'site/visibility': 'Show / hide' }
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, the pencils-to-colours sets, and the heading of each part below it.',
@@ -99,6 +100,7 @@
     'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
     'site/account': 'For members: accounts on or off, the membership card, your note on their page, and the free profile pictures. The people themselves are under Sales → Customers.',
     'site/rewards': 'Profile pictures, membership card designs and discounts customers earn: by confirming their email, every few orders, or the pieces they collect.',
+    'site/sales': 'Price cuts that run by themselves: 10% off everything, 25% off one category... from a start to an end, no code needed.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -111,6 +113,7 @@
     'site/categories': 'M4 5h7v7H4z M13 5h7v7h-7z M4 14h7v5H4z M13 14h7v5h-7z',
     'site/account': 'M12 12.200a4.200 4.200 0 1 0 0-8.400 4.200 4.200 0 0 0 0 8.400z M4 20.500c.800-3.600 4-5.800 8-5.800s7.200 2.200 8 5.800',
     'site/rewards': 'M8 4h8v5a4 4 0 0 1-8 0z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M8 20h8 M9.500 17h5v3h-5z',
+    'site/sales': 'M20.600 13.400l-7.200 7.200a2 2 0 0 1-2.800 0L3 13V3h10l7.600 7.600a2 2 0 0 1 0 2.800z M7.500 7.500h.010 M9.500 15.500l6-6 M10.500 10.500h.010 M14.500 14.500h.010',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'
@@ -350,6 +353,7 @@
     }
     markRequired(pane)
     nameTheForm()
+    tidySales(pane)
     // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
     for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
@@ -364,6 +368,39 @@
       if (label) input.placeholder = label.textContent.replace(/\s*\(optional\)\s*$/i, '')
     }
   }
+
+  /* ---------- a shop sale (Shop → Sales) ----------
+     Each sale has one "which" field to go with its "On what": the category, sub category or type
+     it covers. The other two are hidden (whatever they still hold is ignored by the site). A sale
+     folded shut says what it covers and where it is up to, after its name and cut:
+     "Black Friday — 10% off · everything · on now". */
+  const SALE_ON = { 'A category': 'category', 'A sub category': 'subcategory', 'A type': 'type' }
+  const tidySales = (pane) => {
+    if (`${currentSection()}/${currentFile()}` !== 'site/sales') return
+    const fieldIn = (item, name) => { const label = item.querySelector(`label[for^="${name}-field"]`); return label && label.closest('[class*="ControlContainer"]') }
+    const shown = (field) => ((field && field.querySelector('[class*="singleValue"]')) || {}).textContent || ''
+    for (const item of pane.querySelectorAll('[class*="-listControlItem"]')) {
+      const kind = SALE_ON[shown(fieldIn(item, 'appliesTo')).trim()] || 'all'
+      for (const name of ['category', 'subcategory', 'type']) {
+        const field = fieldIn(item, name)
+        if (field && field.hasAttribute('data-ia-off') !== (name !== kind)) field.toggleAttribute('data-ia-off', name !== kind)
+      }
+      // what it covers, and whether it is running
+      const what = kind === 'all' ? 'everything' : shown(fieldIn(item, kind)).trim() || `no ${kind === 'subcategory' ? 'sub category' : kind} chosen`
+      const at = (name) => { const input = (fieldIn(item, name) || item).querySelector('input[type="datetime-local"], input[type="date"]'); const t = input && input.value ? Date.parse(input.value) : NaN; return Number.isFinite(t) ? t : null }
+      const on = (fieldIn(item, 'on') || item).querySelector('[role="switch"]')
+      const starts = at('starts'), ends = at('ends'), now = Date.now()
+      const date = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      const state = on && on.getAttribute('aria-checked') === 'false' ? 'off' : ends != null && now >= ends ? 'ended' : starts != null && now < starts ? `starts ${date(starts)}` : ends != null ? `on now, until ${date(ends)}` : 'on now'
+      const label = item.querySelector('[class*="NestedObjectLabel"]')
+      const words = `${what} · ${state}`
+      if (label && label.dataset.iaCovers !== words) label.dataset.iaCovers = words
+      if (label && label.dataset.iaState !== state.split(' ')[0]) label.dataset.iaState = state.split(' ')[0]
+    }
+  }
+  // the dates and the On switch change no element: look again after them
+  document.addEventListener('input', () => { if (currentFile() === 'sales') scheduleTag() }, true)
+  document.addEventListener('click', () => { if (currentFile() === 'sales') setTimeout(scheduleTag, 40) }, true)
 
   /* Decap heads every form "Writing in X collection". Say what is being edited instead: the
      page's own name for a single page ("Home page"), the section's name for anything else. */
@@ -888,6 +925,7 @@
     cards: { what: 'card design', text: 'Customers who earned it lose it, and anyone using it goes back to the usual card. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     discounts: { what: 'discount', text: 'Customers no longer earn it. Codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     rewards: { what: 'reward', text: 'Customers who earned it lose it: a picture or card design they chose goes back to the usual one, and they no longer see it under Rewards. Discount codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
+    sales: { what: 'sale', text: 'Once you press Save it stops on the site and its prices go back to normal. To pause it without losing it, switch "On" off instead.' },
     icons: { what: 'free picture', text: 'Customers using it as their profile picture go back to their initials.' },
     pages: { what: 'page', text: 'It comes out of the comic and the pages after it move up one. The picture stays in the Media library.' },
   }

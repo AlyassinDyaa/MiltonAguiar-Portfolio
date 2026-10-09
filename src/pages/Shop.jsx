@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { brand, forSale, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
+import { brand, forSale, salesNow, shop, shopCats, shows, soldOut, subCats, types, work } from '../data/site'
+import { saleLine } from '../data/sales'
 import Dropdown from '../components/Dropdown'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
@@ -64,6 +65,9 @@ export default function Shop() {
   // each count reads with the other drop-downs' choices, so it says what picking it would show
   const count = (field, value) => forSale.filter((p) => fits(p, { ...pick, [field]: value })).length
   const menus = FILTERS.filter((f) => shows('shop', f.show)).map((f) => ({ ...f, list: f.list() })).filter((f) => f.list.length > 1) // each can be switched off under Show or hide
+  // the shop sales running now, each a red band above the pieces (read as the page is drawn, so a
+  // sale shows from its start and goes at its end without the site being rebuilt)
+  const running = forSale.length ? salesNow() : []
   const steps = ['Pick a piece', 'Pay securely with Stripe', shop.shipping !== false ? 'Posted to your door' : 'Sent to your inbox']
 
   return (
@@ -86,6 +90,16 @@ export default function Shop() {
       <section className="spread">
         <div className="container">
           <Runner label={filtering ? FILTERS.map((f) => pick[f.field]).filter((x) => x !== 'All').join(' · ') : 'For sale'} page={2} />
+          {running.length > 0 && (
+            <ul className="shop-sales" aria-label="Sales on now">
+              {running.map((s, i) => (
+                <li key={`${s.name}-${i}`} className="shop-sale">
+                  {s.name && <b>{s.name}</b>}
+                  <span>{saleLine(s)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           {menus.length > 0 && (
             <div className="shop-filters">
               {menus.map((f) => (

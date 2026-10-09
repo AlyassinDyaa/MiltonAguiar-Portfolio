@@ -1538,3 +1538,10 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .sl-gift-foot .sl-gift-tell { flex: 1 1 100%; }
   .sl-modal-head.sl-profile { align-items: flex-start; }
 }
+
+/* a shop sale (Shop → Sales): only the "which" field that goes with its "On what" shows; folded
+   shut, it says after its name what it covers and whether it is running (shell.js: tidySales) */
+[data-ia-off] { display: none !important; }
+[class*='NestedObjectLabel'][data-ia-covers]::after { content: '· ' attr(data-ia-covers); min-width: 0; margin-left: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; color: var(--dim); }
+[class*='NestedObjectLabel'][data-ia-state='on']::after { color: var(--ok); }
+[class*='NestedObjectLabel'][data-ia-state='ended']::after, [class*='NestedObjectLabel'][data-ia-state='off']::after { color: var(--mute); }

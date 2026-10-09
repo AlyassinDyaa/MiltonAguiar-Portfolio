@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
 import { checkout, payLine } from '../data/checkout'
 
@@ -57,6 +57,7 @@ export default function Buy({ piece }) {
   const tag = badge(piece)
   const sizes = sizesOf(piece)
   const now = nowPrice(piece, size), full = fullPrice(piece, size), sale = onSale(piece, size)
+  const deal = priceOf(piece, size).deal // the shop sale that makes this price, when one does
   const inCart = cart.lines.filter((l) => l.slug === piece.slug).reduce((n, l) => n + l.qty, 0)
   const addToCart = () => { cart.add(piece.slug, choice && signed, size); setAdded(true); setTimeout(() => cart.setOpen(true), 350) }
   const ways = payWays()
@@ -78,7 +79,7 @@ export default function Buy({ piece }) {
           : <Link className="buy-heart" to="/account/login?next=/account?tab=saved" title="Log in to save it for later" aria-label="Log in to save it for later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.8c0 5.7-7.5 10.3-7.5 10.3z" /></svg></Link>)}
       </div>
       {piece.what && <p className="buy-what">{piece.what}</p>}
-      {sale && !out && <p className="buy-save">You save {money(full - now, true)}</p>}
+      {sale && !out && <p className="buy-save">{deal && <b className="buy-deal">{deal.name || 'Sale'} −{deal.percent}%</b>}You save {money(full - now, true)}</p>}
       {sizes.length > 0 && !out && (
         <Dropdown
           className="buy-size" label="Size" value={size} onChange={setSize}

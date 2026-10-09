@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
-import { artistInbox, sendMail } from './_users.js'
+import { artistInbox, emailsToArtist, sendMail } from './_users.js'
 
 /* Orders in the database, so a buyer's account can show them (the leading underscore keeps Vercel
    from serving this file). Each is kept under `ref`: the Stripe checkout's id (cs_...), or "pp_"
@@ -218,6 +218,7 @@ export const tellBuyer = async (ref, site) => {
 
 export const tellAdmin = async (ref, site) => {
   if (!dbReady()) return
+  if (!emailsToArtist('orders')) return // switched off under Shop → Settings and payments → Emails to you
   const got = await (await db()).collection('orders').findOneAndUpdate({ ref, status: 'paid', adminTold: { $ne: true } }, { $set: { adminTold: true } })
   const order = got && got.value !== undefined && got.ok !== undefined ? got.value : got // older drivers wrap the document
   if (!order) return

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
 import { forCustomer, numberMember, stripeCodes, usesHere } from './_orders.js'
 import { accountsMode } from './_buyer.js'
+import { countedMatch } from './_commissions.js'
 import { adminOk } from './_session.js'
 import { randomBytes } from 'node:crypto'
 import {
@@ -89,7 +90,7 @@ const rewardsList = () => {
   const kindOf = (r) => (['card', 'discount'].includes(r.kind) ? r.kind : 'picture')
   return list.filter((r) => r && !r.hidden && (kindOf(r) === 'card' ? r.cardLook || r.cardArt : kindOf(r) === 'discount' ? Number(r.percent) > 0 : r.picture))
     .map((r) => {
-      const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces'].includes(r.earnedBy) ? r.earnedBy : 'verify'
+      const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces', 'commissions'].includes(r.earnedBy) ? r.earnedBy : 'verify'
       return {
         id: slug(r.name) || slug(r.picture), name: String(r.name || ''), kind: kindOf(r), earnedBy: by,
         count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)),
@@ -104,14 +105,16 @@ const countedOrders = async (d, user) => {
   const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
   return d.collection('orders').find({ ...match, status: 'paid', hidden: { $ne: true }, customerRemoved: { $ne: true }, 'track.status': { $ne: 'cancelled' } }).sort({ createdAt: -1 }).limit(500).toArray()
 }
-// how far a customer has come: email confirmed, orders, pieces
+// how far a customer has come: email confirmed, orders, pieces, and (counted apart) commissions
 const progressOf = async (d, user) => {
   const orders = await countedOrders(d, user)
-  return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0), gifts: giftsOf(user) }
+  let commissions = 0
+  try { commissions = await d.collection('commissions').countDocuments(countedMatch(user._id)) } catch (e) { console.error('commissions not counted:', e.message) }
+  return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0), commissions, gifts: giftsOf(user) }
 }
 // rewards the admin has given this customer (Sales → Customers → Gift a reward): theirs whatever their progress
 const giftsOf = (user) => (Array.isArray(user && user.gifts) ? user.gifts.map((g) => g && g.id).filter(Boolean) : [])
-const earnedOnItsOwn = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count)
+const earnedOnItsOwn = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : r.earnedBy === 'commissions' ? (p.commissions || 0) >= r.count : p.pieces >= r.count)
 const earns = (r, p) => (p.gifts || []).includes(r.id) || earnedOnItsOwn(r, p)
 // Stripe, at the version promotion codes are read with everywhere on the site (api/_orders.js)
 const stripePost = async (path, fields) => {

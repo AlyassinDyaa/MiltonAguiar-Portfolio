@@ -2238,3 +2238,49 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 .tier-go.is-closed { cursor: default; }
 .tier-go.is-closed small { font-size: 0.78rem; letter-spacing: 0.1em; opacity: 0.75; }
 .tier:hover .tier-go.is-closed { background: var(--on-loud); color: var(--loud); }
+
+/* ---------- commissions, round two: readable bubbles (WCAG AA), the quote in the thread, a code ---------- */
+/* the same colours in either theme: light words on a dark bubble (14:1), white on a deep red one (6.9:1) */
+.acc-thread .acc-msg .acc-msg-bubble { background: #232328; border-color: #4a4a52; color: #f3f3f1; }
+.acc-thread .acc-msg .acc-msg-bubble p, .acc-thread .acc-msg .acc-msg-bubble li { color: #f3f3f1; }
+.acc-thread .acc-msg.is-mine .acc-msg-bubble { background: #b3141f; border-color: #b3141f; }
+.acc-thread .acc-msg.is-mine .acc-msg-bubble p, .acc-thread .acc-msg.is-mine .acc-msg-bubble li { color: #fff; }
+.acc-thread .acc-msg .acc-msg-bubble a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.acc-thread .acc-msg .acc-msg-bubble a:hover, .acc-thread .acc-msg .acc-msg-bubble a:focus-visible { text-decoration-thickness: 2px; outline: 0; }
+.acc-thread .acc-msg.is-note .acc-msg-bubble { background: transparent; border-color: var(--line-strong); color: var(--fg); }
+.acc-thread .acc-msg.is-note .acc-msg-bubble p { color: var(--fg); }
+.acc-thread .acc-msg-who, .acc-thread .acc-msg time { color: var(--fg-dim); }
+.acc-csteps { grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); }
+@media (max-width: 699px) { .acc-csteps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* a quote in the conversation: a card of its own */
+.acc-qnote { display: grid; gap: 6px; min-width: min(100%, 300px); padding: 14px 16px; text-align: left; border: 2px solid #ffc446; background: #1d1d21; color: #f3f3f1; box-shadow: 4px 4px 0 var(--k); }
+.acc-qnote-tag { justify-self: start; padding: 3px 8px 2px; font-family: var(--display); font-size: 0.72rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; background: #ffc446; color: #0b0b0c; }
+.acc-qnote strong { font-family: var(--display); font-size: 2rem; font-weight: 900; font-style: italic; line-height: 1; color: #fff; }
+.acc-qnote p { margin: 0; color: #f3f3f1; white-space: pre-wrap; overflow-wrap: anywhere; }
+.acc-qnote a { color: inherit; text-decoration: underline; }
+.acc-qnote dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 4px 0 0; font-size: 0.9rem; }
+.acc-qnote dt { font-family: var(--display); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #c9c9c6; }
+.acc-qnote dd { margin: 0; color: #f3f3f1; }
+.acc-msg.is-note:has(.acc-qnote) { max-width: min(96%, 460px); }
+/* the quote pinned above the reply box */
+.acc-com-talk .acc-quote { margin: 0 0 14px; }
+.acc-quote-code { display: grid; gap: 8px; width: min(100%, 420px); }
+.acc-quote-codeform { display: grid; gap: 6px; max-width: none; }
+.acc-quote-codeform label { font-family: var(--display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-dim); }
+.acc-quote-codeform > div { display: flex; gap: 8px; }
+.acc-quote-codeform input { flex: 1; min-width: 0; padding: 9px 12px; font: inherit; letter-spacing: 0.08em; color: var(--fg); background: var(--page); border: 2px solid var(--line-strong); border-radius: 0; outline: 0; }
+.acc-quote-codeform input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 2px; }
+.acc-quote-off { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; margin: 0; padding: 8px 12px; border: 1px dashed var(--gold-ink); color: var(--fg); }
+.acc-quote-off b { font-family: var(--display); letter-spacing: 0.06em; }
+.acc-quote-total { display: flex; justify-content: space-between; margin: 0; font-family: var(--display); font-size: 1.05rem; font-weight: 800; text-transform: uppercase; color: var(--fg); }
+.acc-quote-total b { font-size: 1.4rem; font-style: italic; }
+.cmr-kinds[role='radiogroup'] { margin: 0; }
+/* a commission's row, with its delete button beside it; choosing several to delete */
+.acc-crow-wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.acc-crow-del { width: 40px; height: 40px; }
+.acc-orow.acc-crow.is-picking { grid-template-columns: auto minmax(0, 1fr) auto auto 26px; }
+.acc-ccount { font-family: var(--display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-dim); }
+@media (max-width: 599px) {
+  .acc-orow.acc-crow.is-picking { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .acc-crow-del { width: 34px; height: 34px; }
+}

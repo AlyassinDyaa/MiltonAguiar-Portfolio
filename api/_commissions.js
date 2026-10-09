@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
-import { SITE, shapeAddress } from './_orders.js'
-import { artistInbox, clean, sendMail } from './_users.js'
+import { SITE, codeUsed, shapeAddress } from './_orders.js'
+import { artistInbox, clean, emailsToArtist, sendMail } from './_users.js'
 
 /* Commissions: a customer asks for a piece, talks it over with the artist, gets a quote, pays it,
    and follows the piece from sketch to delivery (the leading underscore keeps Vercel from serving
@@ -33,9 +33,30 @@ export const SETTINGS = {
 
 export const STATUSES = ['requested', 'discussing', 'quoted', 'paid', 'sketch', 'inks', 'colours', 'delivered', 'cancelled']
 export const WORK_STAGES = ['sketch', 'inks', 'colours', 'delivered', 'cancelled'] // what the admin moves it to once paid
+/* What the piece goes through, set on the quote (quote.stages): a sketch is sketched and delivered,
+   an inked piece is inked too, full colour (and anything bigger) gets its colours. A quote from
+   before this goes through all of them. */
+export const STAGE_SETS = { sketch: ['sketch', 'delivered'], inks: ['sketch', 'inks', 'delivered'], full: ['sketch', 'inks', 'colours', 'delivered'] }
+export const stagesOf = (c) => STAGE_SETS[(c && c.quote && c.quote.stages) || 'full'] || STAGE_SETS.full
+// the likely one for a kind of piece, from the offer's name and what it includes: colour, ink, sketch or pencil
+export const guessStages = (kind) => {
+  const tier = ((read('content/pages/commissions.json') || {}).tiers || []).find((t) => t && String(t.name || '').trim() === String(kind || '').trim()) || {}
+  const words = [kind, tier.text, ...(Array.isArray(tier.includes) ? tier.includes : [])].join(' ').toLowerCase()
+  if (/colou?r/.test(words)) return 'full'
+  if (/\bink/.test(words)) return 'inks'
+  if (/sketch|pencil/.test(words)) return 'sketch'
+  return 'full'
+}
 export const STATUS_WORDS = { requested: 'Requested', discussing: 'Discussing', quoted: 'Quoted', paid: 'Paid', sketch: 'Sketch', inks: 'Inks', colours: 'Colours', delivered: 'Delivered', cancelled: 'Cancelled' }
 const OPEN = ['requested', 'discussing', 'quoted'] // not paid yet: the customer can still cancel
 export const isOpen = (c) => OPEN.includes(c.status)
+/* The commissions that count toward rewards ('A number of commissions'), kept apart from the shop's
+   orders and pieces: paid (paid, sketch, inks, colours, delivered), not refunded, and still in the
+   customer's account. As with shop orders, one the customer removed from their account no longer
+   counts. */
+export const COUNTED = ['paid', 'sketch', 'inks', 'colours', 'delivered']
+export const countedMatch = (userId) => ({ userId, status: { $in: COUNTED }, 'payment.refunded': { $ne: true }, customerRemoved: { $ne: true } })
+export const counts = (c) => COUNTED.includes(c.status) && !(c.payment && c.payment.refunded) && !c.customerRemoved
 export const isPaid = (c) => Boolean(c && c.payment && c.payment.paidAt)
 
 const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return null } }
@@ -45,7 +66,6 @@ export const kinds = () => [...((read('content/pages/commissions.json') || {}).t
 /* New requests only while commissions are open (Page text → Commissions → Commissions are open).
    Commissions already asked for carry on either way: messages, paying a quote, the stages. */
 export const commissionsOpen = () => {
-  if (typeof globalThis.__maCommissionsOpen === 'boolean') return globalThis.__maCommissionsOpen // set only by tests
   return (read('content/pages/commissions.json') || {}).open !== false
 }
 const brandName = () => (read('content/site/brand.json') || {}).name || 'Milton Aguiar'
@@ -97,12 +117,13 @@ const summary = (c) => {
   return {
     id: c._id, number: c.number, title: c.title, kind: (c.details && c.details.kind) || '', status: c.status,
     price: c.quote ? c.quote.price : null, currency: (c.quote && c.quote.currency) || SETTINGS.currency, ship: Boolean(c.quote && c.quote.ship),
+    stages: stagesOf(c), counted: counts(c), removed: Boolean(c.customerRemoved),
     paid: isPaid(c), createdAt: c.createdAt, updatedAt: c.updatedAt,
     lastAt: last ? last.at : c.createdAt, lastFrom: last ? last.from : '', lastText: last ? String(last.text || '').slice(0, 140) : '',
   }
 }
 // the payment as the customer sees it (no ids)
-const paymentFor = (p) => (p && p.paidAt ? { provider: p.provider, amount: p.amount, currency: p.currency, paidWith: p.paidWith || '', paidAt: p.paidAt, refunded: Boolean(p.refunded) } : null)
+const paymentFor = (p) => (p && p.paidAt ? { provider: p.provider, amount: p.amount, currency: p.currency, paidWith: p.paidWith || '', paidAt: p.paidAt, refunded: Boolean(p.refunded), ...(p.code ? { code: p.code, discount: p.discount || 0 } : {}) } : null)
 export const forCustomer = (c, full = false) => ({
   ...summary(c),
   unread: (c.unread && c.unread.customer) || 0,
@@ -112,7 +133,7 @@ export const forAdmin = (c, full = false) => ({
   ...summary(c),
   unread: (c.unread && c.unread.artist) || 0,
   userId: c.userId || null, email: c.email || '', name: c.name || '', test: Boolean(c.payment && c.payment.test),
-  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: c.payment || null, pending: c.pending || null, address: c.address || null } : {}),
+  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: c.payment || null, pending: c.pending || null, address: c.address || null, suggestedStages: guessStages(c.details && c.details.kind) } : {}),
 })
 
 /* ---------- adding to the thread ----------
@@ -140,7 +161,7 @@ const firstName = (c) => String(c.name || '').split(' ')[0]
 const paras = (t) => String(t || '').split(/\n{2,}/).map((p) => p.replace(/\n/g, ' ').trim()).filter(Boolean)
 const safely = async (what, mail) => { try { return await sendMail(mail) } catch (e) { console.error(`${what} email not sent:`, e.message); return false } }
 
-export const mailArtistRequest = (c, site) => safely('commission request', {
+export const mailArtistRequest = (c, site) => (!emailsToArtist('commissions') ? Promise.resolve(false) : safely('commission request', {
   to: artistInbox(),
   subject: `Commission request ${c.number}: ${c.details.kind || 'a piece'} for ${c.name || c.email}`,
   kicker: 'Commission request',
@@ -156,15 +177,15 @@ export const mailArtistRequest = (c, site) => safely('commission request', {
   button: { label: 'Open the commission', url: adminLink(site, c._id) },
   after: 'Answer in the admin (Sales → Orders → Commissions): they see it in their account, and get an email.',
   replyTo: c.email ? `${String(c.name || '').replace(/[<>"]/g, '')} <${c.email}>` : undefined,
-})
-export const mailArtistMessage = (c, msg, site, what = 'A new message') => safely('commission message', {
+}))
+export const mailArtistMessage = (c, msg, site, what = 'A new message') => (!emailsToArtist('replies') ? Promise.resolve(false) : safely('commission message', {
   to: artistInbox(),
   subject: `${what} on commission ${c.number}${c.name ? ` from ${c.name}` : ''}`,
   kicker: `Commission ${c.number}`,
   title: what,
   lines: [`${c.name || c.email} wrote about "${c.title}":`, ...paras(msg.text), ...(msg.links && msg.links.length ? [`Links: ${msg.links.join(' ')}`] : [])],
   button: { label: 'Open the commission', url: adminLink(site, c._id) },
-})
+}))
 export const mailCustomer = (c, site, { subject, kicker, title, lines, orders, label = 'See your commission' }) => safely('commission', {
   to: c.email,
   subject,
@@ -183,9 +204,43 @@ export const quoteBox = (c) => ({
     ['What is included', c.quote.includes || '—'],
     ...(c.quote.due ? [['Ready by', dueWords(c.quote.due)]] : []),
     ['Delivery', c.quote.ship ? 'Posted to you' : 'Digital'],
+    ['Stages', stagesOf(c).map((k) => STATUS_WORDS[k]).join(' → ')],
   ],
   total: price(c.quote.price, c.quote.currency),
 })
+
+/* A commission written out for the copy emailed before it leaves the customer's account: the
+   request, the quote, the payment, how far it got, and the conversation. Long words go on the left
+   (they wrap); amounts on the right. */
+const day = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '')
+export const copyBox = (c) => {
+  const d = c.details || {}
+  const q = c.quote
+  const p = c.payment && c.payment.paidAt ? c.payment : null
+  const cut = (t, n = 600) => { const s = String(t || '').replace(/\s+/g, ' ').trim(); return s.length > n ? `${s.slice(0, n - 1)}…` : s }
+  const rows = [
+    [`Asked ${day(c.createdAt)}: ${d.kind || 'a piece'}`, ''],
+    [`The idea: ${cut(d.idea)}`, ''],
+    ...(d.refs && d.refs.length ? [[`References: ${d.refs.join(' ')}`, '']] : []),
+    ...(d.size ? [[`Size: ${d.size}`, '']] : []),
+    ...(d.budget ? [[`Budget: ${d.budget}`, '']] : []),
+    ...(d.due ? [[`Needed by: ${d.due}`, '']] : []),
+    ...(q ? [
+      ['Quote', price(q.price, q.currency)],
+      [`Included: ${cut(q.includes, 300)}`, ''],
+      ...(q.due ? [[`Ready by ${dueWords(q.due)}`, '']] : []),
+      [`${q.ship ? 'Posted' : 'Digital'} · ${stagesOf(c).map((k) => STATUS_WORDS[k]).join(' → ')}`, ''],
+    ] : [['No quote was sent', '']]),
+    ...(p ? [
+      ...(p.code ? [[`Code ${p.code}`, `−${price(p.discount || 0, p.currency)}`]] : []),
+      [`Paid ${day(p.paidAt)}${p.paidWith ? ` by ${p.paidWith}` : ''}${p.refunded ? ' (refunded)' : ''}`, price(p.amount, p.currency)],
+    ] : []),
+    [`Stage reached: ${STATUS_WORDS[c.status] || c.status}`, ''],
+    ['The conversation', ''],
+    ...(c.messages || []).map((m) => [`${day(m.at)}, ${m.from === 'customer' ? 'you' : m.from === 'artist' ? 'Milton' : 'note'}: ${cut(m.text, 800)}${m.links && m.links.length ? ` ${m.links.join(' ')}` : ''}`, '']),
+  ]
+  return { title: `Commission ${c.number}`, sub: [c.title, STATUS_WORDS[c.status]].filter(Boolean).join(' · '), rows, total: p ? price(p.amount, p.currency) : q ? price(q.price, q.currency) : '' }
+}
 
 /* ---------- paid ----------
    A payment taken (Stripe's webhook, or PayPal's capture): the commission is marked paid, once,
@@ -195,28 +250,36 @@ export const markPaid = async (id, payment, address, site) => {
   if (!dbReady()) return null
   const c = await col()
   const now = new Date()
-  const note = message('system', `Paid ${price(payment.amount, payment.currency)}${payment.paidWith ? ` by ${payment.paidWith}` : ''}. Thank you: the work starts now.`)
+  const note = message('system', `Paid ${price(payment.amount, payment.currency)}${payment.paidWith ? ` by ${payment.paidWith}` : ''}${payment.code ? ` with the code ${payment.code} (−${price(payment.discount || 0, payment.currency)})` : ''}. Thank you: the work starts now.`)
   const got = after(await c.findOneAndUpdate(
     { _id: id, 'payment.paidAt': { $exists: false } },
     { $set: { status: 'paid', payment: { ...payment, paidAt: now }, pending: null, ...(address ? { address } : {}), updatedAt: now }, $push: { messages: note }, $inc: { 'unread.customer': 1, 'unread.artist': 1 } },
     { returnDocument: 'after' },
   ))
   if (!got) return null // already paid (Stripe says so more than once)
-  const box = { ...quoteBox(got), foot: [`Paid by ${payment.paidWith || (payment.provider === 'paypal' ? 'PayPal' : 'card')}`, address ? `Posting to ${addressWords(address)}` : ''].filter(Boolean).join(' · ') }
+  // a discount code: a reward or a gift shows as used in their account; a PayPal use is counted here (Stripe counts its own)
+  if (payment.code) { try { await codeUsed({ code: payment.code, promoId: payment.promoId, viaPaypal: payment.provider === 'paypal', userId: got.userId, ref: payment.ref }) } catch (e) { console.error('code use not noted:', e.message) } }
+  const base = quoteBox(got)
+  const box = {
+    ...base,
+    rows: [...base.rows, ...(payment.code ? [[`Code ${payment.code}`, `−${price(payment.discount || 0, payment.currency)}`]] : [])],
+    total: price(payment.amount, payment.currency),
+    foot: [`Paid by ${payment.paidWith || (payment.provider === 'paypal' ? 'PayPal' : 'card')}`, address ? `Posting to ${addressWords(address)}` : ''].filter(Boolean).join(' · '),
+  }
   await mailCustomer(got, site, {
     subject: `Your ${brandName()} commission ${got.number} is paid`,
     kicker: 'Thank you',
     title: `Commission ${got.number} paid`,
-    lines: ['Thank you, your payment is in and the work can start. You can follow every stage in your account: sketch, inks, colours, then delivery.'],
+    lines: [`Thank you, your payment is in and the work can start. You can follow every stage in your account: ${stagesOf(got).map((k) => STATUS_WORDS[k].toLowerCase()).join(', then ')}.`],
     orders: [box],
     label: 'Follow your commission',
   })
-  await safely('commission paid', {
+  if (emailsToArtist('commissions')) await safely('commission paid', {
     to: process.env.ORDER_EMAIL_TO || artistInbox(),
     subject: `Commission paid ${got.number}: ${price(payment.amount, payment.currency)}${got.name ? ` from ${got.name}` : ''}${payment.test ? ' (test)' : ''}`,
     kicker: 'Commission paid',
     title: `${price(payment.amount, payment.currency)} paid`,
-    lines: [`${got.name || got.email} (${got.email}) paid for "${got.title}"${payment.paidWith ? ` by ${payment.paidWith}` : ''}${payment.test ? ' (a test)' : ''}.`, ...(address ? [`Post to: ${addressWords(address)}`] : ['Delivery: digital.'])],
+    lines: [`${got.name || got.email} (${got.email}) paid for "${got.title}"${payment.paidWith ? ` by ${payment.paidWith}` : ''}${payment.test ? ' (a test)' : ''}.`, ...(payment.code ? [`Discount code ${payment.code}: −${price(payment.discount || 0, payment.currency)}`] : []), ...(address ? [`Post to: ${addressWords(address)}`] : ['Delivery: digital.'])],
     button: { label: 'Open the commission', url: adminLink(site, got._id) },
     after: 'Move it on to Sketch, Inks, Colours and Delivered in Sales → Orders → Commissions: they see each step in their account.',
   })
@@ -232,6 +295,7 @@ export const paidByStripe = async (o, { paidWith, pi, site }) => {
   return markPaid(id, {
     provider: 'stripe', ref: o.id, pi: pi || '', amount: (o.amount_total || 0) / 100, currency: String(o.currency || 'eur').toUpperCase(),
     paidWith: paidWith || 'Card', test: !o.livemode,
+    ...(o.metadata.code ? { code: String(o.metadata.code).toUpperCase(), discount: ((o.total_details && o.total_details.amount_discount) || 0) / 100 } : {}),
   }, ship && ship.address ? shapeAddress(ship.address, ship.name) : null, site)
 }
 // a refund in Stripe (charge.refunded): the payment shows as refunded, with a note in the thread
@@ -260,7 +324,7 @@ export const paypal = async (path, body) => {
   return said
 }
 // a PayPal capture that went through: the payer's address (when posted), then markPaid
-export const paidByPaypal = async (id, orderId, said, site) => {
+export const paidByPaypal = async (id, orderId, said, site, pending = null) => {
   const unit = (said.purchase_units || [])[0] || {}
   const ship = unit.shipping || {}
   const a = ship.address || null
@@ -268,6 +332,7 @@ export const paidByPaypal = async (id, orderId, said, site) => {
   return markPaid(id, {
     provider: 'paypal', ref: `pp_${orderId}`, captureId: capture.id || '', paidWith: 'PayPal', test: paypalSandbox(),
     amount: Number(capture.amount && capture.amount.value) || 0, currency: (capture.amount && capture.amount.currency_code) || SETTINGS.currency,
+    ...(pending && pending.code ? { code: pending.code, promoId: pending.promoId || '', discount: pending.discount || 0 } : {}),
   }, a ? shapeAddress({ line1: a.address_line_1, line2: a.address_line_2, city: a.admin_area_2, state: a.admin_area_1, postal_code: a.postal_code, country: a.country_code }, ship.name && ship.name.full_name) : null, site)
 }
 

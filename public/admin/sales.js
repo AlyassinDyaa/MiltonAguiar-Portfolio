@@ -1105,6 +1105,11 @@ window.IASales = (() => {
   const C_STATUS = [['requested', 'New'], ['discussing', 'Discussing'], ['quoted', 'Quoted'], ['paid', 'Paid'], ['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered'], ['cancelled', 'Cancelled']]
   const cStatusName = Object.fromEntries(C_STATUS)
   const C_WORK = [['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered'], ['cancelled', 'Cancel']]
+  // what a piece goes through once paid, set on the quote (api/_commissions.js STAGE_SETS)
+  const C_SETS = [['sketch', 'Sketch → Delivered (a sketch)', ['sketch', 'delivered']], ['inks', 'Sketch → Inks → Delivered (an inked piece)', ['sketch', 'inks', 'delivered']], ['full', 'Sketch → Inks → Colours → Delivered (full colour, or bigger)', ['sketch', 'inks', 'colours', 'delivered']]]
+  const setWords = (key) => ((C_SETS.find((x) => x[0] === key) || C_SETS[2])[2]).map((k) => cStatusName[k]).join(' → ')
+  // a label with the red star of a field that must be filled in
+  const reqLabel = (text) => el('span', {}, [text, el('b', { className: 'sl-req', ariaHidden: 'true', textContent: ' *' })])
   const C_CHIPS = [
     ['all', 'All', () => true],
     ['unread', 'Unread', (c) => c.unread > 0],
@@ -1231,7 +1236,7 @@ window.IASales = (() => {
           el('span', { className: 'sl-c-order' }, [el('strong', { textContent: c.number }), el('small', { textContent: date(new Date(c.createdAt).getTime()) })]),
           el('span', { className: 'sl-c-who' }, [avatar({ name: c.name, email: c.email, member: memberOf(c.email) }), el('span', {}, [el('strong', { textContent: c.name || '—' }), el('small', { textContent: c.email })])]),
           el('span', {}, [el('strong', { textContent: c.title }), el('small', { textContent: c.kind })]),
-          el('span', {}, [badge(`c-${c.status}`, cStatusName[c.status] || c.status)]),
+          el('span', {}, [badge(`c-${c.status}`, cStatusName[c.status] || c.status), c.removed ? el('small', { textContent: 'Removed by the customer' }) : null]),
           el('span', { className: 'sl-c-total' }, [el('strong', { textContent: c.price != null ? money(c.price, c.currency) : '—' }), el('small', { textContent: c.paid ? 'Paid' : c.price != null ? 'Not paid yet' : 'No quote yet' })]),
           el('span', { className: 'sl-c-last' }, [
             el('strong', {}, [c.unread ? el('b', { className: 'sl-unread', textContent: String(c.unread) }) : null, ago(c.lastAt || c.updatedAt)]),
@@ -1250,6 +1255,17 @@ window.IASales = (() => {
     return out
   }
   const ymd = (d) => (d ? String(d).slice(0, 10) : '')
+  // a quote as it shows in the conversation
+  const quoteNote = (q) => el('div', { className: 'sl-qnote' }, [
+    el('span', { className: 'sl-qnote-tag', textContent: 'Quote' }),
+    el('strong', { textContent: money(q.price, q.currency) }),
+    el('p', {}, linked(q.includes)),
+    el('dl', {}, [
+      q.due ? el('dt', { textContent: 'Ready by' }) : null, q.due ? el('dd', { textContent: date(new Date(q.due).getTime()) }) : null,
+      el('dt', { textContent: 'Delivery' }), el('dd', { textContent: q.ship ? 'Posted to them' : 'Digital' }),
+      el('dt', { textContent: 'Stages' }), el('dd', { textContent: setWords(q.stages || 'full') }),
+    ]),
+  ])
   const commissionPanel = (c) => {
     const id = cState.open
     const draft = cState.drafts[id] || (cState.drafts[id] = {})
@@ -1285,7 +1301,7 @@ window.IASales = (() => {
     // the conversation: the customer on the left, Milton on the right, the site's notes in the middle
     const thread = el('div', { className: 'sl-thread' }, (c.messages || []).map((m) => el('div', { className: `sl-msg is-${m.from}` }, [
       m.from !== 'system' ? el('span', { className: 'sl-msg-who', textContent: m.from === 'artist' ? 'You' : (c.name || 'Customer').split(' ')[0] }) : null,
-      el('div', { className: 'sl-msg-bubble' }, [
+      m.kind === 'quote' && m.quote ? quoteNote(m.quote) : el('div', { className: 'sl-msg-bubble' }, [
         m.text ? el('p', {}, linked(m.text)) : null,
         m.links && m.links.length ? el('ul', { className: 'sl-msg-links' }, m.links.map((l) => el('li', {}, [el('a', { href: l, target: '_blank', rel: 'noopener noreferrer', textContent: l.replace(/^https?:\/\//, '') })]))) : null,
       ]),
@@ -1302,8 +1318,12 @@ window.IASales = (() => {
 
     // the quote: price, what it includes, when, and whether it is posted
     const q = c.quote
-    const price = input('price', { type: 'number', min: '1', step: '1', inputMode: 'decimal', value: q ? String(q.price) : '', placeholder: 'For example 250' })
-    const includes = input('includes', { rows: 3, maxLength: 1000, value: q ? q.includes : '', placeholder: 'For example: A3 full colour, signed, high-resolution file' }, 'textarea')
+    const price = input('price', { type: 'number', min: '1', step: '1', inputMode: 'decimal', value: q ? String(q.price) : '', placeholder: 'For example 250', required: true, ariaRequired: 'true' })
+    const includes = input('includes', { rows: 3, maxLength: 1000, value: q ? q.includes : '', placeholder: 'For example: A3 full colour, signed, high-resolution file', required: true, ariaRequired: 'true' }, 'textarea')
+    // what the piece goes through: from the quote, else guessed from the kind of piece they asked for
+    const stageWant = draft.stages ?? ((q && q.stages) || c.suggestedStages || 'full')
+    const stageSel = el('select', { className: 'sl-select', required: true, ariaRequired: 'true' }, C_SETS.map(([k, t]) => el('option', { value: k, textContent: t, selected: k === stageWant })))
+    stageSel.addEventListener('change', () => { draft.stages = stageSel.value })
     const due = input('due', { type: 'date', value: q ? ymd(q.due) : '' })
     const shipBox = input('ship', { type: 'checkbox', className: 'sl-switch-box', checked: q ? Boolean(q.ship) : false })
     const ship = el('label', { className: 'sl-switch' }, [shipBox, el('span', { className: 'sl-switch-track', ariaHidden: 'true' }), el('span', {}, [el('strong', { textContent: 'Post it to me' }), el('small', { textContent: 'On: the checkout asks for their address. Off: a digital piece.' })])])
@@ -1311,26 +1331,28 @@ window.IASales = (() => {
       const p = Number(draft.price ?? price.value)
       if (!(p >= 1)) { said.classList.add('is-bad'); said.textContent = 'Put a price first.'; price.focus(); return }
       if (!String(draft.includes ?? includes.value).trim()) { said.classList.add('is-bad'); said.textContent = 'Say what the price includes.'; includes.focus(); return }
-      run(sendQuote, { action: 'adminQuote', price: p, includes: draft.includes ?? includes.value, due: draft.due ?? due.value, ship: draft.ship ?? shipBox.checked }, () => { ['price', 'includes', 'due', 'ship'].forEach((k) => delete draft[k]); cState.said = 'Quote sent ✓ They have an email.' })
+      run(sendQuote, { action: 'adminQuote', price: p, includes: draft.includes ?? includes.value, due: draft.due ?? due.value, ship: draft.ship ?? shipBox.checked, stages: stageSel.value }, () => { ['price', 'includes', 'due', 'ship', 'stages'].forEach((k) => delete draft[k]); cState.said = 'Quote sent ✓ They have an email.' })
     }, 'ia-btn')
     const quoteForm = el('div', { className: 'sl-quote-form' }, [
       el('div', { className: 'sl-quote-row' }, [
-        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Price (€)' }), price]),
-        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Ready by' }), due]),
+        el('label', { className: 'sl-label' }, [reqLabel('Price (€)'), price]),
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Ready by (optional)' }), due]),
       ]),
-      el('label', { className: 'sl-label' }, [el('span', { textContent: 'What is included' }), includes]),
+      el('label', { className: 'sl-label' }, [reqLabel('What is included'), includes]),
+      el('label', { className: 'sl-label' }, [reqLabel('What the piece goes through'), stageSel, el('small', { className: 'sl-hint', textContent: `Their tracker shows only these stages. Picked from what they asked for (${(c.details && c.details.kind) || 'the kind of piece'}); change it if needed.` })]),
       ship,
       el('div', { className: 'sl-save' }, [sendQuote, el('small', { className: 'sl-hint', textContent: 'Full price, paid up front. They accept and pay it in their account.' })]),
     ])
     const quoteNow = q ? el('div', { className: 'sl-quote-now' }, [
       el('strong', { textContent: money(q.price, q.currency) }),
       el('span', {}, linked(q.includes)),
-      el('small', { textContent: [q.due ? `Ready by ${date(new Date(q.due).getTime())}` : '', q.ship ? 'Posted to them' : 'Digital', `sent ${date(new Date(q.at).getTime(), true)}`].filter(Boolean).join(' · ') }),
+      el('small', { textContent: [q.due ? `Ready by ${date(new Date(q.due).getTime())}` : '', q.ship ? 'Posted to them' : 'Digital', setWords(q.stages || 'full'), `sent ${date(new Date(q.at).getTime(), true)}`].filter(Boolean).join(' · ') }),
     ]) : null
 
     // the stages of the work: once it is paid (cancel any time)
     const note = input('note', { placeholder: 'A note for them with the step (optional)', maxLength: 2000 })
-    const stages = el('div', { className: 'sl-stages', role: 'group', ariaLabel: 'Stage' }, C_WORK.map(([k, t]) => {
+    const goesThrough = c.stages || ['sketch', 'inks', 'colours', 'delivered']
+    const stages = el('div', { className: 'sl-stages', role: 'group', ariaLabel: 'Stage', style: `grid-template-columns:repeat(${goesThrough.length + 1},minmax(0,1fr))` }, C_WORK.filter(([k]) => k === 'cancelled' || goesThrough.includes(k)).map(([k, t]) => {
       const off = (k !== 'cancelled' && !paid) || c.status === k
       const b = el('button', { type: 'button', className: `sl-stage is-${k === 'cancelled' ? 'cancelled' : k === 'delivered' ? 'delivered' : 'new'} ${c.status === k ? 'on' : ''}`, textContent: t, disabled: off && c.status !== k, ariaPressed: String(c.status === k) })
       b.addEventListener('click', () => {
@@ -1352,7 +1374,7 @@ window.IASales = (() => {
           el('div', { className: 'ia-kicker', textContent: `Asked ${date(new Date(c.createdAt).getTime(), true)}` }),
           el('h2', { textContent: c.number }),
           el('p', { className: 'sl-panel-sub', textContent: c.title }),
-          el('div', { className: 'sl-badges' }, [badge(`c-${c.status}`, cStatusName[c.status] || c.status), paid ? badge('paid', p.refunded ? 'Refunded' : 'Paid') : null, c.test ? badge('test', 'Test') : null]),
+          el('div', { className: 'sl-badges' }, [badge(`c-${c.status}`, cStatusName[c.status] || c.status), paid ? badge('paid', p.refunded ? 'Refunded' : 'Paid') : null, c.test ? badge('test', 'Test') : null, c.removed ? badge('removed', 'Removed by the customer') : null]),
         ]),
         button('×', closeCommission, 'sl-x'),
       ]),
@@ -1380,6 +1402,7 @@ window.IASales = (() => {
         block('Payment', p && p.paidAt ? [
           el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Paid' }), el('strong', { textContent: money(p.amount, p.currency) })]),
           el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'With' }), el('strong', { textContent: p.paidWith || p.provider })]),
+          p.code ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Code ${p.code}` }), el('strong', { textContent: `− ${money(p.discount || 0, p.currency)}` })]) : null,
           el('p', { className: 'sl-dim', textContent: `${date(new Date(p.paidAt).getTime(), true)}${p.test ? ' · test payment' : ''}${p.refunded ? ' · refunded' : ''}` }),
           a ? el('p', { className: 'sl-address' }, [a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), country(a.country)].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line]))) : el('p', { className: 'sl-dim', textContent: c.quote && c.quote.ship ? 'No address came with the payment.' : 'Digital: nothing to post.' }),
           stripeLink || paypalLink ? el('a', { className: 'ia-btn ghost', href: stripeLink || paypalLink, target: '_blank', rel: 'noopener', textContent: stripeLink ? 'Open in Stripe ↗' : 'Open in PayPal ↗' }) : null,

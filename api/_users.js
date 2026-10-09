@@ -216,6 +216,17 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
 // the artist's own inbox, as for the Contact form: CONTACT_TO, else the contact email in the admin
 // (Site → Name, colour and contact), else the address the site sends from
+/* Emails to the artist can be switched off, each kind on its own (Shop → Settings and payments →
+   Emails to you, content/site/shop.json `emails`): 'orders' (a new shop order), 'commissions' (a new
+   commission request, and a commission paid), 'replies' (a customer's message on a commission, or
+   their cancelling it). On unless switched off; read afresh each time. Emails to customers never
+   depend on these. */
+export const emailsToArtist = (kind) => {
+  try {
+    const emails = (JSON.parse(readFileSync(join(process.cwd(), 'content/site/shop.json'), 'utf8')) || {}).emails || {}
+    return emails[kind] !== false
+  } catch { return true }
+}
 export const artistInbox = () => {
   const m = String(process.env.MAIL_FROM || '').match(/<([^>]+)>/)
   return process.env.CONTACT_TO || brandInfo().email || (m && m[1]) || process.env.SMTP_USER || String(process.env.MAIL_FROM || '').trim()

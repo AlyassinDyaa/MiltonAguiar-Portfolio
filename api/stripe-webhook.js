@@ -42,7 +42,7 @@ export const commissionPaid = async (o, req) => {
   const piId = typeof o.payment_intent === 'string' ? o.payment_intent : (o.payment_intent && o.payment_intent.id) || ''
   const payment = piId ? await stripe(`payment_intents/${piId}?expand[]=latest_charge`) : null
   const charge = payment && payment.latest_charge && typeof payment.latest_charge === 'object' ? payment.latest_charge : null
-  return paidByStripe(o, { paidWith: (charge && paidWithOf(charge.payment_method_details)) || 'Card', pi: piId, site: siteUrl(req) })
+  return paidByStripe(o, { paidWith: (charge && paidWithOf(charge.payment_method_details)) || (o.amount_total === 0 ? 'Free, with a code' : 'Card'), pi: piId, site: siteUrl(req) })
 }
 
 export default async function handler(req, res) {

@@ -595,6 +595,16 @@ collections:
           - { name: countries, label: Countries you post to, widget: list, required: false, hint: 'Two-letter country codes, separated by commas: PT, ES, FR, GB, US.' }
           - { name: thanksTitle, label: Heading, widget: string, required: false }
           - { name: thanksText, label: Text, widget: string, required: false }
+          - name: emails
+            label: Emails to you
+            widget: object
+            required: false
+            collapsed: false
+            hint: 'Which emails come to you (the contact email under Name, colour and contact). Emails to your customers always go.'
+            fields:
+              - { name: orders, label: New shop orders, widget: boolean, default: true, required: false, hint: 'An email for each order paid in the Shop.' }
+              - { name: commissions, label: New commission requests and payments, widget: boolean, default: true, required: false, hint: 'An email when someone asks for a commission, and when they pay its quote.' }
+              - { name: replies, label: Customer replies on commissions, widget: boolean, default: true, required: false, hint: 'An email when a customer writes in a commission conversation, or cancels one. Off: you see them in Sales → Orders → Commissions.' }
 
       - name: categories
         label: Shop categories and sizes
@@ -691,7 +701,8 @@ collections:
                   - { label: 'Confirming their email', value: verify }
                   - { label: 'A number of orders', value: orders }
                   - { label: 'A number of pieces collected', value: pieces }
-              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders or pieces it takes: 1 for their first order, 3, 6, 10... Refunded and deleted orders do not count.' }
+                  - { label: 'A number of commissions', value: commissions }
+              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders, pieces or commissions it takes: 1 for their first, 3, 6, 10... A commission counts once it is paid. Refunded, cancelled and deleted ones do not count, and commissions never count as shop orders or pieces.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
           - name: cards
             label: Membership card designs
@@ -723,7 +734,8 @@ collections:
                   - { label: 'Confirming their email', value: verify }
                   - { label: 'A number of orders', value: orders }
                   - { label: 'A number of pieces collected', value: pieces }
-              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders or pieces it takes: 1 for their first order, 3, 6, 10... Refunded and deleted orders do not count.' }
+                  - { label: 'A number of commissions', value: commissions }
+              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders, pieces or commissions it takes: 1 for their first, 3, 6, 10... A commission counts once it is paid. Refunded, cancelled and deleted ones do not count, and commissions never count as shop orders or pieces.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
           - name: discounts
             label: Discounts
@@ -746,7 +758,8 @@ collections:
                   - { label: 'Confirming their email', value: verify }
                   - { label: 'A number of orders', value: orders }
                   - { label: 'A number of pieces collected', value: pieces }
-              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders or pieces it takes: 1 for their first order, 3, 6, 10... Refunded and deleted orders do not count.' }
+                  - { label: 'A number of commissions', value: commissions }
+              - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders, pieces or commissions it takes: 1 for their first, 3, 6, 10... A commission counts once it is paid. Refunded, cancelled and deleted ones do not count, and commissions never count as shop orders or pieces.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
       - name: sales
         label: Shop sales

@@ -71,9 +71,10 @@ const PERKS = [
 ]
 /* the collector card: the name, the year they joined, a card number, and what they have collected */
 /* Rewards: how each is earned, whether this customer has, and the card design they chose. */
-const earnText = (r) => (r.earnedBy === 'verify' ? 'Confirm your email' : r.earnedBy === 'orders' ? (r.count === 1 ? 'Place your first order' : `Place ${r.count} orders`) : `Collect ${r.count} pieces`)
+const earnText = (r) => (r.earnedBy === 'verify' ? 'Confirm your email' : r.earnedBy === 'orders' ? (r.count === 1 ? 'Place your first order' : `Place ${r.count} orders`) : r.earnedBy === 'commissions' ? (r.count === 1 ? 'Commission a piece' : `Commission ${r.count} pieces`) : `Collect ${r.count} pieces`)
 // a reward is theirs when they have earned it, or when the admin gave it to them as a gift
-const hasEarned = (r, p) => Boolean(p) && ((p.gifts || []).includes(r.id) || (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : p.pieces >= r.count))
+// commissions are counted apart from the shop's orders and pieces (paid, not refunded, still in the account)
+const hasEarned = (r, p) => Boolean(p) && ((p.gifts || []).includes(r.id) || (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : r.earnedBy === 'commissions' ? (p.commissions || 0) >= r.count : p.pieces >= r.count))
 const cardDesigns = () => accountPage.rewards.filter((r) => r.kind === 'card')
 const designOf = (id) => cardDesigns().find((r) => r.id === id) || null
 // a design's picture, placed and zoomed as set in the admin (the card's ::before draws it)
@@ -1101,9 +1102,9 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   const gifted = list.filter((r) => r.gifted)
   const earnable = list.filter((r) => !r.gifted)
   if (!list.length && !giftCodes.length) return <div className="acc-empty"><strong>No rewards yet</strong><p>Rewards for members are on their way.</p></div>
-  const have = (r) => (r.earnedBy === 'orders' ? p.orders : r.earnedBy === 'pieces' ? p.pieces : p.verified ? 1 : 0)
+  const have = (r) => (r.earnedBy === 'orders' ? p.orders : r.earnedBy === 'pieces' ? p.pieces : r.earnedBy === 'commissions' ? p.commissions || 0 : p.verified ? 1 : 0)
   const need = (r) => (r.earnedBy === 'verify' ? 1 : r.count)
-  const unit = (r) => (r.earnedBy === 'pieces' ? 'pieces' : 'orders')
+  const unit = (r) => (r.earnedBy === 'pieces' ? 'pieces' : r.earnedBy === 'commissions' ? 'commissions' : 'orders')
   const copy = async (code) => { try { await navigator.clipboard.writeText(code); setCopied(code); setTimeout(() => setCopied(''), 1600) } catch { /* the code is on screen to copy by hand */ } }
   // the code goes into the cart, and the cart opens to show what it takes off
   const toCart = async (code) => {
@@ -1248,6 +1249,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
       <div className="acct-progress">
         <span><b>{p.orders}</b> {p.orders === 1 ? 'order' : 'orders'}</span>
         <span><b>{p.pieces}</b> {p.pieces === 1 ? 'piece' : 'pieces'}</span>
+        <span><b>{p.commissions || 0}</b> {p.commissions === 1 ? 'commission' : 'commissions'}</span>
         <span><b>{p.verified ? '✓' : '–'}</b> email {p.verified ? 'confirmed' : 'not confirmed'}</span>
         {giftCount > 0 && <span><b>{giftCount}</b> {giftCount === 1 ? 'gift' : 'gifts'}</span>}
       </div>
@@ -1519,7 +1521,7 @@ function Home() {
             )}
             {tab === 'rewards' && <Rewards fresh={freshGifts} onPreview={setPreview} prints={orders ? `${prints} ${prints === 1 ? 'piece' : 'pieces'}` : '…'} />}
             {tab === 'saved' && <Saved />}
-            {tab === 'details' && <Details onPreview={setPreview} owned={owned} progress={orders ? { verified: Boolean(user.verified), orders: keptOrders(orders).length, pieces: piecesIn(orders) } : null} />}
+            {tab === 'details' && <Details onPreview={setPreview} owned={owned} progress={orders ? { verified: Boolean(user.verified), orders: keptOrders(orders).length, pieces: piecesIn(orders), commissions: (commissions.list || []).filter((c) => c.counted).length } : null} />}
             {tab === 'security' && <Security />}
           </motion.div>
         </div>

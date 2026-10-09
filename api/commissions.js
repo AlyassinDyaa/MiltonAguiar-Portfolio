@@ -1,11 +1,11 @@
 import { adminOk } from './_session.js'
 import { accountsMode } from './_buyer.js'
-import { SITE } from './_orders.js'
-import { clean, currentUser, fromThisSite, newId, noteTry, siteUrl, tooMany } from './_users.js'
+import { SITE, checkCode, discountCents } from './_orders.js'
+import { checkPassword, clean, currentUser, fromThisSite, newId, noteTry, sendMail, siteUrl, tooMany } from './_users.js'
 import {
-  SETTINGS, STATUS_WORDS, WORK_STAGES, cents, cleanLinks, cleanText, closePending, col, dbReady, dueWords, forAdmin, forCustomer, isOpen, isPaid, kinds,
+  SETTINGS, STAGE_SETS, STATUS_WORDS, WORK_STAGES, stagesOf, cents, cleanLinks, cleanText, closePending, col, dbReady, dueWords, forAdmin, forCustomer, isOpen, isPaid, kinds,
   addMessage, mailArtistMessage, mailArtistRequest, mailCustomer, message, nextNumber, noteMailed, paidByPaypal, paypal, paypalSandbox, price, quoteBox,
-  commissionsOpen, shopSettings, stripe, titleFrom,
+  commissionsOpen, copyBox, shopSettings, stripe, titleFrom,
 } from './_commissions.js'
 
 /* Commissions, for the customer and for the admin. One function for all of it (Vercel's plan
@@ -20,6 +20,11 @@ import {
      { action: 'pay', id, provider: 'card' | 'paypal' }          accept the quote: answers { url } of the payment page
      { action: 'capture', id, order }                            back from PayPal: the payment is taken
      { action: 'cancel', id }                                    while it is not paid
+     { action: 'remove', ids, password }                         out of their account, after a copy of each is
+                                                                 emailed (nothing goes if it cannot be sent): an
+                                                                 unpaid one is cancelled and deleted, a paid one
+                                                                 only leaves their account (the artist keeps it)
+     'pay' also takes `code`: a discount code, checked again here (a reward code only for its owner)
    The admin (Sales → Orders → Commissions; their pass, or localhost on this computer):
      { action: 'adminList' }  { action: 'adminGet', id }  { action: 'adminMessage', id, text, links }
      { action: 'adminQuote', id, price, includes, due, ship }
@@ -77,10 +82,13 @@ const adminAction = async (req, action, body) => {
     const includes = cleanText(body.includes, 1000)
     if (!includes) return [400, { message: 'Say what the price includes.', field: 'includes' }]
     const due = /^\d{4}-\d{2}-\d{2}$/.test(String(body.due || '')) ? String(body.due) : ''
-    const quote = { price: amount, currency: SETTINGS.currency, includes, due, ship: Boolean(body.ship), at: new Date() }
+    const stages = String(body.stages || '')
+    if (!STAGE_SETS[stages]) return [400, { message: 'Pick what the piece goes through.', field: 'stages' }]
+    const quote = { price: amount, currency: SETTINGS.currency, includes, due, ship: Boolean(body.ship), stages, at: new Date() }
     // a checkout already opened at the old price is closed first
     await closePending(found)
-    const note = message('system', `Quote: ${price(amount)} · ${includes}${due ? ` · ready by ${dueWords(due)}` : ''} · ${quote.ship ? 'posted to you' : 'digital'}`)
+    // the note in the thread carries the quote itself, so both sides show it as a quote card
+    const note = { ...message('system', `Quote: ${price(amount)} · ${includes}${due ? ` · ready by ${dueWords(due)}` : ''} · ${quote.ship ? 'posted to you' : 'digital'}`), kind: 'quote', quote }
     const { after } = await addMessage(id, note, { forSide: 'customer', set: { quote, status: 'quoted', pending: null } })
     await mailCustomer(after, site, {
       subject: `Your commission quote is ready: ${after.number}`,
@@ -98,6 +106,7 @@ const adminAction = async (req, action, body) => {
     const status = String(body.status || '')
     if (!WORK_STAGES.includes(status)) return [400, { message: 'Unknown stage.' }]
     if (status !== 'cancelled' && !isPaid(found)) return [409, { message: 'It is not paid yet: the work stages start once it is.' }]
+    if (status !== 'cancelled' && !stagesOf(found).includes(status)) return [400, { message: `This piece does not go through ${STATUS_WORDS[status]}: the quote says ${stagesOf(found).map((k) => STATUS_WORDS[k]).join(' → ')}.` }]
     if (status === found.status) return [409, { message: `It is at ${STATUS_WORDS[status]} already.` }]
     const note = cleanText(body.note, 2000)
     const words = { sketch: 'The sketch is under way', inks: 'On to the inks', colours: 'On to the colours', delivered: 'Delivered', cancelled: 'Cancelled by the artist' }
@@ -155,13 +164,47 @@ const customerAction = async (req, user, action, body) => {
   }
 
   if (action === 'list') {
-    const list = await c.find({ userId: user._id }).sort({ createdAt: -1 }).limit(200).toArray()
+    const list = await c.find({ userId: user._id, customerRemoved: { $ne: true } }).sort({ createdAt: -1 }).limit(200).toArray()
     return [200, { commissions: list.map((x) => forCustomer(x)), unread: list.reduce((n, x) => n + ((x.unread && x.unread.customer) || 0), 0) }]
+  }
+
+  if (action === 'remove') {
+    // like taking orders out of the account: the password, then a copy of each by email, then out
+    if (await tooMany(`login:${user.email}`, 8, 15)) return [429, { message: 'Too many tries. Wait 15 minutes.' }]
+    if (!(await checkPassword(body.password, user.password))) { await noteTry(`login:${user.email}`); return [400, { message: 'The password is not right.', field: 'password' }] }
+    const ids = [...new Set((Array.isArray(body.ids) ? body.ids : [body.id]).map((x) => String(x || '')).filter((x) => ID.test(x)))].slice(0, 100)
+    const going = ids.length ? await c.find({ _id: { $in: ids }, userId: user._id, customerRemoved: { $ne: true } }).limit(100).toArray() : []
+    if (!going.length) return [404, { message: ids.length > 1 ? 'Those commissions are not in your account any more.' : 'That commission is not in your account any more.' }]
+    const first = (user.name || '').split(' ')[0]
+    const sent = await sendMail({
+      to: user.email,
+      subject: `Your commissions: a copy of ${going.length === 1 ? `commission ${going[0].number}` : `${going.length} commissions`}`,
+      kicker: 'Your commissions',
+      title: going.length === 1 ? 'A copy of your commission' : `A copy of ${going.length} commissions`,
+      lines: [`Hi${first ? ` ${first}` : ''},`, `You took ${going.length === 1 ? 'this commission' : 'these commissions'} out of your account. Here is a copy to keep: the request, the quote, the payment and the whole conversation.`],
+      orders: going.map(copyBox),
+      after: 'Questions about a commission? Just reply to this email.',
+    })
+    if (!sent) return [502, { message: 'The copy could not be emailed just now, so nothing was taken out. Try again in a moment.' }]
+    const dropped = []
+    for (const x of going) {
+      if (isPaid(x)) {
+        // paid: it leaves their account; the artist keeps it, with a note
+        await c.updateOne({ _id: x._id }, { $set: { customerRemoved: true, removedAt: new Date(), updatedAt: new Date() }, $push: { messages: message('system', 'The customer removed this commission from their account (a copy was emailed to them).') }, $inc: { 'unread.artist': 1 } })
+      } else {
+        // not paid: cancelled, and gone (an open checkout for it is closed first)
+        await closePending(x)
+        await c.deleteOne({ _id: x._id })
+        dropped.push(x)
+      }
+    }
+    if (dropped.length) await mailArtistMessage(dropped[0], { text: `${user.name || user.email} took ${dropped.length === 1 ? 'this request' : 'these requests'} out of their account before paying, so ${dropped.length === 1 ? 'it was' : 'they were'} cancelled: ${dropped.map((x) => `${x.number} (${x.title})`).join(', ')}.`, links: [] }, site, dropped.length === 1 ? 'A commission request was withdrawn' : 'Commission requests were withdrawn')
+    return [200, { removed: going.map((x) => x._id) }]
   }
 
   const id = String(body.id || '')
   if (!ID.test(id)) return [400, { message: 'Which commission?' }]
-  const found = await c.findOne({ _id: id, userId: user._id })
+  const found = await c.findOne({ _id: id, userId: user._id, customerRemoved: { $ne: true } })
   if (!found) return [404, { message: 'That commission is not in your account.' }]
 
   if (action === 'get') {
@@ -197,16 +240,28 @@ const customerAction = async (req, user, action, body) => {
     const ways = payWays()
     const q = found.quote
     const name = `Commission ${found.number}: ${found.title}`.slice(0, 250)
-    const amount = cents(q.price * SETTINGS.upFront)
+    // a discount code from the quote card, checked again (a reward code works only for its owner)
+    let deal = null
+    if (String(body.code || '').trim()) {
+      const got = await checkCode(body.code, user)
+      if (!got.ok) return [400, { field: 'code', message: got.message }]
+      deal = got
+    }
+    const total = cents(q.price * SETTINGS.upFront)
+    const off = deal ? discountCents(total, deal.percent) : 0
+    const amount = total - off
+    const codeKept = deal ? { code: deal.code, promoId: deal.promoId, discount: off / 100 } : {}
     if (body.provider === 'paypal') {
       if (!ways.paypal) return [403, { message: 'PayPal is switched off. Pay by card instead.' }]
+      if (amount <= 0) return [400, { field: 'code', message: 'A code that covers the whole price works with card payment: use the card button.' }]
       const value = (amount / 100).toFixed(2)
+      const whole = (total / 100).toFixed(2)
       const order = {
         intent: 'CAPTURE',
         purchase_units: [{
           reference_id: 'commission', custom_id: id, description: name.slice(0, 127),
-          amount: { currency_code: q.currency, value, breakdown: { item_total: { currency_code: q.currency, value } } },
-          items: [{ name: name.slice(0, 127), quantity: '1', unit_amount: { currency_code: q.currency, value }, category: q.ship ? 'PHYSICAL_GOODS' : 'DIGITAL_GOODS', sku: found.number, ...(q.includes ? { description: q.includes.slice(0, 127) } : {}) }],
+          amount: { currency_code: q.currency, value, breakdown: { item_total: { currency_code: q.currency, value: whole }, ...(off ? { discount: { currency_code: q.currency, value: (off / 100).toFixed(2) } } : {}) } },
+          items: [{ name: name.slice(0, 127), quantity: '1', unit_amount: { currency_code: q.currency, value: whole }, category: q.ship ? 'PHYSICAL_GOODS' : 'DIGITAL_GOODS', sku: found.number, ...(q.includes ? { description: q.includes.slice(0, 127) } : {}) }],
         }],
         payment_source: { paypal: { experience_context: {
           brand_name: 'Milton Aguiar', user_action: 'PAY_NOW', shipping_preference: q.ship ? 'GET_FROM_FILE' : 'NO_SHIPPING',
@@ -217,7 +272,7 @@ const customerAction = async (req, user, action, body) => {
         const made = await paypal('/v2/checkout/orders', order)
         const go = (made.links || []).find((l) => l.rel === 'payer-action' || l.rel === 'approve')
         if (!go) throw new Error('paypal: no approval link')
-        await c.updateOne({ _id: id }, { $set: { pending: { provider: 'paypal', ref: made.id, amount: amount / 100, test: paypalSandbox(), at: new Date() } } })
+        await c.updateOne({ _id: id }, { $set: { pending: { provider: 'paypal', ref: made.id, amount: amount / 100, ...codeKept, test: paypalSandbox(), at: new Date() } } })
         return [200, { url: go.href }]
       } catch (e) {
         console.error('commission paypal:', e.message)
@@ -231,7 +286,13 @@ const customerAction = async (req, user, action, body) => {
     ask.set('cancel_url', back(req, id))
     ask.set('line_items[0][quantity]', '1')
     ask.set('line_items[0][price_data][currency]', q.currency.toLowerCase())
-    ask.set('line_items[0][price_data][unit_amount]', String(amount))
+    ask.set('line_items[0][price_data][unit_amount]', String(total))
+    // the code, applied on Stripe's page; the webhook reads it back from the metadata
+    if (deal) {
+      ask.set('discounts[0][promotion_code]', deal.promoId)
+      ask.set('metadata[code]', deal.code)
+      ask.set('payment_intent_data[metadata][code]', deal.code)
+    }
     ask.set('line_items[0][price_data][product_data][name]', name)
     if (q.includes) ask.set('line_items[0][price_data][product_data][description]', q.includes.slice(0, 500))
     // this site's checkout, and a commission (not a shop order): see api/stripe-webhook.js
@@ -252,7 +313,7 @@ const customerAction = async (req, user, action, body) => {
         console.error('stripe refused the commission checkout:', got.status, got.said && got.said.error && got.said.error.message)
         return [502, { message: 'The checkout could not be opened. Try again in a moment.' }]
       }
-      await c.updateOne({ _id: id }, { $set: { pending: { provider: 'stripe', ref: got.said.id, amount: amount / 100, test: !got.said.livemode, at: new Date() } } })
+      await c.updateOne({ _id: id }, { $set: { pending: { provider: 'stripe', ref: got.said.id, amount: amount / 100, ...codeKept, test: !got.said.livemode, at: new Date() } } })
       return [200, { url: got.said.url }]
     } catch {
       return [502, { message: 'Could not reach the payment service. Try again in a moment.' }]
@@ -269,7 +330,7 @@ const customerAction = async (req, user, action, body) => {
     try {
       const done = await paypal(`/v2/checkout/orders/${order}/capture`)
       if (done.status !== 'COMPLETED') return [502, { message: 'PayPal did not finish the payment. Nothing was charged: try again.' }]
-      const after = (await paidByPaypal(id, order, done, site)) || (await c.findOne({ _id: id }))
+      const after = (await paidByPaypal(id, order, done, site, found.pending)) || (await c.findOne({ _id: id }))
       return [200, { ok: true, commission: forCustomer(after, true) }]
     } catch (e) {
       if (e.issue === 'ORDER_ALREADY_CAPTURED') return [200, { ok: true, commission: forCustomer((await c.findOne({ _id: id })) || found, true) }]

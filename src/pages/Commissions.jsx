@@ -33,7 +33,7 @@ function Field({ id, label, hint, error, textarea = false, required = false, ...
   return (
     <div className={`cmr-field ${error ? 'is-bad' : ''}`}>
       <label htmlFor={id}>{label}{required ? <span className="cmr-req" aria-hidden="true"> *</span> : <small> (optional)</small>}</label>
-      <Tag id={id} required={required} aria-invalid={error ? 'true' : undefined} aria-describedby={described} {...(textarea ? {} : { type: 'text' })} {...rest} />
+      <Tag id={id} required={required} aria-required={required ? 'true' : undefined} aria-invalid={error ? 'true' : undefined} aria-describedby={described} {...(textarea ? {} : { type: 'text' })} {...rest} />
       {hint && <small id={`${id}-hint`} className="cmr-hint">{hint}</small>}
       {error && <small id={`${id}-err`} className="cmr-err">{error}</small>}
     </div>
@@ -45,8 +45,8 @@ function Field({ id, label, hint, error, textarea = false, required = false, ...
 function KindPicker({ options, value, onChange }) {
   return (
     <fieldset className="cmr-group">
-      <legend>What kind of piece <span className="cmr-req" aria-hidden="true">*</span></legend>
-      <div className="cmr-kinds">
+      <legend id="cmr-kind-legend">What kind of piece <span className="cmr-req" aria-hidden="true">*</span><span className="sr-only"> (required)</span></legend>
+      <div className="cmr-kinds" role="radiogroup" aria-labelledby="cmr-kind-legend" aria-required="true">
         {options.map((o) => (
           <label key={o.name} className={`cmr-kind ${value === o.name ? 'on' : ''}`}>
             <input type="radio" name="kind" value={o.name} checked={value === o.name} onChange={() => onChange(o.name)} />

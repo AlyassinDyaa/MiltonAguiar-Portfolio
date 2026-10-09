@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useAccount } from '../hooks/useAccount'
 import { money } from '../data/site'
 import { Lock, PaypalButton } from './Buy'
 
@@ -35,6 +37,11 @@ export function useCommissionList(on = true) {
 
 export const STEPS = [['requested', 'Requested'], ['discussing', 'Discussing'], ['quoted', 'Quoted'], ['paid', 'Paid'], ['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered']]
 const WORDS = { ...Object.fromEntries(STEPS), cancelled: 'Cancelled' }
+// what a piece goes through once paid (the quote's stages): a sketch skips inks and colours, an inked piece the colours
+const SETS = { sketch: ['sketch', 'delivered'], inks: ['sketch', 'inks', 'delivered'], full: ['sketch', 'inks', 'colours', 'delivered'] }
+const workOf = (stages) => (Array.isArray(stages) && stages.length ? stages : SETS[stages] || SETS.full)
+const stepsFor = (stages) => [...STEPS.slice(0, 4), ...workOf(stages).map((k) => [k, WORDS[k]])]
+const stagesWords = (stages) => workOf(stages).map((k) => WORDS[k]).join(' → ')
 const priced = (n, code) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: code || 'EUR', currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(n) } catch { return money(n) } }
 const longDay = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 const dueDay = (d) => { const t = new Date(d); return Number.isNaN(+t) ? String(d) : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) }
@@ -53,42 +60,176 @@ export function Linked({ text }) {
   return String(text || '').split(URL_RE).map((part, i) => (i % 2 ? <a key={i} href={part} target="_blank" rel="noreferrer nofollow">{part.replace(/^https?:\/\//, '').slice(0, 60)}{part.length > 68 ? '…' : ''}</a> : part))
 }
 
+/* Taking commissions out of the account (one, or several chosen at once), as with shop orders:
+   only with the password, and only once a copy of each (the request, the quote, the payment and
+   the conversation) has been emailed to them. Not paid yet: cancelled and gone. Paid: it leaves
+   their account, and the artist keeps it. */
+function RemoveCommissions({ items = [], onClose, onRemoved }) {
+  const { user } = useAccount()
+  const open = items.length > 0
+  const box = useRef(null)
+  const pwId = useId()
+  const [password, setPassword] = useState('')
+  const [shown, setShown] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState({ text: '', field: '' })
+  useEffect(() => {
+    if (!open) return undefined
+    const before = document.activeElement
+    const key = (e) => { if (e.key === 'Escape' && !busy) onClose() }
+    addEventListener('keydown', key)
+    const t = setTimeout(() => box.current?.querySelector('input')?.focus(), 60)
+    window.__lenis?.stop?.()
+    return () => { removeEventListener('keydown', key); clearTimeout(t); window.__lenis?.start?.(); before?.focus?.() }
+  }, [open, onClose, busy])
+  useEffect(() => { if (!open) { setPassword(''); setProblem({ text: '', field: '' }) } }, [open])
+  const one = items.length === 1
+  const paid = items.filter((c) => c.paid).length
+  const unpaid = items.length - paid
+  const submit = async (e) => {
+    e.preventDefault()
+    if (busy || !password) return
+    setBusy(true); setProblem({ text: '', field: '' })
+    try { await askCommissions('remove', { ids: items.map((c) => c.id), password }); setPassword(''); onRemoved(items) } catch (err) { setProblem({ text: err.message, field: err.field || '' }) }
+    setBusy(false)
+  }
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }}>
+          <motion.form ref={box} className="acc-modal-box lined" role="alertdialog" aria-modal="true" aria-labelledby="acc-cdel-title" aria-describedby="acc-cdel-text" noValidate onSubmit={submit}
+            initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+            <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close" disabled={busy}>×</button>
+            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6" /></svg></span>
+            <h2 id="acc-cdel-title">{one ? `Delete commission ${items[0].number}?` : `Delete ${items.length} commissions?`}</h2>
+            <div id="acc-cdel-text" className="acc-del-text">
+              {!one && <ul className="acc-del-list">{items.map((c) => <li key={c.id}><b>{c.number}</b><small>{c.title} · {WORDS[c.status] || c.status}</small></li>)}</ul>}
+              <p className="acc-del-warn"><b>This cannot be undone.</b> {one ? 'It leaves' : 'They leave'} your account for good: the conversation, the quote and the stages will no longer show here.</p>
+              {unpaid > 0 && <p>{one ? 'It is not paid, so the request is cancelled too' : unpaid === items.length ? 'None of them is paid, so the requests are cancelled too' : `${unpaid} of them ${unpaid === 1 ? 'is' : 'are'} not paid: ${unpaid === 1 ? 'that request is' : 'those requests are'} cancelled too`}, and Milton is told.</p>}
+              {paid > 0 && <p>{one ? 'It is paid, so' : paid === items.length ? 'They are paid, so' : `${paid} of them ${paid === 1 ? 'is' : 'are'} paid:`} Milton keeps {paid === 1 ? 'it' : 'them'} on his side and the work carries on. {paid === 1 ? 'It' : 'They'} will no longer count toward your rewards.</p>}
+              <p className="acc-del-copy"><span aria-hidden="true">✉</span> First, a copy of {one ? 'it' : 'each'} (the request, the quote, the payment and the whole conversation) is emailed to you at <b>{user.email}</b>. If the copy cannot be sent, nothing is deleted.</p>
+              <p>Type your password to be sure.</p>
+            </div>
+            <div className="acc-modal-field">
+              <div className={`field acc-field ${problem.field === 'password' ? 'has-error' : ''}`}>
+                <input id={pwId} type={shown ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder=" " required aria-required="true" autoComplete="current-password" maxLength={200} aria-invalid={problem.field === 'password'} aria-describedby={problem.field === 'password' ? `${pwId}-note` : undefined} />
+                <label htmlFor={pwId}>Your password <span className="cmr-req" aria-hidden="true">*</span></label>
+                <span className="bar" />
+                <button type="button" className="acc-eye" onClick={() => setShown(!shown)} aria-label={shown ? 'Hide the password' : 'Show the password'} aria-pressed={shown}>{shown ? 'Hide' : 'Show'}</button>
+                {problem.field === 'password' && <p id={`${pwId}-note`} className="acc-note is-error">{problem.text}</p>}
+              </div>
+            </div>
+            {problem.text && problem.field !== 'password' && <p className="acc-problem" role="alert">{problem.text}</p>}
+            <div className="acc-modal-actions">
+              <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>Keep {one ? 'it' : 'them'}</button>
+              <button type="submit" className="btn sm acc-modal-yes" disabled={busy || !password}>{busy ? 'Emailing the copy…' : one ? 'Delete and email me a copy' : `Delete ${items.length} and email me a copy`}</button>
+            </div>
+          </motion.form>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 /* ---------- the list ---------- */
-function CommissionList({ list, open }) {
+function CommissionList({ list, open, reload }) {
+  const { user } = useAccount()
+  const [picking, setPicking] = useState(false)
+  const [picked, setPicked] = useState(() => new Set())
+  const [removing, setRemoving] = useState([])
+  const [done, setDone] = useState('')
+  const close = useCallback(() => setRemoving([]), [])
   if (!list) return <p className="acc-wait">Fetching your commissions…</p>
   if (!list.length) return (
-    <div className="acc-empty">
-      <strong>No commissions yet</strong>
-      <p>Ask for a piece of your own on the Commissions page: you talk it over with Milton here, get a quote, and follow it from sketch to delivery.</p>
-      <Link className="btn sm" to="/commissions#request">Request a commission <span className="arrow">→</span></Link>
-    </div>
+    <>
+      {done && <p className="acc-welcome" role="status">{done}</p>}
+      <div className="acc-empty">
+        <strong>No commissions yet</strong>
+        <p>Ask for a piece of your own on the Commissions page: you talk it over with Milton here, get a quote, and follow it from sketch to delivery.</p>
+        <Link className="btn sm" to="/commissions#request">Request a commission <span className="arrow">→</span></Link>
+      </div>
+    </>
   )
+  const toggle = (id) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const allPicked = list.every((c) => picked.has(c.id))
+  const chosen = list.filter((c) => picked.has(c.id))
+  const stop = () => { setPicking(false); setPicked(new Set()) }
+  const removed = (items) => {
+    setRemoving([]); stop()
+    reload()
+    setDone(`${items.length === 1 ? 'Deleted.' : `${items.length} commissions deleted.`} A copy is on its way to ${user.email}.`)
+    setTimeout(() => setDone(''), 6000)
+  }
   return (
-    <div className="acc-olist">
-      {list.map((c) => (
-        <button key={c.id} type="button" className={`acc-orow acc-crow ${c.unread ? 'is-unread' : ''}`} onClick={() => open(c.id)}>
-          <span className="acc-crow-no" aria-hidden="true">{c.number.replace(/^C-/, '')}</span>
-          <span className="acc-orow-what">
-            <strong>{c.title}</strong>
-            <small>{c.number} · {c.kind}{c.lastAt ? ` · ${when(c.lastAt)}` : ''}</small>
-          </span>
-          <span className={`acc-pill is-${c.status}`}>{WORDS[c.status] || c.status}</span>
-          <b className="acc-orow-total">{c.price != null ? priced(c.price, c.currency) : '—'}</b>
-          {c.unread > 0 ? <small className="acc-cbadge" aria-label={`${c.unread} new`}>{c.unread}</small> : <svg className="acc-orow-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>}
-        </button>
-      ))}
-    </div>
+    <>
+      <div className="acc-otools">
+        <span className="acc-ccount">{list.length} {list.length === 1 ? 'commission' : 'commissions'}</span>
+        {!picking && <button type="button" className="acc-oselect" onClick={() => { setPicking(true); setDone('') }}>Select</button>}
+      </div>
+      {picking && (
+        <div className="acc-opick" role="region" aria-label="Choose commissions to delete">
+          <label className="acc-opick-all">
+            <input type="checkbox" checked={allPicked} onChange={() => setPicked(allPicked ? new Set() : new Set(list.map((c) => c.id)))} />
+            <span aria-hidden="true" />
+            Select all <small>{list.length}</small>
+          </label>
+          <span className="acc-opick-count">{picked.size ? `${picked.size} chosen` : 'Tick the commissions to delete'}</span>
+          <button type="button" className="btn sm acc-modal-yes" disabled={!chosen.length} onClick={() => setRemoving(chosen)}>Delete{chosen.length ? ` ${chosen.length}` : ''}…</button>
+          <button type="button" className="btn ghost sm" onClick={stop}>Cancel</button>
+        </div>
+      )}
+      {done && <p className="acc-welcome" role="status">{done}</p>}
+      <div className="acc-olist">
+        {list.map((c) => (
+          <div key={c.id} className="acc-crow-wrap">
+            <button type="button" className={`acc-orow acc-crow ${c.unread ? 'is-unread' : ''} ${picking ? 'is-picking' : ''} ${picking && picked.has(c.id) ? 'is-picked' : ''}`} aria-pressed={picking ? picked.has(c.id) : undefined} onClick={() => (picking ? toggle(c.id) : open(c.id))}>
+              {picking ? <span className="acc-orow-tick" aria-hidden="true" /> : <span className="acc-crow-no" aria-hidden="true">{c.number.replace(/^C-/, '')}</span>}
+              <span className="acc-orow-what">
+                <strong>{c.title}</strong>
+                <small>{c.number} · {c.kind}{c.lastAt ? ` · ${when(c.lastAt)}` : ''}</small>
+              </span>
+              <span className={`acc-pill is-${c.status}`}>{WORDS[c.status] || c.status}</span>
+              <b className="acc-orow-total">{c.price != null ? priced(c.price, c.currency) : '—'}</b>
+              {c.unread > 0 ? <small className="acc-cbadge" aria-label={`${c.unread} new`}>{c.unread}</small> : <svg className="acc-orow-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>}
+            </button>
+            {!picking && (
+              <button type="button" className="acc-order-del acc-crow-del" onClick={() => setRemoving([c])} title="Delete from your account" aria-label={`Delete commission ${c.number} from your account`}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6" /></svg>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <RemoveCommissions items={removing} onClose={close} onRemoved={removed} />
+    </>
   )
 }
 
 /* ---------- one commission ---------- */
-function Tracker({ status }) {
+function Tracker({ status, stages }) {
   if (status === 'cancelled') return <p className="acc-refund">This commission was cancelled.</p>
-  const at = STEPS.findIndex(([k]) => k === status)
+  const steps = stepsFor(stages)
+  const at = steps.findIndex(([k]) => k === status)
   return (
-    <ol className="acc-steps acc-csteps" aria-label="Where it is">
-      {STEPS.map(([k, label], i) => <li key={k} className={i <= at ? 'done' : ''} aria-current={i === at ? 'step' : undefined}><i aria-hidden="true" /><span>{label}</span></li>)}
+    <ol className="acc-steps acc-csteps" aria-label="Where it is" style={{ '--n': steps.length }}>
+      {steps.map(([k, label], i) => <li key={k} className={i <= at ? 'done' : ''} aria-current={i === at ? 'step' : undefined}><i aria-hidden="true" /><span>{label}</span></li>)}
     </ol>
+  )
+}
+
+// a quote, as it shows in the conversation: the price and everything it comes with
+function QuoteNote({ q }) {
+  return (
+    <div className="acc-qnote">
+      <span className="acc-qnote-tag">Quote</span>
+      <strong>{priced(q.price, q.currency)}</strong>
+      <p><Linked text={q.includes} /></p>
+      <dl>
+        {q.due && <><dt>Ready by</dt><dd>{dueDay(q.due)}</dd></>}
+        <dt>Delivery</dt><dd>{q.ship ? 'Posted to you' : 'Digital'}</dd>
+        <dt>Stages</dt><dd>{stagesWords(q.stages)}</dd>
+      </dl>
+    </div>
   )
 }
 
@@ -101,10 +242,10 @@ function Thread({ messages }) {
       {messages.map((m, i) => (
         <div key={i} className={`acc-msg is-${m.from === 'customer' ? 'mine' : m.from === 'artist' ? 'theirs' : 'note'}`}>
           {m.from !== 'system' && <span className="acc-msg-who">{m.from === 'customer' ? 'You' : 'Milton'}</span>}
-          <div className="acc-msg-bubble">
+          {m.kind === 'quote' && m.quote ? <QuoteNote q={m.quote} /> : <div className="acc-msg-bubble">
             {m.text && <p><Linked text={m.text} /></p>}
             {m.links && m.links.length > 0 && <ul className="acc-msg-links">{m.links.map((l) => <li key={l}><a href={l} target="_blank" rel="noreferrer nofollow">{l.replace(/^https?:\/\//, '')}</a></li>)}</ul>}
-          </div>
+          </div>}
           <time dateTime={new Date(m.at).toISOString()}>{when(m.at)}</time>
         </div>
       ))}
@@ -146,9 +287,27 @@ function QuoteCard({ c, ways }) {
   const [paying, setPaying] = useState(false)
   const [busy, setBusy] = useState('')
   const [problem, setProblem] = useState('')
+  // a discount code, checked as the cart checks one (a reward code works only for its owner); the payment checks it again
+  const [codeOpen, setCodeOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const [code, setCode] = useState(null)
+  const [codeNote, setCodeNote] = useState('')
+  const [checking, setChecking] = useState(false)
+  const off = code ? Math.round(q.price * code.percent) / 100 : 0
+  const apply = async (e) => {
+    e.preventDefault()
+    if (!typed.trim() || checking) return
+    setChecking(true); setCodeNote('')
+    try {
+      const answer = await fetch('/api/discount', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: typed.trim() }) })
+      const said = await answer.json().catch(() => ({}))
+      if (answer.ok && said.ok) { setCode({ code: said.code, percent: said.percent, label: said.label }); setCodeOpen(false); setTyped('') } else setCodeNote(said.message || 'That code is not valid.')
+    } catch { setCodeNote('The code could not be checked. Try again in a moment.') }
+    setChecking(false)
+  }
   const pay = async (provider) => {
     setBusy(provider); setProblem('')
-    try { const s = await askCommissions('pay', { id: c.id, provider }); window.location.href = s.url; return } catch (e) { setProblem(e.message) }
+    try { const s = await askCommissions('pay', { id: c.id, provider, ...(code ? { code: code.code } : {}) }); window.location.href = s.url; return } catch (e) { setProblem(e.message); if (e.field === 'code') setCode(null) }
     setBusy('')
   }
   const open = c.status === 'quoted'
@@ -160,7 +319,25 @@ function QuoteCard({ c, ways }) {
       <p className="acc-quote-meta">
         {q.due && <span>Ready by {dueDay(q.due)}</span>}
         <span>{q.ship ? 'Posted to you' : 'Digital'}</span>
+        <span>{stagesWords(q.stages)}</span>
       </p>
+      {open && (
+        <div className="acc-quote-code">
+          {code ? (
+            <p className="acc-quote-off"><span>Code <b>{code.code}</b>: −{priced(off, q.currency)} ({code.percent}% off)</span><button type="button" className="acc-link" onClick={() => setCode(null)} aria-label={`Remove the code ${code.code}`}>Remove</button></p>
+          ) : codeOpen ? (
+            <form className="acc-quote-codeform" onSubmit={apply}>
+              <label htmlFor={`code-${c.id}`}>Discount code</label>
+              <div>
+                <input id={`code-${c.id}`} type="text" value={typed} onChange={(e) => { setTyped(e.target.value.toUpperCase()); setCodeNote('') }} autoComplete="off" autoCapitalize="characters" spellCheck="false" maxLength={40} aria-describedby={codeNote ? `code-${c.id}-note` : undefined} aria-invalid={codeNote ? 'true' : undefined} />
+                <button type="submit" className="btn sm" disabled={checking || !typed.trim()}>{checking ? 'Checking…' : 'Apply'}</button>
+              </div>
+              {codeNote && <small id={`code-${c.id}-note`} className="acc-reply-bad" role="alert">{codeNote}</small>}
+            </form>
+          ) : <button type="button" className="acc-link" onClick={() => setCodeOpen(true)}>Have a discount code?</button>}
+          {code && <p className="acc-quote-total"><span>To pay</span><b>{priced(Math.max(0, q.price - off), q.currency)}</b></p>}
+        </div>
+      )}
       {open && !paying && <button type="button" className="btn" onClick={() => setPaying(true)}>Accept and pay <span className="arrow">→</span></button>}
       {open && paying && (
         <div className="acc-quote-pay">
@@ -236,15 +413,14 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
           </div>
           <span className={`acc-pill is-${c.status}`}>{WORDS[c.status] || c.status}</span>
         </header>
-        <Tracker status={c.status} />
-
-        {c.quote && !isPaid && c.status !== 'cancelled' && <QuoteCard c={c} ways={ways} />}
+        <Tracker status={c.status} stages={c.stages} />
 
         {isPaid && (
           <section className="acc-order-foot acc-com-paid">
             <div>
               <div className="label">Paid</div>
               <p><b>{priced(c.payment.amount, c.payment.currency)}</b>{c.payment.paidWith ? ` · ${c.payment.paidWith}` : ''} · {longDay(c.payment.paidAt)}{c.payment.refunded ? ' · refunded' : ''}</p>
+              {c.payment.code && <p className="acc-com-dim">Code {c.payment.code}: −{priced(c.payment.discount || 0, c.payment.currency)}</p>}
               {c.quote && <p className="acc-com-dim"><Linked text={c.quote.includes} />{c.quote.due ? ` · ready by ${dueDay(c.quote.due)}` : ''}</p>}
             </div>
             <div>
@@ -257,6 +433,8 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
         <section className="acc-com-talk">
           <div className="label">The conversation</div>
           <Thread messages={c.messages || []} />
+          {/* the latest quote stays here, above the reply box, until it is paid */}
+          {c.quote && !isPaid && c.status !== 'cancelled' && <QuoteCard c={c} ways={ways} />}
           {c.status !== 'cancelled' ? <Reply id={c.id} onSent={(next) => { setC(next); onChange() }} /> : <p className="acc-com-dim">This commission is closed.</p>}
           {problem && <p className="acc-problem">{problem}</p>}
         </section>
@@ -296,5 +474,5 @@ export default function AccountCommissions({ list, reload, params, setParams }) 
   const clearReturn = useCallback(() => setParams(id ? { tab: 'orders', view: 'commissions', c: id, ...(paid ? { paid: '1' } : {}) } : { tab: 'orders', view: 'commissions' }, { replace: true }), [id, paid, setParams])
   const clearPaid = useCallback(() => setParams({ tab: 'orders', view: 'commissions', c: id }, { replace: true }), [id, setParams])
   if (id) return <Commission key={id} id={id} close={close} onChange={reload} paid={paid} paypalToken={paypalToken} clearReturn={clearReturn} clearPaid={clearPaid} />
-  return <CommissionList list={list} open={open} />
+  return <CommissionList list={list} open={open} reload={reload} />
 }

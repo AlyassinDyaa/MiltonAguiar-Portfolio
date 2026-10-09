@@ -13,7 +13,7 @@
     "type": true
   },
   "sales": {
-    "testOrders": true,
+    "testOrders": false,
     "testCustomers": false,
     "testCodes": false
   },
@@ -27,7 +27,7 @@
   },
   "themes": {
     "dark": true,
-    "light": false
+    "light": true
   },
   "art": {
     "comicsWatermark": false,

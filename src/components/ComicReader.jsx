@@ -330,7 +330,14 @@ function Reader({ comic, onClose }) {
   }
   let book
   if (wide) {
-    if (!flip) { const h = halvesOf(shown); book = pair(h.L, h.R) }
+    // a spread at rest is one picture across the open book, not two halves (only a turning page needs halves)
+    if (!flip && shown[0].spread) {
+      book = (
+        <div className={`reader-book is-pair is-spread ${turning}`} {...bookProps(2 * ratio)}>
+          <div className="reader-cell is-whole">{face(half(shown[0], 'whole'))}</div>
+        </div>
+      )
+    } else if (!flip) { const h = halvesOf(shown); book = pair(h.L, h.R) }
     else {
       const a = halvesOf(sheetsAt(flip.from)), b = halvesOf(sheetsAt(flip.to))
       book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L), 'R') : pair(b.L, a.R, leaf('is-back', a.L, b.R), 'L')

@@ -1975,8 +1975,8 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .reader-face img.is-right { object-fit: cover; object-position: right center; }
 /* the fold: a little shade either side of the spine */
 .reader-book.is-pair .reader-face:not(.is-blank)::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
-.reader-book.is-pair .is-left > .reader-face:not(.is-blank)::after, .reader-leaf.is-back .reader-face.is-front::after, .reader-leaf.is-fwd .reader-face.is-back::after { background: linear-gradient(90deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
-.reader-book.is-pair .is-right > .reader-face:not(.is-blank)::after, .reader-leaf.is-fwd .reader-face.is-front::after, .reader-leaf.is-back .reader-face.is-back::after { background: linear-gradient(270deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
+.reader-book.is-pair .is-left > .reader-face:not(.is-blank)::after, .reader-leaf.is-back .reader-face.is-front::after, .reader-leaf.is-fwd .reader-face.is-back::after { background: linear-gradient(90deg, transparent 90%, rgba(0, 0, 0, 0.16)); }
+.reader-book.is-pair .is-right > .reader-face:not(.is-blank)::after, .reader-leaf.is-fwd .reader-face.is-front::after, .reader-leaf.is-back .reader-face.is-back::after { background: linear-gradient(270deg, transparent 90%, rgba(0, 0, 0, 0.16)); }
 /* the turning page: two faces back to back, turning on the spine as far as --turn says. --turn moves
    smoothly when the page turns by itself, and follows the finger while it is dragged */
 @property --turn { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
@@ -2042,3 +2042,6 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .srow::after { right: calc(var(--gutter) * -1); background: linear-gradient(270deg, var(--bg, #0b0b0c), transparent); }
 .srow.can-scroll:not(.at-start)::before, .srow.can-scroll:not(.at-end)::after { opacity: 1; }
 .srow-track { -webkit-overflow-scrolling: touch; }
+/* a spread at rest: one picture across both pages, no fold down its middle */
+.reader-cell.is-whole { grid-column: 1 / -1; }
+.reader-book.is-spread .reader-face::after { content: none; }

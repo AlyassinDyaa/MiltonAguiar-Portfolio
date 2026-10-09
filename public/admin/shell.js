@@ -21,6 +21,7 @@
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     work: 'M4 5h16v14H4z M4 15l4-4 4 4 3-3 5 5 M9 9h.01',
     shop: 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
+    comics: 'M12 7v13 M12 7c-2-1.600-5-2-8-1.500v13c3-.500 6-.100 8 1.500 M12 7c2-1.600 5-2 8-1.500v13c-3-.500-6-.100-8 1.500',
     gallery_sections: 'M4 4h7v9H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 15h7v5H4z',
     redraws: 'M4 5h16v14H4z M12 3v18 M8 10l-2 2 2 2 M16 10l2 2-2 2',
     events: 'M5 6h14v14H5z M5 10h14 M9 4v4 M15 4v4',
@@ -50,6 +51,7 @@
     work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale', sizes: 'Sizes and prices' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'look', 'price', 'salePrice', 'universe', 'shopOnly'] },
     'site/categories': { groups: { subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
     shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
+    comics: { groups: { title: 'The comic', cover: 'Cover and pages', order: 'Rarely needed' }, half: ['title', 'text', 'order', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
     'pages/home': {
@@ -57,7 +59,7 @@
       half: ['latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
       inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl', 'words', 'to', 'address', 'tone', 'off', 'text'],
     },
-    'pages/lists': { groups: { workLabel: 'Work page', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'galleryLabel', 'galleryTitle'] },
+    'pages/lists': { groups: { workLabel: 'Work page', samplesLabel: 'Comic samples (on the Work page)', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'samplesLabel', 'samplesTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
       groups: { title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
       half: ['quoteLabel', 'quoteUrl', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
@@ -87,7 +89,7 @@
   /* One line about each single page, for its tile on the Home screen. */
   const ABOUT = {
     'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, the pencils-to-colours sets, and the heading of each part below it.',
-    'pages/lists': 'The heading and introduction above the Work page and the Gallery page.',
+    'pages/lists': 'The heading and introduction above the Work page, its comic samples and the Gallery page.',
     'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
@@ -424,8 +426,33 @@
     }
   }
 
+  /* ---------- a comic's pages, numbered as they read ----------
+     Under Comic samples every page in the list is headed with its number: "Page 1", or "Pages 3–4
+     (spread)" for one wide picture across two pages. Page 1 is the first page after the cover.
+     Counted again whenever a page is added, removed, moved or switched to a spread. */
+  const numberPages = () => {
+    if (currentSection() !== 'comics') return
+    const list = [...document.querySelectorAll('[class*="ControlContainer"]')]
+      .find((f) => /^pages-field/.test((f.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''))
+    if (!list) return
+    let n = 1
+    for (const item of list.querySelectorAll('[class*="-listControlItem"]')) {
+      const spread = item.querySelector('button[role="switch"][id^="spread-field"]')?.getAttribute('aria-checked') === 'true'
+      const words = spread ? `Pages ${n}–${n + 1} (spread)` : `Page ${n}`
+      n += spread ? 2 : 1
+      // the heading sits in the item's own fields, beside its picture
+      for (const box of [item, item.querySelector(':scope > div:last-child > div')]) {
+        if (!box) continue
+        if (box.dataset.iaPage !== words) box.dataset.iaPage = words
+        if (box.hasAttribute('data-ia-spread') !== spread) box.toggleAttribute('data-ia-spread', spread)
+      }
+    }
+  }
+  // switching a page to a spread changes no element, only the switch's state: count again after it
+  document.addEventListener('click', (e) => { if (e.target.closest?.('button[role="switch"]')) setTimeout(numberPages, 40) })
+
   let tagTimer
-  const scheduleTag = () => { clearTimeout(tagTimer); tagTimer = setTimeout(() => { tagFields(); syncViews(); paintThumbs() }, 60) }
+  const scheduleTag = () => { clearTimeout(tagTimer); tagTimer = setTimeout(() => { tagFields(); syncViews(); paintThumbs(); numberPages() }, 60) }
 
   /* ---------- list views ----------
      Decap offers rows or cards, one choice for the whole admin. Here every list gets four views
@@ -439,7 +466,7 @@
     { id: 'cards', label: 'Cards', cards: true },
     { id: 'gallery', label: 'Big pictures', cards: true },
   ]
-  const PICTURED = new Set(['work', 'shop', 'gallery_sections', 'redraws'])
+  const PICTURED = new Set(['work', 'shop', 'comics', 'gallery_sections', 'redraws'])
   const viewPlace = () => currentSection() || (/^#\/search/.test(location.hash) ? 'search' : 'other')
   const chosenView = () => {
     let saved = null
@@ -862,6 +889,7 @@
     discounts: { what: 'discount', text: 'Customers no longer earn it. Codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     rewards: { what: 'reward', text: 'Customers who earned it lose it: a picture or card design they chose goes back to the usual one, and they no longer see it under Rewards. Discount codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     icons: { what: 'free picture', text: 'Customers using it as their profile picture go back to their initials.' },
+    pages: { what: 'page', text: 'It comes out of the comic and the pages after it move up one. The picture stays in the Media library.' },
   }
   let removing = false // the confirmed click passes straight through
   const askRemove = (kind, name, onYes) => {
@@ -899,7 +927,7 @@
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation()
     const item = btn.closest('[class*="-listControlItem"]')
     const named = item && [...item.querySelectorAll('input[type="text"], input:not([type])')].find((i) => /^name-field/.test(i.id || ''))
-    const label = (named && named.value) || (item && (item.querySelector('[class*="ListItemTopBar"]') || {}).textContent) || ''
+    const label = (named && named.value) || (item && item.dataset.iaPage) || (item && (item.querySelector('[class*="ListItemTopBar"]') || {}).textContent) || ''
     askRemove(ASK_BEFORE_REMOVING[list], String(label).trim(), () => { removing = true; try { btn.click() } finally { removing = false } })
   }, true)
 

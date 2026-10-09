@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { catOf, categories, day, home, pages, redraws, work } from '../data/site'
+import { catOf, categories, comics, day, home, pages, redraws, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
@@ -9,6 +9,7 @@ import Lightbox from '../components/Lightbox'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
 import ShopTags from '../components/ShopTags'
+import ComicShelf from '../components/ComicShelf'
 
 export default function Work() {
   const [filter, setFilter] = useState('All')
@@ -51,10 +52,23 @@ export default function Work() {
         </div>
       </section>
 
+      {comics.length > 0 && filter === 'All' && (
+        <section className="spread">
+          <div className="container">
+            <Runner label={pages.samples.label} page={3} />
+            <div className="spread-head">
+              <h2 className="display h-lg">{pages.samples.title}</h2>
+              {pages.samples.intro && <p className="dim">{pages.samples.intro}</p>}
+            </div>
+            <ComicShelf comics={comics} />
+          </div>
+        </section>
+      )}
+
       {redraws.length > 0 && filter === 'All' && (
         <section className="spread">
           <div className="container">
-            <Runner label={home.redrawLabel} page={3} />
+            <Runner label={home.redrawLabel} page={comics.length > 0 ? 4 : 3} />
             <div className="spread-head"><h2 className="display h-lg">{home.redrawTitle}</h2></div>
             <div className="compare-grid">
               {redraws.map((r, i) => <Reveal key={r.slug} delay={i * 0.1}><Compare set={r} /></Reveal>)}

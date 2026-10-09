@@ -25,7 +25,7 @@ export let accountPage
 export let quote
 /* The comic or series the artist is drawing now, shown in its own block on the home page. */
 export let project
-/* Headings and introductions of the Work and Gallery pages. */
+/* Headings and introductions of the Work and Gallery pages (and of the comic samples on Work). */
 export let pages
 export let nav
 /* Every piece, newest first; the file name is the piece's id. Pieces marked "Only in the Shop"
@@ -56,6 +56,10 @@ export let gallerySections, gallery
 export let galleryHome
 /* Step-by-step sets: one piece at each stage (pencils, inks, colours), or an old drawing and its redraw. */
 export let redraws
+/* Comic samples (Work page): a cover and its pages in reading order, for visitors to read. A page
+   marked `spread` is one wide picture across two facing pages; `count` is the number of pages
+   after the cover, a spread counting as two. */
+export let comics
 export let events
 /* True when the page is showing an admin their newest saved changes rather than only the built-in content. */
 export let previewing = false
@@ -146,6 +150,7 @@ function assemble(content) {
   pages = {
     work: { label: 'The work', title: 'Everything so far', ...given({ label: lists.workLabel, title: lists.workTitle, intro: lists.workIntro }) },
     gallery: { label: 'The gallery', title: 'Pin-ups and pages', ...given({ label: lists.galleryLabel, title: lists.galleryTitle, intro: lists.galleryIntro }) },
+    samples: { label: 'Read a few pages', title: 'Samples', ...given({ label: lists.samplesLabel, title: lists.samplesTitle || undefined, intro: lists.samplesIntro }) },
   }
   shop = {
     enabled: false, payments: 'stripe', currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
@@ -238,6 +243,13 @@ function assemble(content) {
     .map((r) => ({ ...r, stages: (r.stages || []).filter((s) => s && s.year) }))
     .filter((r) => r.stages.length > 1)
   events = live(folder('events')).filter((e) => e.name).sort(byOrder)
+  // the comics with a cover, lowest order first (then by title); pages without a picture left out
+  const rank = (c) => (c.order === '' || c.order == null ? 99 : Number(c.order))
+  comics = live(folder('comics'))
+    .filter((c) => c.title && c.cover)
+    .map((c) => ({ ...c, text: c.text || '', pages: (Array.isArray(c.pages) ? c.pages : []).filter((p) => p && p.src).map((p) => ({ src: p.src, spread: Boolean(p.spread) })) }))
+    .map((c) => ({ ...c, count: c.pages.reduce((n, p) => n + (p.spread ? 2 : 1), 0) })) // a spread counts as two pages
+    .sort((a, b) => rank(a) - rank(b) || String(a.title).localeCompare(String(b.title)))
 }
 assemble(built)
 

@@ -65,6 +65,8 @@ const thumbs = () => {
     const picture = pulled || (section.data.items || []).find((item) => item && item.src)?.src
     if (picture) index[`gallery_sections/${section.slug}`] = picture
   }
+  // a comic sample: its cover
+  for (const comic of read('comics')) if (comic.data.cover) index[`comics/${comic.slug}`] = comic.data.cover
   for (const set of read('redraws')) {
     const picture = [...(set.data.stages || [])].reverse().find((stage) => stage && stage.src)?.src
     if (picture) index[`redraws/${set.slug}`] = picture
@@ -194,17 +196,17 @@ const adminBundle = () => ({
 
 /* The artwork, as the built site sends it: never the full-size file. Every uploaded picture is
    brought down to ART_MAX pixels on its long side (sharp on any screen, too small for a good
-   print: A3 wants about 3500), and the pictures of the Shop, the Work page, the Gallery and the pencils-to-colours sets
-   carry the artist's logo inside the picture itself: clearly in a corner, and faintly and large in
+   print: A3 wants about 3500), and the pictures of the Shop, the Work page, the Gallery, the pencils-to-colours sets
+   and the comic samples carry the artist's logo inside the picture itself: clearly in a corner, and faintly and large in
    the middle, so cropping the corner off does not remove it. The files in public/uploads (what the
    admin uploads, and what this computer's dev server shows) stay as they are: only the copies in
    dist, which are what visitors get, are changed. The logo and the site icon are left alone. */
 const ART_MAX = 1400
-const ART_FOLDERS = ['work', 'gallery-sections', 'redraws'] // whose pictures get the watermark
+const ART_FOLDERS = ['work', 'gallery-sections', 'redraws', 'comics'] // whose pictures get the watermark
 const readBrand = () => { try { return JSON.parse(readFileSync(resolve('content/site/brand.json'), 'utf8')) } catch { return {} } }
 // the logo on the artwork can be switched off (Show / hide → Artwork); on unless switched off
 const watermarkOn = () => { try { return (JSON.parse(readFileSync(resolve('content/site/visibility.json'), 'utf8')).art || {}).watermark !== false } catch { return true } }
-// every /uploads picture named in the Shop, Work and before-and-after content
+// every /uploads picture named in the Shop, Work, before-and-after and comic samples content
 const artPictures = () => {
   const art = new Set()
   for (const folder of ART_FOLDERS) {

@@ -3,7 +3,7 @@
 # Changes are saved as commits to the repository; the site rebuilds automatically.
 #
 # The panel has three kinds of section (public/admin/shell.js groups them in the navigation):
-#   1. things that are added to over time: Work, Gallery, Step by step, Conventions;
+#   1. things that are added to over time: Work, Comic samples, Gallery, Step by step, Conventions;
 #   2. the words on each page: one short form per page ("pages" below);
 #   3. things that apply to the whole site: name and colour, and what is shown or hidden ("site").
 
@@ -105,6 +105,37 @@ collections:
           - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'], hint: 'Pick it from your list of print sizes (Shop → Categories & sizes).' }
           - { name: price, label: Price, widget: number, value_type: float, min: 0 }
           - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
+
+  - name: comics
+    label: Comic samples
+    label_singular: Comic
+    description: 'A few pages of a comic for visitors to read: a cover and its pages, in reading order. Each one is a small comic book on the Work page; a click opens it to read.'
+    folder: content/comics
+    create: true
+    extension: json
+    format: json
+    identifier_field: title
+    slug: '{{slug}}'
+    summary: '{{title}}'
+    sortable_fields: [order, title]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: text, label: One line about it, widget: string, required: false, hint: 'Shown under the book, for example "Issue #1, the first 8 pages".' }
+      - { name: cover, label: Cover, widget: image, choose_url: false, hint: 'The front of the book. Portrait, the same size as the pages reads best.' }
+      - name: pages
+        label: Pages
+        label_singular: page
+        widget: list
+        collapsed: false
+        minimize_collapsed: false
+        required: false
+        summary: '{{fields.src}}'
+        hint: 'Page 1 is the first page after the cover. Upload every page in order (Add page), and drag a page to move it. Portrait pages of the same size read best. A double-page spread is one wide picture: switch on "Two-page spread" and it counts as two pages.'
+        fields:
+          - { name: src, label: Page, widget: image, choose_url: false }
+          - { name: spread, label: Two-page spread (one wide picture), widget: boolean, default: false, required: false }
+      - { name: order, label: Order on the page, widget: number, value_type: int, required: false, hint: 'Lower numbers come first. Empty: after the numbered ones, by title.' }
+      - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
   - name: shop
     label: Items for sale
@@ -337,6 +368,9 @@ collections:
           - { name: workLabel, label: Small label, widget: string, required: false }
           - { name: workTitle, label: Heading, widget: string }
           - { name: workIntro, label: Introduction, widget: text, required: false }
+          - { name: samplesLabel, label: Small label, widget: string, required: false, hint: 'Above the comic samples on the Work page (they are added under Comic samples, and show once there is one).' }
+          - { name: samplesTitle, label: Heading, widget: string, required: false }
+          - { name: samplesIntro, label: Introduction, widget: text, required: false }
           - { name: galleryLabel, label: Small label, widget: string, required: false }
           - { name: galleryTitle, label: Heading, widget: string }
           - { name: galleryIntro, label: Introduction, widget: text, required: false }

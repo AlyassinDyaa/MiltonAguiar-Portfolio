@@ -627,6 +627,23 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 [class*='-listControlItem'] [class*='ControlContainer']:has(label[for^='src-field']) span:has(> [class*='FileWidgetButton']) { padding: 0; }
 [class*='-listControlItem'] [class*='ControlContainer']:has(label[for^='src-field']) [class*='FileWidgetButton'] { height: 36px !important; font-size: 0.78rem !important; }
 
+/* a comic's pages (Comic samples): each headed with its page number, which shell.js keeps
+   counted ("Page 1", "Pages 3–4 (spread)"); a spread's picture gets the room of two pages */
+[data-ia-page] > div:last-child > div[data-ia-page]::before {
+  content: attr(data-ia-page); grid-column: 2; grid-row: 1; align-self: start;
+  font-family: var(--display); font-size: 1.5rem; font-weight: 800; font-style: italic; line-height: 1; letter-spacing: 0.01em; text-transform: uppercase; color: var(--fg);
+}
+[data-ia-page][data-ia-spread] > div:last-child > div[data-ia-page]::before { color: var(--accent); }
+[data-ia-page] > [class*='NestedObjectLabel'] { display: none !important; } /* the page number says it */
+[data-ia-page] > div:last-child > div[data-ia-spread] { grid-template-columns: 340px minmax(0, 1fr); }
+[data-ia-page] [class*='ControlContainer']:has(label[for^='src-field']) [class*='ImageWrapper'] { height: 200px !important; background: var(--field) !important; }
+[data-ia-page] [class*='ControlContainer']:has(label[for^='src-field']) [class*='ImageWrapper'] img { object-fit: contain !important; }
+@media (max-width: 699px) {
+  [data-ia-page] > div:last-child > div[data-ia-page], [data-ia-page] > div:last-child > div[data-ia-spread] { grid-template-columns: minmax(0, 1fr); }
+  [data-ia-page] > div:last-child > div[data-ia-page]::before { grid-column: 1; padding-right: 80px; } /* clear of the move and remove buttons */
+  [data-ia-page] > div:last-child > div[data-ia-page] > [class*='ControlContainer'] { grid-column: 1 !important; grid-row: auto !important; }
+}
+
 /* =====================================================================
    7. Picture library (dialog)
    ===================================================================== */

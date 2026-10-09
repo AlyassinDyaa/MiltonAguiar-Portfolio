@@ -1931,3 +1931,34 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .acc-card3d.has-art.is-gold .acc-card3d-brand .wordmark b, .acc-card3d.has-art.is-chrome .acc-card3d-brand .wordmark b { color: #ff2a36; }
 .acc-card3d.has-art.is-gold .acc-card3d-foot small, .acc-card3d.has-art.is-chrome .acc-card3d-foot small { color: rgba(255, 255, 255, 0.7); }
 .acc-card3d.has-art.is-gold .acc-card3d-mark, .acc-card3d.has-art.is-chrome .acc-card3d-mark { -webkit-text-stroke-color: rgba(255, 255, 255, 0.14); }
+
+/* the open book: page boxes the comic's own shape either side of the spine, and the page that turns */
+.reader-zoom { container-type: size; display: flex; align-items: center; justify-content: center; }
+.reader-book { position: relative; display: grid; aspect-ratio: var(--r); width: min(100cqw, calc(100cqh * var(--r))); perspective: 2400px; }
+.reader-book.is-pair { grid-template-columns: 1fr 1fr; }
+.reader-book.is-one { grid-template-columns: 1fr; }
+.reader-cell { position: relative; min-width: 0; }
+.reader-face { position: absolute; inset: 0; overflow: hidden; background: #17171a; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+.reader-face.is-blank { background: transparent; box-shadow: none; }
+.reader-face img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+.reader-face img.is-left { object-fit: cover; object-position: left center; }
+.reader-face img.is-right { object-fit: cover; object-position: right center; }
+/* the fold: a little shade either side of the spine */
+.reader-book.is-pair .reader-face:not(.is-blank)::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+.reader-book.is-pair .is-left > .reader-face:not(.is-blank)::after, .reader-leaf.is-back .reader-face.is-front::after, .reader-leaf.is-fwd .reader-face.is-back::after { background: linear-gradient(90deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
+.reader-book.is-pair .is-right > .reader-face:not(.is-blank)::after, .reader-leaf.is-fwd .reader-face.is-front::after, .reader-leaf.is-back .reader-face.is-back::after { background: linear-gradient(270deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
+/* the turning page: two faces back to back, turning on the spine */
+.reader-leaf { position: absolute; z-index: 2; top: 0; bottom: 0; width: 50%; transform-style: preserve-3d; animation-timing-function: cubic-bezier(0.45, 0.05, 0.25, 1); animation-fill-mode: both; }
+.reader-leaf .reader-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.reader-leaf .reader-face.is-back { transform: rotateY(180deg); }
+.reader-leaf .reader-face:not(.is-blank)::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 60%); opacity: 0; animation: leaf-shade 0.75s cubic-bezier(0.45, 0.05, 0.25, 1) both; }
+.reader-leaf.is-fwd { left: 50%; transform-origin: left center; animation-name: leaf-fwd; }
+.reader-leaf.is-back { left: 0; transform-origin: right center; animation-name: leaf-back; }
+.reader-leaf.is-peel, .reader-leaf.is-unpeel { left: 0; width: 100%; transform-origin: left center; }
+.reader-leaf.is-peel { animation-name: leaf-fwd; }
+.reader-leaf.is-unpeel { animation-name: leaf-in; }
+@keyframes leaf-fwd { from { transform: rotateY(0deg); } 50% { transform: rotateY(-90deg) translateZ(18px); } to { transform: rotateY(-180deg); } }
+@keyframes leaf-back { from { transform: rotateY(0deg); } 50% { transform: rotateY(90deg) translateZ(18px); } to { transform: rotateY(180deg); } }
+@keyframes leaf-in { from { transform: rotateY(-180deg); } 50% { transform: rotateY(-90deg) translateZ(18px); } to { transform: rotateY(0deg); } }
+@keyframes leaf-shade { from { opacity: 0; } 50% { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .reader-leaf { animation: none; display: none; } }

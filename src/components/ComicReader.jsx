@@ -43,12 +43,19 @@ const viewsOf = (sheets, wide) => {
   return views
 }
 
-// a page turning: in from the side it is going to, out the other way (only a fade with reduced motion)
-const turn = {
-  enter: ({ dir, still }) => (still ? { opacity: 0 } : { opacity: 0, x: dir * 70, rotateY: dir * -10 }),
-  show: { opacity: 1, x: 0, rotateY: 0 },
-  leave: ({ dir, still }) => (still ? { opacity: 0 } : { opacity: 0, x: dir * -70, rotateY: dir * 10 }),
+/* Turning a page, as in a printed comic. The open book is two page boxes either side of the spine;
+   what each shows is a whole page, one half of a two-page spread, or nothing (the cover has no page
+   to its left). Turning forward, the right-hand page lifts and turns over on the spine: its front is
+   the page being left, its back the next left-hand page, and the next right-hand page is under it.
+   Turning back is the same the other way. On a phone (one page at a time) the page peels away to the
+   left, or comes back from there. With reduced motion the page simply changes. */
+const half = (s, part) => (s ? { src: s.src, part, name: nameOf(s) } : null)
+const halvesOf = (shown) => {
+  if (shown[0].spread) return { L: half(shown[0], 'left'), R: half(shown[0], 'right') }
+  if (shown.length === 2) return { L: half(shown[0], 'whole'), R: half(shown[1], 'whole') }
+  return shown[0].cover ? { L: null, R: half(shown[0], 'whole') } : { L: half(shown[0], 'whole'), R: null }
 }
+const TURN_MS = 750
 
 /* The comic reader: a comic full screen, page by page. Turn the page with the arrows at the sides,
    the arrow keys (also Page Up / Page Down, Home and End), a sideways swipe, or a click on the right
@@ -71,7 +78,10 @@ function Reader({ comic, onClose }) {
   const sheets = useMemo(() => sheetsOf(comic), [comic])
   const views = useMemo(() => viewsOf(sheets, wide), [sheets, wide])
   const [at, setAt] = useState(0) // the sheet being read (its view is worked out from it, so a turned phone keeps the place)
-  const [dir, setDir] = useState(1)
+  const [flip, setFlip] = useState(null) // a page turning: { from, to, dir, n } (views)
+  const flipping = useRef(null)
+  flipping.current = flip
+  const [ratio, setRatio] = useState(0.66) // a page's width to its height, from the cover
   const [zoom, setZoom] = useState(null) // { x, y }: how far a zoomed page is moved, in px
   const [dx, setDx] = useState(0) // how far a finger has pulled the page sideways
   const [panning, setPanning] = useState(false)
@@ -83,7 +93,8 @@ function Reader({ comic, onClose }) {
   const lastTap = useRef(null)
   const tapTimer = useRef(0)
 
-  const v = Math.max(0, views.findIndex((list) => list.includes(at)))
+  const settled = Math.max(0, views.findIndex((list) => list.includes(at)))
+  const v = flip ? flip.to : settled // where the reader is going (the label, the strip and the keys follow it)
   const view = views[v]
   const shown = view.map((i) => sheets[i])
   const inside = shown.filter((s) => !s.cover)
@@ -93,14 +104,27 @@ function Reader({ comic, onClose }) {
   const stripShown = stripOpen ?? tall
   const first = v === 0, last = v === views.length - 1
 
+  // a page turned: the next view is where the reader is; a turn still going lands at once
   const go = (to) => {
     const next = Math.min(views.length - 1, Math.max(0, to))
     if (next === v) return
-    setDir(next > v ? 1 : -1)
-    setAt(views[next][0])
     setZoom(null)
+    if (still) { setFlip(null); setAt(views[next][0]); return }
+    setAt(views[v][0])
+    setFlip({ from: v, to: next, dir: next > v ? 1 : -1, n: Date.now() })
   }
-  const jump = (i) => { if (!view.includes(i)) { setDir(i > at ? 1 : -1); setAt(i); setZoom(null) } }
+  const landed = () => { const f = flipping.current; if (!f) return; setAt(views[f.to][0]); setFlip(null) }
+  const jump = (i) => { const to = views.findIndex((list) => list.includes(i)); if (to >= 0) go(to) }
+  // should the animation's end never be heard (a hidden tab), the page lands anyway
+  useEffect(() => { if (!flip) return; const t = setTimeout(landed, TURN_MS + 150); return () => clearTimeout(t) }, [flip]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a phone turned mid-turn: the views change, so the turn just lands
+  useEffect(() => { setFlip(null) }, [wide])
+  // the shape of a page, from the cover, so the open book is the comic's own shape
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => { if (img.naturalWidth && img.naturalHeight) setRatio(img.naturalWidth / img.naturalHeight) }
+    img.src = asset(sheets[0].src)
+  }, [sheets])
   // the keys and the delayed tap act on whatever is showing when they happen
   const act = useRef({})
   act.current = { go, v, views, zoom, onClose }
@@ -209,12 +233,43 @@ function Reader({ comic, onClose }) {
     tapTimer.current = setTimeout(() => act.current.go(act.current.v + way), TAP)
   }
 
-  const page = (s, side) => (
-    <div className={`reader-page ${side}`} key={s.src + side}>
-      <img src={asset(s.src)} alt={`${comic.title}, ${nameOf(s).toLowerCase()}`} draggable="false" />
+  // one page box's picture: a whole page, a half of a spread, or nothing
+  const face = (c, cls = '') => (
+    <div className={`reader-face ${cls} ${c ? '' : 'is-blank'}`}>
+      {c && <img src={asset(c.src)} className={`is-${c.part}`} alt={c.part === 'right' ? '' : `${comic.title}, ${c.name.toLowerCase()}`} draggable="false" />}
     </div>
   )
-  const lone = shown.length === 1
+  const sheetsAt = (i) => views[i].map((k) => sheets[k])
+  const leaf = (cls, front, back) => (
+    <div key={flip.n} className={`reader-leaf ${cls}`} style={{ animationDuration: `${TURN_MS}ms` }} onAnimationEnd={(e) => { if (e.target === e.currentTarget) landed() }}>
+      {face(front, 'is-front')}{face(back, 'is-back')}
+    </div>
+  )
+  const pair = (L, R, turning) => (
+    <div className="reader-book is-pair" style={{ '--r': 2 * ratio }}>
+      <div className="reader-cell is-left">{face(L)}</div>
+      <div className="reader-cell is-right">{face(R)}</div>
+      {turning}
+    </div>
+  )
+  const one = (sh, turning) => (
+    <div className="reader-book is-one" style={{ '--r': sh.spread ? 2 * ratio : ratio }}>
+      <div className="reader-cell">{face(half(sh, 'whole'))}</div>
+      {turning}
+    </div>
+  )
+  let book
+  if (wide) {
+    if (!flip) { const h = halvesOf(shown); book = pair(h.L, h.R) }
+    else {
+      const a = halvesOf(sheetsAt(flip.from)), b = halvesOf(sheetsAt(flip.to))
+      book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L)) : pair(b.L, a.R, leaf('is-back', a.L, b.R))
+    }
+  } else if (!flip) book = one(shown[0])
+  else {
+    const a = sheetsAt(flip.from)[0], b = sheetsAt(flip.to)[0]
+    book = flip.dir > 0 ? one(b, leaf('is-peel', half(a, 'whole'), null)) : one(a, leaf('is-unpeel', half(b, 'whole'), null))
+  }
   const spreadOnPhone = !wide && shown[0].spread
   const look = zoom ? { transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${ZOOM})` } : dx ? { transform: `translateX(${dx}px)` } : undefined
 
@@ -224,17 +279,7 @@ function Reader({ comic, onClose }) {
       <div ref={stage} className={`reader-stage ${zoom ? 'is-zoomed' : ''} ${panning ? 'is-panning' : ''}`}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
         <div className="reader-zoom" style={look}>
-          <AnimatePresence initial={false} custom={{ dir, still }}>
-            <motion.div key={`${wide}:${view.join('-')}`} className={`reader-view ${wide && !shown[0].spread ? 'is-pair' : 'is-one'}`}
-              custom={{ dir, still }} variants={turn} initial="enter" animate="show" exit="leave"
-              transition={{ duration: still ? 0.15 : 0.38, ease: [0.16, 1, 0.3, 1] }}>
-              {wide && !shown[0].spread
-                ? lone
-                  ? shown[0].cover ? [<div className="reader-page is-left is-blank" key="blank" />, page(shown[0], 'is-right')] : [page(shown[0], 'is-left'), <div className="reader-page is-right is-blank" key="blank" />]
-                  : [page(shown[0], 'is-left'), page(shown[1], 'is-right')]
-                : page(shown[0], shown[0].spread ? 'is-spread' : 'is-single')}
-            </motion.div>
-          </AnimatePresence>
+          {book}
         </div>
         {spreadOnPhone && !zoom && <p className="reader-note">A two-page spread: turn the phone sideways, or double-tap to zoom in</p>}
       </div>

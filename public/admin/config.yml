@@ -795,7 +795,6 @@ collections:
               - { name: ticker, label: Moving band of words, widget: boolean, default: true }
               - { name: project, label: Current project, widget: boolean, default: true }
               - { name: latest, label: Latest pieces, widget: boolean, default: true }
-              - { name: samples, label: Samples (comic books to read), widget: boolean, default: true, required: false }
               - { name: redraws, label: Step by step, widget: boolean, default: true }
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: events, label: Conventions, widget: boolean, default: true }

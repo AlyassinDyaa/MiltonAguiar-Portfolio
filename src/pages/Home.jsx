@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { asset, brand, comics, commissions, day, events, fresh, hero, heroPanels, home, marquee, nameParts, pages, project, quote, redraws, shop, shows, work } from '../data/site'
+import { asset, brand, commissions, day, events, fresh, hero, heroPanels, home, marquee, nameParts, project, quote, redraws, shop, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Marquee from '../components/Marquee'
 import Compare from '../components/Compare'
 import ScrollRow from '../components/ScrollRow'
-import ComicShelf from '../components/ComicShelf'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
 import Runner from '../components/Runner'
@@ -252,20 +251,6 @@ export default function Home() {
       {shows('home', 'project') && project.title && <Project page={++n} />}
 
       {shows('home', 'latest') && fresh.length > 0 && <Latest page={++n} onOpen={setSel} />}
-
-      {/* Samples: comic books to read (Show / hide → Parts of the home page → Samples) */}
-      {shows('home', 'samples') && comics.length > 0 && (
-        <section className="spread">
-          <div className="container">
-            <Runner label={pages.samples.label} page={++n} />
-            <div className="spread-head">
-              <h2 className="display h-lg">{pages.samples.title}</h2>
-              {pages.samples.intro && <p className="dim">{pages.samples.intro}</p>}
-            </div>
-            <ComicShelf comics={comics} />
-          </div>
-        </section>
-      )}
 
       {/* Step by step */}
       {shows('home', 'redraws') && redraws.length > 0 && (

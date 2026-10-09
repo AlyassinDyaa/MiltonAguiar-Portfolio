@@ -1,0 +1,21 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/batfam-photo-strip.webp",
+  "universe": "DC",
+  "price": "",
+  "hidden": false,
+  "date": "2026-04-22",
+  "sizes": [
+    {
+      "size": "A5",
+      "price": 5
+    }
+  ],
+  "status": "sale",
+  "title": "Batships",
+  "type": "Prints",
+  "inShop": true,
+  "face": "0,21,100",
+  "category": "Fan art",
+  "look": "default"
+}

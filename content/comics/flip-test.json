@@ -1,8 +1,12 @@
 {
   "title": "Flip test",
   "text": "Temporary test comic, not committed",
-  "cover": "/uploads/robin-page-1_01.webp",
+  "cover": "/uploads/robin-cover-colors.webp",
   "pages": [
+    {
+      "spread": false,
+      "src": "/uploads/robin-page-1_01.webp"
+    },
     {
       "spread": false,
       "src": "/uploads/robin-page-2.webp"

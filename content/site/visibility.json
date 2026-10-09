@@ -26,10 +26,10 @@
     "events": true
   },
   "themes": {
-    "dark": true,
-    "light": false
+    "dark": false,
+    "light": true
   },
   "art": {
-    "watermark": false
+    "watermark": true
   }
 }

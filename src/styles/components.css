@@ -245,12 +245,16 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
   .hp-title .hp-in { display: flex; flex-direction: column; align-items: stretch; padding: 22px 18px 0; --name: min(24.5vw, 9rem, 34svh); } /* 34svh: a phone on its side keeps the name to about a third of the screen */
   .hp-title .hp-in:not(.has-figure) { padding-bottom: 24px; }
   .has-figure .hero-tag, .has-figure .lead, .has-figure .hero-actions { max-width: none; }
-  /* on a phone the drawing stands under the words, in the same panel */
+  /* on a phone the drawing stands between the words and the buttons, in the same panel: the words'
+     box steps aside so its parts and the drawing line up one under another */
+  .has-figure .hero-copy { display: contents; }
+  .has-figure .hero-copy > * { position: relative; z-index: 2; order: 0; }
+  .has-figure .hero-copy > .hero-actions { order: 3; margin-bottom: 24px; }
   .hero-figure.is-cutout, .hero-figure.is-sheet { position: relative; order: 2; display: block; right: auto; top: auto; bottom: auto; width: min(100%, 440px); height: auto; margin: 10px auto 0; translate: none; }
-  .hp-in.has-cutout::before { background: radial-gradient(closest-side at 50% 72%, oklch(0.6 0.22 var(--h) / 0.85), oklch(0.5 0.2 var(--h) / 0.45) 55%, transparent 96%); }
-  .hp-in.has-cutout::after { -webkit-mask-image: radial-gradient(closest-side at 50% 72%, #000 25%, transparent 95%); mask-image: radial-gradient(closest-side at 50% 72%, #000 25%, transparent 95%); }
+  .hp-in.has-cutout::before { background: radial-gradient(closest-side at 50% 58%, oklch(0.6 0.22 var(--h) / 0.85), oklch(0.5 0.2 var(--h) / 0.45) 55%, transparent 96%); }
+  .hp-in.has-cutout::after { -webkit-mask-image: radial-gradient(closest-side at 50% 58%, #000 25%, transparent 95%); mask-image: radial-gradient(closest-side at 50% 58%, #000 25%, transparent 95%); }
   .hero-figure.is-sheet { width: min(88%, 400px); margin: 22px auto 30px; rotate: 1.5deg; }
-  .hero-rays { left: 50%; top: 72%; width: 260%; }
+  .hero-rays { left: 50%; top: 58%; width: 260%; }
   [data-theme='light'] .hero-figure.is-sheet { right: auto; width: min(100%, 440px); height: auto; margin: 10px auto 0; translate: none; }
 }
 

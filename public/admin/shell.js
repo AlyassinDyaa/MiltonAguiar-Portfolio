@@ -62,7 +62,7 @@
     'pages/lists': { groups: { workLabel: 'Work page', samplesLabel: 'Comic samples (on the Work page)', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'samplesLabel', 'samplesTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
       groups: { title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
-      half: ['quoteLabel', 'quoteUrl', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
+      half: ['quoteLabel', 'quoteVia', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
     },
     'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
@@ -354,6 +354,7 @@
     markRequired(pane)
     nameTheForm()
     tidySales(pane)
+    tidyQuote(pane)
     // the kinds of thing sold (Shop and payments) are drawn as slim rows, name and line side by side
     for (const field of pane.querySelectorAll('[class*="ControlContainer"]')) {
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
@@ -398,9 +399,21 @@
       if (label && label.dataset.iaState !== state.split(' ')[0]) label.dataset.iaState = state.split(' ')[0]
     }
   }
+  /* ---------- the quote button (Page text → Commissions) ----------
+     Its address field only matters for "Another link": hidden for the other choices. */
+  const tidyQuote = (pane) => {
+    if (`${currentSection()}/${currentFile()}` !== 'pages/commissions') return
+    const fieldOf = (name) => { const label = pane.querySelector(`label[for^="${name}-field"]`); return label && label.closest('[class*="ControlContainer"]') }
+    const via = fieldOf('quoteVia')
+    const url = fieldOf('quoteUrl')
+    if (!via || !url) return
+    const shown = ((via.querySelector('[class*="singleValue"]') || {}).textContent || '').trim()
+    const off = !/^Another link/i.test(shown) // the address only counts for that choice
+    if (url.hasAttribute('data-ia-off') !== off) url.toggleAttribute('data-ia-off', off)
+  }
   // the dates and the On switch change no element: look again after them
   document.addEventListener('input', () => { if (currentFile() === 'sales') scheduleTag() }, true)
-  document.addEventListener('click', () => { if (currentFile() === 'sales') setTimeout(scheduleTag, 40) }, true)
+  document.addEventListener('click', () => { if (currentFile() === 'sales' || currentFile() === 'commissions') setTimeout(scheduleTag, 40) }, true)
 
   /* Decap heads every form "Writing in X collection". Say what is being edited instead: the
      page's own name for a single page ("Home page"), the section's name for anything else. */

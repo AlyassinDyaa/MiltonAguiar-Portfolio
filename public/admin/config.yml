@@ -296,7 +296,7 @@ collections:
                   - { label: 'Shop', value: shop }
                   - { label: 'Work', value: work }
                   - { label: 'Commissions page', value: commissions }
-                  - { label: 'Get a quote (your Instagram)', value: quote }
+                  - { label: 'Get a quote (where the quote button goes, under Commissions)', value: quote }
                   - { label: 'About', value: about }
                   - { label: 'Contact', value: contact }
                   - { label: 'Gallery', value: gallery }
@@ -390,7 +390,7 @@ collections:
         label: Commissions page
         file: content/pages/commissions.json
         fields:
-          - { name: open, label: Commissions are open, widget: boolean, default: true, hint: 'Switches the "Commissions open" light in the top bar and on the page.' }
+          - { name: open, label: Commissions are open, widget: boolean, default: true, hint: 'Switches the "Commissions open" light in the top bar and on the page. Off: no request form, and the site refuses new requests (commissions already asked for carry on in the customers'' accounts).' }
           - { name: title, label: Heading, widget: string }
           - { name: intro, label: Introduction, widget: text }
           - { name: processLabel, label: Small label, widget: string, required: false }
@@ -415,11 +415,22 @@ collections:
               - { name: price, label: Price, widget: string, required: false, hint: 'Written the way it should read: "From €60". Empty shows the quote button on its own. Either way the offer links to where quotes are given.' }
               - { name: includes, label: What is included, widget: list, required: false, hint: 'Separate them with commas.' }
           - { name: quoteLabel, label: Wording of the quote button, widget: string, required: false, hint: 'On every offer and price tag. Empty reads "Get a quote".' }
-          - { name: quoteUrl, label: Where the quote button goes, widget: string, required: false, hint: 'Empty sends people to your Instagram (the Instagram link under Name, colour and contact). Put another address here to send them somewhere else.' }
+          - name: quoteVia
+            label: Where the quote button goes
+            widget: select
+            required: false
+            default: site
+            hint: 'On the site: the visitor sends their idea from the request card and you talk it through in Sales → Orders → Commissions.'
+            options:
+              - { label: 'On the site (default)', value: site }
+              - { label: 'Instagram', value: instagram }
+              - { label: 'By email', value: email }
+              - { label: 'Another link', value: link }
+          - { name: quoteUrl, label: The other link, widget: string, required: false, hint: 'Only for "Another link": the full address, starting https://' }
           - { name: requestLabel, label: Small label, widget: string, required: false }
           - { name: requestTitle, label: Heading while open, widget: string }
           - { name: closedTitle, label: Heading while closed, widget: string }
-          - { name: closedText, label: Text while closed, widget: text, required: false }
+          - { name: closedText, label: Text while closed, widget: text, required: false, hint: 'Shown instead of the request form while commissions are closed.' }
           - name: notes
             label: Points
             label_singular: Point

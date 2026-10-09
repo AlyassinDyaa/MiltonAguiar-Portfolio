@@ -120,8 +120,9 @@ const adminBundle = () => ({
     // messages about payments (api/stripe-webhook.js) run here too, so a test key, a PayPal sandbox
     // and the database can be tried on this computer before the site goes live. The admin's
     // functions let in requests to localhost without a pass (api/_session.js: adminOk), never on
-    // Vercel. The webhook checks its message as it arrived, so it gets it untouched.
-    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/discount', 'api/discount.js'], ['/api/discounts', 'api/discounts.js'], ['/api/account', 'api/account.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js'], ['/api/contact', 'api/contact.js']]) {
+    // Vercel. The webhook checks its message as it arrived, so it gets it untouched. Commissions
+    // (api/commissions.js: the customer's requests and the admin's side of them) run here too.
+    for (const [route, file] of [['/api/checkout', 'api/checkout.js'], ['/api/paypal', 'api/paypal.js'], ['/api/discount', 'api/discount.js'], ['/api/discounts', 'api/discounts.js'], ['/api/account', 'api/account.js'], ['/api/commissions', 'api/commissions.js'], ['/api/stripe-webhook', 'api/stripe-webhook.js'], ['/api/contact', 'api/contact.js']]) {
       server.middlewares.use(route, async (req, res, next) => {
         if ((req.url || '/').split('?')[0] !== '/') return next()
         useKeys()

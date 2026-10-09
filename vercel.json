@@ -14,6 +14,7 @@
     "api/checkout.js": { "includeFiles": "content/**" },
     "api/paypal.js": { "includeFiles": "content/**" },
     "api/account.js": { "includeFiles": "content/**" },
+    "api/commissions.js": { "includeFiles": "content/**" },
     "api/orders.js": { "includeFiles": "content/work/**" },
     "api/contact.js": { "includeFiles": "content/site/**" }
   }

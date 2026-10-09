@@ -6,6 +6,7 @@ import { useAccount } from '../hooks/useAccount'
 import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
 import { checkout, payLine } from '../data/checkout'
+import { QuoteGo } from './QuoteLink'
 
 const EASE = [0.16, 1, 0.3, 1]
 
@@ -99,7 +100,7 @@ export default function Buy({ piece }) {
       {out ? (
         <>
           <span className="btn buy-btn is-out" aria-disabled="true">Sold out</span>
-          {quote.url && <p className="buy-secure"><span>This one has gone. <a href={quote.url} target="_blank" rel="noreferrer">Ask about a reprint or a commission</a></span></p>}
+          {!quote.closed && <p className="buy-secure"><span>This one has gone. <QuoteGo>Ask about a reprint or a commission</QuoteGo></span></p>}
         </>
       ) : (
         <>

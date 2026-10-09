@@ -1,0 +1,288 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { db, dbReady } from './_db.js'
+import { SITE, shapeAddress } from './_orders.js'
+import { artistInbox, clean, sendMail } from './_users.js'
+
+/* Commissions: a customer asks for a piece, talks it over with the artist, gets a quote, pays it,
+   and follows the piece from sketch to delivery (the leading underscore keeps Vercel from serving
+   this file; api/commissions.js is the function that uses it).
+
+   Kept in the database's `commissions` collection, one document each:
+   { _id: 'c_…', number: 'C-0003-01' (member number, then which commission of theirs it is),
+     userId, email, name, title,
+     details: { kind, idea, refs: [links], size, budget, due },
+     status: requested | discussing | quoted | paid | sketch | inks | colours | delivered | cancelled,
+     quote: null | { price, currency, includes, due, ship, at },
+     messages: [{ from: 'customer' | 'artist' | 'system', text, links: [], at }],
+     unread: { customer: n, artist: n },
+     pending: null | { provider, ref, at }   (a checkout opened and not paid yet)
+     payment: null | { provider, ref, amount, currency, paidWith, paidAt, test, pi?, captureId?, refunded? },
+     address (when it is posted), createdAt, updatedAt } */
+export { dbReady }
+
+/* ---------- the choices made for now (easy to change here) ---------- */
+export const SETTINGS = {
+  currency: 'EUR', // what quotes are in
+  upFront: 1, // the share of the price paid before the work starts: 1 is all of it (deposits would come later)
+  shipByDefault: false, // the quote form's "Post it to me" switch starts off: a digital piece
+  maxLinks: 10, // reference links on one message
+  maxMessages: 400, // a thread stops taking messages after this many
+  mailQuietHours: 6, // a new message is emailed when the other side has read everything, or after this long
+}
+
+export const STATUSES = ['requested', 'discussing', 'quoted', 'paid', 'sketch', 'inks', 'colours', 'delivered', 'cancelled']
+export const WORK_STAGES = ['sketch', 'inks', 'colours', 'delivered', 'cancelled'] // what the admin moves it to once paid
+export const STATUS_WORDS = { requested: 'Requested', discussing: 'Discussing', quoted: 'Quoted', paid: 'Paid', sketch: 'Sketch', inks: 'Inks', colours: 'Colours', delivered: 'Delivered', cancelled: 'Cancelled' }
+const OPEN = ['requested', 'discussing', 'quoted'] // not paid yet: the customer can still cancel
+export const isOpen = (c) => OPEN.includes(c.status)
+export const isPaid = (c) => Boolean(c && c.payment && c.payment.paidAt)
+
+const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return null } }
+export const shopSettings = () => read('content/site/shop.json') || {}
+// the kinds of piece offered on the Commissions page, and anything else
+export const kinds = () => [...((read('content/pages/commissions.json') || {}).tiers || []).map((t) => String((t && t.name) || '').trim()).filter(Boolean), 'Something else']
+/* New requests only while commissions are open (Page text → Commissions → Commissions are open).
+   Commissions already asked for carry on either way: messages, paying a quote, the stages. */
+export const commissionsOpen = () => {
+  if (typeof globalThis.__maCommissionsOpen === 'boolean') return globalThis.__maCommissionsOpen // set only by tests
+  return (read('content/pages/commissions.json') || {}).open !== false
+}
+const brandName = () => (read('content/site/brand.json') || {}).name || 'Milton Aguiar'
+
+/* ---------- tidying what comes in ---------- */
+const text = (v, max) => String(v ?? '').replace(/\r/g, '').trim().slice(0, max)
+// a link someone typed: "www.x.com/y" becomes https://www.x.com/y; anything else that is not a web address is dropped
+const asLink = (v) => {
+  let s = String(v || '').trim().replace(/[),.;]+$/, '')
+  if (/^www\./i.test(s)) s = `https://${s}`
+  if (!/^https?:\/\/[^\s<>"]{3,}$/i.test(s) || s.length > 500) return ''
+  try { return new URL(s).href } catch { return '' }
+}
+// links from a list, or found in a line of text, without repeats
+export const cleanLinks = (v) => {
+  const raw = Array.isArray(v) ? v : String(v || '').split(/[\s,]+/)
+  return [...new Set(raw.map(asLink).filter(Boolean))].slice(0, SETTINGS.maxLinks)
+}
+export const cleanText = (v, max = 4000) => text(v, max)
+const pad = (n, w) => String(n).padStart(w, '0')
+const after = (got) => (got && got.value !== undefined && got.ok !== undefined ? got.value : got) // older drivers wrap the document
+
+/* ---------- money ---------- */
+export const price = (n, cur = SETTINGS.currency) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(Number(n) || 0) } catch { return `${n} ${cur}` } }
+export const cents = (n) => Math.round((Number(n) || 0) * 100)
+// a date as 2026-12-01 is that day wherever the server is (read and written in UTC)
+export const dueWords = (d) => { if (!d) return ''; const t = new Date(d); return Number.isNaN(+t) ? String(d) : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) }
+const addressWords = (a) => (a ? [a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), a.state, a.country].filter(Boolean).join(', ') : '')
+
+/* ---------- the documents ---------- */
+export const col = async () => (await db()).collection('commissions')
+// the member's next commission number: member 3's first is C-0003-01
+export const nextNumber = async (user) => {
+  const doc = after(await (await db()).collection('users').findOneAndUpdate({ _id: user._id }, { $inc: { commissionSeq: 1 } }, { returnDocument: 'after' }))
+  return `C-${pad(Number(user.memberNo) || 0, 4)}-${pad((doc && doc.commissionSeq) || 1, 2)}`
+}
+export const message = (from, textValue, links = []) => ({ from, text: text(textValue, 4000), links: cleanLinks(links), at: new Date() })
+// the title, when none is given: the start of the idea
+export const titleFrom = (kind, idea) => {
+  const first = String(idea || '').split(/[.!?\n]/)[0].trim()
+  const t = first.length > 60 ? `${first.slice(0, 57).replace(/\s+\S*$/, '')}…` : first
+  return t || kind || 'A commission'
+}
+
+// a list row, for either side
+const lastOf = (c) => (Array.isArray(c.messages) && c.messages.length ? c.messages[c.messages.length - 1] : null)
+const summary = (c) => {
+  const last = lastOf(c)
+  return {
+    id: c._id, number: c.number, title: c.title, kind: (c.details && c.details.kind) || '', status: c.status,
+    price: c.quote ? c.quote.price : null, currency: (c.quote && c.quote.currency) || SETTINGS.currency, ship: Boolean(c.quote && c.quote.ship),
+    paid: isPaid(c), createdAt: c.createdAt, updatedAt: c.updatedAt,
+    lastAt: last ? last.at : c.createdAt, lastFrom: last ? last.from : '', lastText: last ? String(last.text || '').slice(0, 140) : '',
+  }
+}
+// the payment as the customer sees it (no ids)
+const paymentFor = (p) => (p && p.paidAt ? { provider: p.provider, amount: p.amount, currency: p.currency, paidWith: p.paidWith || '', paidAt: p.paidAt, refunded: Boolean(p.refunded) } : null)
+export const forCustomer = (c, full = false) => ({
+  ...summary(c),
+  unread: (c.unread && c.unread.customer) || 0,
+  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: paymentFor(c.payment), address: c.address || null, paying: Boolean(c.pending) } : {}),
+})
+export const forAdmin = (c, full = false) => ({
+  ...summary(c),
+  unread: (c.unread && c.unread.artist) || 0,
+  userId: c.userId || null, email: c.email || '', name: c.name || '', test: Boolean(c.payment && c.payment.test),
+  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: c.payment || null, pending: c.pending || null, address: c.address || null } : {}),
+})
+
+/* ---------- adding to the thread ----------
+   Each message (or system note) goes on the end; the side it is for has one more unread. `quiet`
+   says whether the other side was already told and has not read since (then no new email). */
+export const addMessage = async (id, msg, { set = {}, forSide, alsoUnread } = {}) => {
+  const c = await col()
+  const before = await c.findOne({ _id: id })
+  if (!before) return { before: null, after: null, quiet: false }
+  const inc = {}
+  if (forSide) inc[`unread.${forSide}`] = 1
+  if (alsoUnread) inc[`unread.${alsoUnread}`] = 1
+  await c.updateOne({ _id: id }, { $push: { messages: msg }, $set: { ...set, updatedAt: new Date() }, ...(Object.keys(inc).length ? { $inc: inc } : {}) })
+  const unreadBefore = forSide ? (before.unread && before.unread[forSide]) || 0 : 0
+  const lastMail = forSide && before.mailed && before.mailed[forSide] ? new Date(before.mailed[forSide]) : null
+  const quiet = unreadBefore > 0 && lastMail && Date.now() - +lastMail < SETTINGS.mailQuietHours * 3600e3
+  return { before, after: await c.findOne({ _id: id }), quiet }
+}
+export const noteMailed = async (id, side) => (await col()).updateOne({ _id: id }, { $set: { [`mailed.${side}`]: new Date() } })
+
+/* ---------- emails ---------- */
+const adminLink = (site, id) => `${site}/admin/#/sales/orders?tab=commissions&c=${encodeURIComponent(id)}`
+const accountLink = (site, id) => `${site}/account?tab=orders&view=commissions&c=${encodeURIComponent(id)}`
+const firstName = (c) => String(c.name || '').split(' ')[0]
+const paras = (t) => String(t || '').split(/\n{2,}/).map((p) => p.replace(/\n/g, ' ').trim()).filter(Boolean)
+const safely = async (what, mail) => { try { return await sendMail(mail) } catch (e) { console.error(`${what} email not sent:`, e.message); return false } }
+
+export const mailArtistRequest = (c, site) => safely('commission request', {
+  to: artistInbox(),
+  subject: `Commission request ${c.number}: ${c.details.kind || 'a piece'} for ${c.name || c.email}`,
+  kicker: 'Commission request',
+  title: `${c.details.kind || 'A commission'} for ${c.name || c.email}`,
+  lines: [
+    `From ${c.name || 'a member'} (${c.email}), commission ${c.number}.`,
+    ...paras(c.details.idea),
+    `Reference pictures: ${c.details.refs && c.details.refs.length ? c.details.refs.join(' ') : 'none yet'}`,
+    ...(c.details.size ? [`Size: ${c.details.size}`] : []),
+    ...(c.details.budget ? [`Budget: ${c.details.budget}`] : []),
+    `Needed by: ${c.details.due || 'no deadline'}`,
+  ],
+  button: { label: 'Open the commission', url: adminLink(site, c._id) },
+  after: 'Answer in the admin (Sales → Orders → Commissions): they see it in their account, and get an email.',
+  replyTo: c.email ? `${String(c.name || '').replace(/[<>"]/g, '')} <${c.email}>` : undefined,
+})
+export const mailArtistMessage = (c, msg, site, what = 'A new message') => safely('commission message', {
+  to: artistInbox(),
+  subject: `${what} on commission ${c.number}${c.name ? ` from ${c.name}` : ''}`,
+  kicker: `Commission ${c.number}`,
+  title: what,
+  lines: [`${c.name || c.email} wrote about "${c.title}":`, ...paras(msg.text), ...(msg.links && msg.links.length ? [`Links: ${msg.links.join(' ')}`] : [])],
+  button: { label: 'Open the commission', url: adminLink(site, c._id) },
+})
+export const mailCustomer = (c, site, { subject, kicker, title, lines, orders, label = 'See your commission' }) => safely('commission', {
+  to: c.email,
+  subject,
+  kicker: kicker || `Commission ${c.number}`,
+  title,
+  lines: [`Hi${firstName(c) ? ` ${firstName(c)}` : ''},`, ...lines],
+  orders,
+  button: { label, url: accountLink(site, c._id) },
+  after: 'You can answer from your account, or just reply to this email.',
+  replyTo: artistInbox() || undefined,
+})
+export const quoteBox = (c) => ({
+  title: `Commission ${c.number}`,
+  sub: c.title,
+  rows: [
+    ['What is included', c.quote.includes || '—'],
+    ...(c.quote.due ? [['Ready by', dueWords(c.quote.due)]] : []),
+    ['Delivery', c.quote.ship ? 'Posted to you' : 'Digital'],
+  ],
+  total: price(c.quote.price, c.quote.currency),
+})
+
+/* ---------- paid ----------
+   A payment taken (Stripe's webhook, or PayPal's capture): the commission is marked paid, once,
+   however often it is reported, with a note in the thread; the customer gets a receipt and the
+   artist hears of it. `payment` is { provider, ref, amount, currency, paidWith, test, pi?, captureId? }. */
+export const markPaid = async (id, payment, address, site) => {
+  if (!dbReady()) return null
+  const c = await col()
+  const now = new Date()
+  const note = message('system', `Paid ${price(payment.amount, payment.currency)}${payment.paidWith ? ` by ${payment.paidWith}` : ''}. Thank you: the work starts now.`)
+  const got = after(await c.findOneAndUpdate(
+    { _id: id, 'payment.paidAt': { $exists: false } },
+    { $set: { status: 'paid', payment: { ...payment, paidAt: now }, pending: null, ...(address ? { address } : {}), updatedAt: now }, $push: { messages: note }, $inc: { 'unread.customer': 1, 'unread.artist': 1 } },
+    { returnDocument: 'after' },
+  ))
+  if (!got) return null // already paid (Stripe says so more than once)
+  const box = { ...quoteBox(got), foot: [`Paid by ${payment.paidWith || (payment.provider === 'paypal' ? 'PayPal' : 'card')}`, address ? `Posting to ${addressWords(address)}` : ''].filter(Boolean).join(' · ') }
+  await mailCustomer(got, site, {
+    subject: `Your ${brandName()} commission ${got.number} is paid`,
+    kicker: 'Thank you',
+    title: `Commission ${got.number} paid`,
+    lines: ['Thank you, your payment is in and the work can start. You can follow every stage in your account: sketch, inks, colours, then delivery.'],
+    orders: [box],
+    label: 'Follow your commission',
+  })
+  await safely('commission paid', {
+    to: process.env.ORDER_EMAIL_TO || artistInbox(),
+    subject: `Commission paid ${got.number}: ${price(payment.amount, payment.currency)}${got.name ? ` from ${got.name}` : ''}${payment.test ? ' (test)' : ''}`,
+    kicker: 'Commission paid',
+    title: `${price(payment.amount, payment.currency)} paid`,
+    lines: [`${got.name || got.email} (${got.email}) paid for "${got.title}"${payment.paidWith ? ` by ${payment.paidWith}` : ''}${payment.test ? ' (a test)' : ''}.`, ...(address ? [`Post to: ${addressWords(address)}`] : ['Delivery: digital.'])],
+    button: { label: 'Open the commission', url: adminLink(site, got._id) },
+    after: 'Move it on to Sketch, Inks, Colours and Delivered in Sales → Orders → Commissions: they see each step in their account.',
+  })
+  return got
+}
+
+/* A Stripe checkout for a commission, completed (api/stripe-webhook.js): its payment details, then markPaid. */
+export const ofStripe = (session) => Boolean(session && session.metadata && session.metadata.site === SITE && session.metadata.kind === 'commission')
+export const paidByStripe = async (o, { paidWith, pi, site }) => {
+  const id = String(o.metadata.commission || '')
+  if (!/^c_[a-f0-9]{24}$/.test(id)) return null
+  const ship = (o.collected_information && o.collected_information.shipping_details) || o.shipping_details || null
+  return markPaid(id, {
+    provider: 'stripe', ref: o.id, pi: pi || '', amount: (o.amount_total || 0) / 100, currency: String(o.currency || 'eur').toUpperCase(),
+    paidWith: paidWith || 'Card', test: !o.livemode,
+  }, ship && ship.address ? shapeAddress(ship.address, ship.name) : null, site)
+}
+// a refund in Stripe (charge.refunded): the payment shows as refunded, with a note in the thread
+export const refundedByStripe = async (pi) => {
+  if (!dbReady() || !pi) return
+  const c = await col()
+  const found = await c.findOne({ 'payment.pi': pi })
+  if (!found || found.payment.refunded) return
+  await c.updateOne({ _id: found._id }, { $set: { 'payment.refunded': true, updatedAt: new Date() }, $push: { messages: message('system', 'The payment was refunded.') }, $inc: { 'unread.customer': 1 } })
+}
+
+/* ---------- PayPal (the same keys and sandbox switch as api/paypal.js) ---------- */
+const paypalApi = () => (process.env.PAYPAL_ENV === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com')
+export const paypalSandbox = () => process.env.PAYPAL_ENV !== 'live'
+const paypalToken = async () => {
+  const basic = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64')
+  const r = await fetch(`${paypalApi()}/v1/oauth2/token`, { method: 'POST', headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=client_credentials' })
+  const said = await r.json().catch(() => ({}))
+  if (!r.ok || !said.access_token) throw Object.assign(new Error(`paypal token ${r.status}`), { status: r.status === 401 ? 401 : 502 })
+  return said.access_token
+}
+export const paypal = async (path, body) => {
+  const r = await fetch(`${paypalApi()}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${await paypalToken()}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(body || {}) })
+  const said = await r.json().catch(() => ({}))
+  if (!r.ok) throw Object.assign(new Error(`paypal ${path} ${r.status} ${(said.details && said.details[0] && said.details[0].issue) || said.name || ''}`), { status: r.status, issue: said.details && said.details[0] && said.details[0].issue })
+  return said
+}
+// a PayPal capture that went through: the payer's address (when posted), then markPaid
+export const paidByPaypal = async (id, orderId, said, site) => {
+  const unit = (said.purchase_units || [])[0] || {}
+  const ship = unit.shipping || {}
+  const a = ship.address || null
+  const capture = ((unit.payments || {}).captures || [])[0] || {}
+  return markPaid(id, {
+    provider: 'paypal', ref: `pp_${orderId}`, captureId: capture.id || '', paidWith: 'PayPal', test: paypalSandbox(),
+    amount: Number(capture.amount && capture.amount.value) || 0, currency: (capture.amount && capture.amount.currency_code) || SETTINGS.currency,
+  }, a ? shapeAddress({ line1: a.address_line_1, line2: a.address_line_2, city: a.admin_area_2, state: a.admin_area_1, postal_code: a.postal_code, country: a.country_code }, ship.name && ship.name.full_name) : null, site)
+}
+
+/* ---------- Stripe ---------- */
+export const stripe = async (path, form) => {
+  const r = await fetch(`https://api.stripe.com/v1/${path}`, { method: form ? 'POST' : 'GET', headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) }, body: form ? form.toString() : undefined })
+  const said = await r.json().catch(() => ({}))
+  return { ok: r.ok, status: r.status, said }
+}
+// a checkout opened and not paid (a new quote, or a cancel): closed, so the old price can never be paid
+export const closePending = async (c) => {
+  const p = c && c.pending
+  if (!p) return
+  if (p.provider === 'stripe' && /^cs_[A-Za-z0-9_]+$/.test(String(p.ref || '')) && process.env.STRIPE_SECRET_KEY) {
+    try { await stripe(`checkout/sessions/${p.ref}/expire`, new URLSearchParams()) } catch (e) { console.error('checkout not closed:', e.message) }
+  }
+  await (await col()).updateOne({ _id: c._id }, { $set: { pending: null } })
+}

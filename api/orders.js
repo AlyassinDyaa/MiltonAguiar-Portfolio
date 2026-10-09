@@ -36,6 +36,8 @@ const listSessions = async () => {
   }
   return all
 }
+// a commission's payment (api/commissions.js) is not a shop order: it lives under Commissions
+const commission = (s) => Boolean(s.metadata && s.metadata.kind === 'commission')
 const hidden = (s) => (s.metadata && s.metadata.ma_hidden === '1') || (s.payment_intent && typeof s.payment_intent === 'object' && (s.payment_intent.metadata || {}).ma_hidden === '1')
 /* Mark one order as taken off the lists: on its payment, or (a checkout never paid) on the checkout. */
 const hide = async ({ id, paymentIntent }) => {
@@ -181,7 +183,7 @@ export async function orders({ method, body }) {
       const gone = await deletedHere()
       // a checkout still open (the buyer is on the payment page, or left it) is not an order yet
       // this site's checkouts only: a Stripe sandbox shared with another site keeps their orders apart
-      const list = all.filter((s) => ours(s) && !hidden(s) && !gone.has(s.id) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
+      const list = all.filter((s) => ours(s) && !commission(s) && !hidden(s) && !gone.has(s.id) && (s.status !== 'open' || s.payment_status === 'paid')).map(order)
       list.push(...await paypalOrders())
       list.sort((x, y) => y.created - x.created)
       await withPieces(list)

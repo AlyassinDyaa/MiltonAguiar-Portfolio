@@ -41,7 +41,7 @@ window.IASales = (() => {
 
   // ---------- what the screens hold ----------
   const state = {
-    view: 'orders', loaded: false, loading: false, orders: [], sample: false, problem: null,
+    view: 'orders', ordersTab: 'shop', loaded: false, loading: false, orders: [], sample: false, problem: null,
     o: { q: '', stage: 'all', period: 'all', sort: 'new', page: 1, per: perSaved(), customer: '' },
     c: { q: '', kind: 'all', sort: 'spent', page: 1, per: perSaved() },
     open: null, // the order whose panel is open
@@ -193,7 +193,7 @@ window.IASales = (() => {
     const per = el('select', { className: 'sl-select sl-per', ariaLabel: 'Rows per page' }, PER.map((n) => el('option', { value: n, textContent: String(n), selected: n === f.per })))
     per.addEventListener('change', () => {
       const n = Number(per.value)
-      for (const x of [state.o, state.c, dState]) x.per = n // one choice for every list
+      for (const x of [state.o, state.c, dState, cState]) x.per = n // one choice for every list
       f.page = 1
       try { localStorage.setItem('ma.sales.per', String(n)) } catch { /* only for this visit */ }
       draw()
@@ -366,6 +366,7 @@ window.IASales = (() => {
       ...list.map((o) => [o.number, date(o.created, true), o.name, o.email, o.phone, country(o.country), o.shipTo.join(', '), o.items.map((i) => `${i.name} x${i.qty}`).join('; '), o.discountCode, o.discount, o.total, o.refunded, o.currency, PAYMENT[o.payment] || o.payment, stageName[o.fulfilment], o.tracking, o.note]),
     ], `orders-${new Date().toISOString().slice(0, 10)}.csv`)
     return [
+      ordersTabs(),
       head('Orders', 'Every purchase made through the shop, paid by card (Stripe) or PayPal. Open one to see what was bought and where it goes, and mark it packed, shipped or delivered: the buyer sees each step, and the tracking number, in their account.', [
         button(state.loading ? 'Loading…' : 'Refresh', load),
         button('Export CSV', exportCsv),
@@ -1096,6 +1097,305 @@ window.IASales = (() => {
     ]
   }
 
+  // ---------- Commissions ----------
+  /* Sales → Orders → Commissions (#/sales/orders?tab=commissions): every commission asked for on
+     the site (api/commissions.js), a conversation with each customer, the quote they accept and
+     pay, and the stages of the work. One opens in a panel; asked again every 20 seconds while this
+     tab is showing. What is typed in the panel is kept while the screen is drawn again. */
+  const C_STATUS = [['requested', 'New'], ['discussing', 'Discussing'], ['quoted', 'Quoted'], ['paid', 'Paid'], ['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered'], ['cancelled', 'Cancelled']]
+  const cStatusName = Object.fromEntries(C_STATUS)
+  const C_WORK = [['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered'], ['cancelled', 'Cancel']]
+  const C_CHIPS = [
+    ['all', 'All', () => true],
+    ['unread', 'Unread', (c) => c.unread > 0],
+    ['to-answer', 'To quote', (c) => ['requested', 'discussing'].includes(c.status)],
+    ...C_STATUS.map(([k, t]) => [k, t, (c) => c.status === k]),
+  ]
+  const cState = { loaded: false, loading: false, list: [], problem: '', chip: 'all', q: '', page: 1, per: perSaved(), open: null, detail: null, detailProblem: '', drafts: {}, said: '', stick: true }
+  const cApi = async (body) => {
+    try {
+      const r = await fetch('/api/commissions', { method: 'POST', cache: 'no-store', headers: { Authorization: `token ${pass()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) })
+      return { ok: r.ok, status: r.status, json: await r.json().catch(() => ({})) }
+    } catch { return { ok: false, status: 0, json: { message: 'Could not reach the site. Check the connection and try again.' } } }
+  }
+  const loadCommissions = async (quiet = false) => {
+    if (cState.loading) return
+    cState.loading = true
+    if (!quiet) draw()
+    const r = await cApi({ action: 'adminList' })
+    cState.loading = false; cState.loaded = true
+    if (r.ok) { cState.list = r.json.commissions || []; cState.problem = '' } else cState.problem = r.json.message || 'The commissions could not be loaded.'
+    draw()
+  }
+  // one commission, in full (opening it marks the customer's messages read)
+  const loadCommission = async (id) => {
+    const r = await cApi({ action: 'adminGet', id })
+    if (cState.open !== id) return
+    if (r.ok) { cState.detail = r.json.commission; cState.detailProblem = ''; const row = cState.list.find((x) => x.id === id); if (row) row.unread = 0 } else cState.detailProblem = r.json.message || 'It could not be opened.'
+    draw()
+  }
+  const openCommission = (id) => {
+    cState.open = id; cState.detail = cState.detail && cState.detail.id === id ? cState.detail : null; cState.detailProblem = ''; cState.said = ''; cState.stick = true
+    history.replaceState(null, '', `#/sales/orders?tab=commissions&c=${encodeURIComponent(id)}`)
+    draw(); loadCommission(id)
+  }
+  const closeCommission = () => {
+    cState.open = null; cState.detail = null
+    history.replaceState(null, '', '#/sales/orders?tab=commissions')
+    draw()
+  }
+  // an answer from the server with the whole commission: kept, and its row brought up to date
+  const keepCommission = (c) => {
+    cState.detail = c
+    const row = cState.list.find((x) => x.id === c.id)
+    const last = c.messages && c.messages[c.messages.length - 1]
+    const fresh = { id: c.id, number: c.number, title: c.title, kind: c.kind, status: c.status, price: c.price, currency: c.currency, ship: c.ship, paid: c.paid, updatedAt: c.updatedAt, lastAt: last ? last.at : c.lastAt, lastFrom: last ? last.from : '', lastText: last ? last.text : '', unread: 0, email: c.email, name: c.name, userId: c.userId, test: c.test, createdAt: c.createdAt }
+    if (row) Object.assign(row, fresh); else cState.list.unshift(fresh)
+  }
+  // every 20 seconds while the Commissions tab shows (and this browser tab is in view)
+  setInterval(() => {
+    if (!root || !root.isConnected || document.visibilityState !== 'visible' || state.view !== 'orders' || state.ordersTab !== 'commissions') return
+    if (!document.documentElement.hasAttribute('data-ia-sales')) return
+    loadCommissions(true)
+    if (cState.open) loadCommission(cState.open)
+  }, 20000)
+
+  const ago = (t) => {
+    const mins = Math.round((Date.now() - new Date(t)) / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins} min ago`
+    if (mins < 60 * 24) return `${Math.round(mins / 60)} h ago`
+    return date(new Date(t).getTime())
+  }
+  const cUnread = () => cState.list.reduce((n, c) => n + (c.unread || 0), 0)
+  // the two tabs at the top of Orders: the shop's orders, and the commissions
+  const ordersTabs = () => {
+    const tab = (k, label, href, n, hot) => el('a', { className: `sl-otab ${state.ordersTab === k ? 'on' : ''}`, href, ariaCurrent: state.ordersTab === k ? 'page' : null }, [label, n != null ? el('small', { className: hot ? 'is-hot' : '', textContent: String(n) }) : null])
+    const unread = cUnread()
+    return el('nav', { className: 'sl-otabs', ariaLabel: 'Orders' }, [
+      tab('shop', 'Shop', '#/sales/orders', state.loaded ? visible(state.orders, 'orders').filter(done).length : null, false),
+      tab('commissions', 'Commissions', '#/sales/orders?tab=commissions', unread || (cState.loaded ? cState.list.length : null), unread > 0),
+    ])
+  }
+
+  const filteredCommissions = () => {
+    const chip = C_CHIPS.find((c) => c[0] === cState.chip) || C_CHIPS[0]
+    const q = cState.q.trim().toLowerCase()
+    return cState.list.filter((c) => chip[2](c) && (!q || [c.number, c.name, c.email, c.title, c.kind, c.lastText].join(' ').toLowerCase().includes(q)))
+      .sort((a, b) => (b.unread > 0) - (a.unread > 0) || new Date(b.lastAt || b.updatedAt) - new Date(a.lastAt || a.updatedAt))
+  }
+  const askDeleteCommission = (c) => ask({
+    title: `Delete commission ${c.number}?`,
+    text: `${c.name || c.email} · ${c.title} · ${cStatusName[c.status] || c.status}${c.price != null ? ` · ${money(c.price, c.currency)}` : ''}`,
+    more: `It is erased with its whole conversation: it leaves this list and the customer's account.${c.paid ? ' It is paid: the payment stays in Stripe or PayPal (refund it there if needed).' : ''}`,
+    yes: 'Delete commission',
+    run: async () => {
+      const r = await cApi({ action: 'adminDelete', id: c.id })
+      if (!r.ok) return r.json.message || 'Not deleted. Try again.'
+      cState.list = cState.list.filter((x) => x.id !== c.id)
+      if (cState.open === c.id) closeCommission()
+      return ''
+    },
+  })
+  const commissionsView = () => {
+    const list = filteredCommissions()
+    const all = cState.list
+    const set = (k, v) => { cState[k] = v; cState.page = 1; draw() }
+    const working = all.filter((c) => ['paid', 'sketch', 'inks', 'colours'].includes(c.status))
+    const paidSum = all.filter((c) => c.paid && c.status !== 'cancelled').reduce((t, c) => t + (Number(c.price) || 0), 0)
+    if (!mState.loaded && !mState.loading) loadMembers() // their pictures
+    return [
+      ordersTabs(),
+      head('Commissions', 'Pieces asked for on the Commissions page. Talk each one over with the customer, send a quote (they accept and pay it in their account), then move it through Sketch, Inks, Colours and Delivered: they see every step, and get an email.', [
+        button(cState.loading ? 'Loading…' : 'Refresh', () => loadCommissions()),
+      ]),
+      cState.problem ? el('div', { className: 'sl-notice is-bad' }, [el('strong', { textContent: 'The commissions could not be loaded' }), el('p', { textContent: cState.problem })]) : null,
+      el('div', { className: 'sl-stats' }, [
+        stat('Unread', String(cUnread()), cUnread() ? 'messages waiting' : 'all read'),
+        stat('To quote', String(all.filter(C_CHIPS[2][2]).length), 'new or being talked over'),
+        stat('In the works', String(working.length), 'paid, not delivered'),
+        stat('Paid', money(paidSum), `${all.filter((c) => c.paid).length} commissions`),
+      ]),
+      el('div', { className: 'sl-chips', role: 'group', ariaLabel: 'Show' }, C_CHIPS.map(([k, label, test]) => {
+        const n = all.filter(test).length
+        if (n === 0 && !['all', 'unread', 'to-answer'].includes(k) && cState.chip !== k) return null
+        const b = el('button', { type: 'button', className: `sl-chip ${cState.chip === k ? 'on' : ''} ${k === 'unread' && n ? 'is-hot' : ''}`, ariaPressed: String(cState.chip === k) }, [label, el('small', { textContent: String(n) })])
+        b.addEventListener('click', () => set('chip', k))
+        return b
+      })),
+      el('div', { className: 'sl-tools' }, [search(cState.q, 'Number, name, email, piece, message…', (v) => set('q', v))]),
+      el('p', { className: 'sl-count', textContent: cState.loading && !cState.loaded ? 'Loading the commissions…' : `${list.length} ${list.length === 1 ? 'commission' : 'commissions'}` }),
+      list.length ? el('div', { className: 'sl-table is-commissions', role: 'table' }, [
+        headRow(['Commission', 'Customer', 'Piece', 'Status', 'Price', 'Last']),
+        ...pageOf(list, cState).map((c) => rowEl(cState.open === c.id, [
+          el('span', { className: 'sl-c-order' }, [el('strong', { textContent: c.number }), el('small', { textContent: date(new Date(c.createdAt).getTime()) })]),
+          el('span', { className: 'sl-c-who' }, [avatar({ name: c.name, email: c.email, member: memberOf(c.email) }), el('span', {}, [el('strong', { textContent: c.name || '—' }), el('small', { textContent: c.email })])]),
+          el('span', {}, [el('strong', { textContent: c.title }), el('small', { textContent: c.kind })]),
+          el('span', {}, [badge(`c-${c.status}`, cStatusName[c.status] || c.status)]),
+          el('span', { className: 'sl-c-total' }, [el('strong', { textContent: c.price != null ? money(c.price, c.currency) : '—' }), el('small', { textContent: c.paid ? 'Paid' : c.price != null ? 'Not paid yet' : 'No quote yet' })]),
+          el('span', { className: 'sl-c-last' }, [
+            el('strong', {}, [c.unread ? el('b', { className: 'sl-unread', textContent: String(c.unread) }) : null, ago(c.lastAt || c.updatedAt)]),
+            el('small', { textContent: `${c.lastFrom === 'customer' ? '' : c.lastFrom === 'artist' ? 'You: ' : ''}${c.lastText || ''}` }),
+          ]),
+        ], () => openCommission(c.id), [iconBtn('trash', `Delete commission ${c.number}`, () => askDeleteCommission(c))])),
+      ]) : (cState.loaded && !cState.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'None match' : 'No commissions yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Requests made on the Commissions page (by customers logged in to their account) show up here.' })]) : null),
+      pager(list, cState, ['commission', 'commissions']),
+    ]
+  }
+
+  // a message's words, with web addresses as links
+  const linked = (text) => {
+    const out = []
+    String(text || '').split(/(https?:\/\/[^\s<>"]+)/g).forEach((part, i) => out.push(i % 2 ? el('a', { href: part, target: '_blank', rel: 'noopener noreferrer', textContent: part.replace(/^https?:\/\//, '') }) : part))
+    return out
+  }
+  const ymd = (d) => (d ? String(d).slice(0, 10) : '')
+  const commissionPanel = (c) => {
+    const id = cState.open
+    const draft = cState.drafts[id] || (cState.drafts[id] = {})
+    const block = (title, kids, cls = '') => el('section', { className: `sl-block ${cls}` }, [el('h3', { textContent: title }), ...kids])
+    const said = el('p', { className: 'sl-said', role: 'status', textContent: cState.said })
+    const fail = (r) => { said.classList.add('is-bad'); said.textContent = r.json.message || 'That did not work. Try again.' }
+    const run = async (btn, body, done) => {
+      btn.disabled = true; said.classList.remove('is-bad'); said.textContent = 'Saving…'
+      const r = await cApi({ id, ...body })
+      btn.disabled = false
+      if (!r.ok) return fail(r)
+      keepCommission(r.json.commission); done(); cState.stick = true
+      draw()
+    }
+    const input = (key, props, tag = 'input') => {
+      const n = el(tag, { className: 'sl-input', ...props })
+      if (draft[key] !== undefined) { if (props.type === 'checkbox') n.checked = draft[key]; else n.value = draft[key] }
+      n.addEventListener(props.type === 'checkbox' ? 'change' : 'input', () => { draft[key] = props.type === 'checkbox' ? n.checked : n.value })
+      return n
+    }
+    if (!c) {
+      const panel = el('aside', { className: 'sl-panel is-commission', role: 'dialog', ariaModal: 'true', ariaLabel: 'Commission' }, [
+        el('header', { className: 'sl-panel-head' }, [el('div', {}, [el('div', { className: 'ia-kicker', textContent: 'Commission' }), el('h2', { textContent: cState.detailProblem ? 'Not found' : 'Opening…' })]), button('×', closeCommission, 'sl-x')]),
+        el('div', { className: 'sl-panel-body' }, [cState.detailProblem ? el('p', { className: 'sl-said is-bad', textContent: cState.detailProblem }) : null]),
+      ])
+      const shade = el('div', { className: 'sl-shade' }); shade.addEventListener('click', closeCommission)
+      return [shade, panel]
+    }
+    const paid = Boolean(c.payment && c.payment.paidAt)
+    const d = c.details || {}
+    const mem = memberOf(c.email)
+
+    // the conversation: the customer on the left, Milton on the right, the site's notes in the middle
+    const thread = el('div', { className: 'sl-thread' }, (c.messages || []).map((m) => el('div', { className: `sl-msg is-${m.from}` }, [
+      m.from !== 'system' ? el('span', { className: 'sl-msg-who', textContent: m.from === 'artist' ? 'You' : (c.name || 'Customer').split(' ')[0] }) : null,
+      el('div', { className: 'sl-msg-bubble' }, [
+        m.text ? el('p', {}, linked(m.text)) : null,
+        m.links && m.links.length ? el('ul', { className: 'sl-msg-links' }, m.links.map((l) => el('li', {}, [el('a', { href: l, target: '_blank', rel: 'noopener noreferrer', textContent: l.replace(/^https?:\/\//, '') })]))) : null,
+      ]),
+      el('time', { textContent: date(new Date(m.at).getTime(), true) }),
+    ])))
+    thread.addEventListener('scroll', () => { cState.stick = thread.scrollTop + thread.clientHeight >= thread.scrollHeight - 30 })
+    const reply = input('reply', { placeholder: c.status === 'cancelled' ? 'It is cancelled; you can still write to them' : `Write to ${(c.name || 'them').split(' ')[0]}…`, rows: 3, maxLength: 4000, ariaLabel: 'Your message' }, 'textarea')
+    const links = input('links', { placeholder: 'Links (optional): paste one or more', maxLength: 2000, ariaLabel: 'Links' })
+    const send = button('Send', () => {
+      if (!(draft.reply || '').trim() && !(draft.links || '').trim()) { reply.focus(); return }
+      run(send, { action: 'adminMessage', text: draft.reply || '', links: String(draft.links || '').split(/[\s,]+/).filter(Boolean) }, () => { draft.reply = ''; draft.links = ''; cState.said = 'Sent ✓' })
+    }, 'ia-btn')
+    reply.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send.click() })
+
+    // the quote: price, what it includes, when, and whether it is posted
+    const q = c.quote
+    const price = input('price', { type: 'number', min: '1', step: '1', inputMode: 'decimal', value: q ? String(q.price) : '', placeholder: 'For example 250' })
+    const includes = input('includes', { rows: 3, maxLength: 1000, value: q ? q.includes : '', placeholder: 'For example: A3 full colour, signed, high-resolution file' }, 'textarea')
+    const due = input('due', { type: 'date', value: q ? ymd(q.due) : '' })
+    const shipBox = input('ship', { type: 'checkbox', className: 'sl-switch-box', checked: q ? Boolean(q.ship) : false })
+    const ship = el('label', { className: 'sl-switch' }, [shipBox, el('span', { className: 'sl-switch-track', ariaHidden: 'true' }), el('span', {}, [el('strong', { textContent: 'Post it to me' }), el('small', { textContent: 'On: the checkout asks for their address. Off: a digital piece.' })])])
+    const sendQuote = button(q ? 'Send the new quote' : 'Send quote', () => {
+      const p = Number(draft.price ?? price.value)
+      if (!(p >= 1)) { said.classList.add('is-bad'); said.textContent = 'Put a price first.'; price.focus(); return }
+      if (!String(draft.includes ?? includes.value).trim()) { said.classList.add('is-bad'); said.textContent = 'Say what the price includes.'; includes.focus(); return }
+      run(sendQuote, { action: 'adminQuote', price: p, includes: draft.includes ?? includes.value, due: draft.due ?? due.value, ship: draft.ship ?? shipBox.checked }, () => { ['price', 'includes', 'due', 'ship'].forEach((k) => delete draft[k]); cState.said = 'Quote sent ✓ They have an email.' })
+    }, 'ia-btn')
+    const quoteForm = el('div', { className: 'sl-quote-form' }, [
+      el('div', { className: 'sl-quote-row' }, [
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Price (€)' }), price]),
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Ready by' }), due]),
+      ]),
+      el('label', { className: 'sl-label' }, [el('span', { textContent: 'What is included' }), includes]),
+      ship,
+      el('div', { className: 'sl-save' }, [sendQuote, el('small', { className: 'sl-hint', textContent: 'Full price, paid up front. They accept and pay it in their account.' })]),
+    ])
+    const quoteNow = q ? el('div', { className: 'sl-quote-now' }, [
+      el('strong', { textContent: money(q.price, q.currency) }),
+      el('span', {}, linked(q.includes)),
+      el('small', { textContent: [q.due ? `Ready by ${date(new Date(q.due).getTime())}` : '', q.ship ? 'Posted to them' : 'Digital', `sent ${date(new Date(q.at).getTime(), true)}`].filter(Boolean).join(' · ') }),
+    ]) : null
+
+    // the stages of the work: once it is paid (cancel any time)
+    const note = input('note', { placeholder: 'A note for them with the step (optional)', maxLength: 2000 })
+    const stages = el('div', { className: 'sl-stages', role: 'group', ariaLabel: 'Stage' }, C_WORK.map(([k, t]) => {
+      const off = (k !== 'cancelled' && !paid) || c.status === k
+      const b = el('button', { type: 'button', className: `sl-stage is-${k === 'cancelled' ? 'cancelled' : k === 'delivered' ? 'delivered' : 'new'} ${c.status === k ? 'on' : ''}`, textContent: t, disabled: off && c.status !== k, ariaPressed: String(c.status === k) })
+      b.addEventListener('click', () => {
+        if (c.status === k) return
+        const go = () => run(b, { action: 'adminStage', status: k, note: draft.note || '' }, () => { draft.note = ''; cState.said = `${cStatusName[k]} ✓ They have an email.` })
+        if (k === 'cancelled') ask({ title: `Cancel commission ${c.number}?`, text: `${c.name || c.email} · ${c.title}`, more: paid ? 'It is paid: cancelling does not refund it. Refund it in Stripe or PayPal, then tell them here.' : 'They see it cancelled in their account, and get an email. An open checkout for it is closed.', yes: 'Cancel it', run: async () => { await go(); return '' } })
+        else go()
+      })
+      return b
+    }))
+
+    const p = c.payment
+    const stripeLink = p && p.provider === 'stripe' && p.pi ? `https://dashboard.stripe.com/${p.test ? 'test/' : ''}payments/${p.pi}` : ''
+    const paypalLink = p && p.provider === 'paypal' && p.captureId ? `https://www.${p.test ? 'sandbox.' : ''}paypal.com/activity/payment/${p.captureId}` : ''
+    const a = c.address
+    const panel = el('aside', { className: 'sl-panel is-commission', role: 'dialog', ariaModal: 'true', ariaLabel: `Commission ${c.number}` }, [
+      el('header', { className: 'sl-panel-head' }, [
+        el('div', {}, [
+          el('div', { className: 'ia-kicker', textContent: `Asked ${date(new Date(c.createdAt).getTime(), true)}` }),
+          el('h2', { textContent: c.number }),
+          el('p', { className: 'sl-panel-sub', textContent: c.title }),
+          el('div', { className: 'sl-badges' }, [badge(`c-${c.status}`, cStatusName[c.status] || c.status), paid ? badge('paid', p.refunded ? 'Refunded' : 'Paid') : null, c.test ? badge('test', 'Test') : null]),
+        ]),
+        button('×', closeCommission, 'sl-x'),
+      ]),
+      el('div', { className: 'sl-panel-body' }, [
+        el('section', { className: 'sl-block sl-c-person' }, [
+          avatar({ name: c.name, email: c.email, member: mem }, 'lg'),
+          el('div', {}, [
+            el('strong', { textContent: c.name || '—' }),
+            el('span', { className: 'sl-mail' }, [el('span', { textContent: c.email }), copyBtn(c.email, 'email')]),
+            mem ? el('small', { textContent: `Member ${memberNo(mem.memberNo)}${mem.verified ? ' · email confirmed' : ''}` }) : null,
+          ]),
+        ]),
+        block('Conversation', [thread, el('div', { className: 'sl-reply' }, [reply, links, el('div', { className: 'sl-save' }, [send, el('small', { className: 'sl-hint', textContent: 'They see it in their account and get an email.' })])])]),
+        block('What they asked for', [el('dl', { className: 'sl-dl' }, [
+          el('dt', { textContent: 'Kind' }), el('dd', { textContent: d.kind || '—' }),
+          d.size ? el('dt', { textContent: 'Size' }) : null, d.size ? el('dd', { textContent: d.size }) : null,
+          d.budget ? el('dt', { textContent: 'Budget' }) : null, d.budget ? el('dd', { textContent: d.budget }) : null,
+          el('dt', { textContent: 'Needed by' }), el('dd', { textContent: d.due || 'No deadline' }),
+          el('dt', { textContent: 'The idea' }), el('dd', {}, linked(d.idea)),
+          d.refs && d.refs.length ? el('dt', { textContent: 'References' }) : null,
+          d.refs && d.refs.length ? el('dd', {}, d.refs.map((l) => el('a', { href: l, target: '_blank', rel: 'noopener noreferrer', textContent: l.replace(/^https?:\/\//, '') }))) : null,
+        ])]),
+        block('Quote', paid || c.status === 'cancelled' ? [quoteNow || el('p', { className: 'sl-dim', textContent: 'No quote was sent.' })] : [quoteNow, quoteForm].filter(Boolean)),
+        block('Stage', [stages, note, el('small', { className: 'sl-hint', textContent: paid ? 'Each step is saved at once, with a note in the conversation and an email to them.' : 'The work stages open once it is paid.' })]),
+        block('Payment', p && p.paidAt ? [
+          el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Paid' }), el('strong', { textContent: money(p.amount, p.currency) })]),
+          el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'With' }), el('strong', { textContent: p.paidWith || p.provider })]),
+          el('p', { className: 'sl-dim', textContent: `${date(new Date(p.paidAt).getTime(), true)}${p.test ? ' · test payment' : ''}${p.refunded ? ' · refunded' : ''}` }),
+          a ? el('p', { className: 'sl-address' }, [a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), country(a.country)].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line]))) : el('p', { className: 'sl-dim', textContent: c.quote && c.quote.ship ? 'No address came with the payment.' : 'Digital: nothing to post.' }),
+          stripeLink || paypalLink ? el('a', { className: 'ia-btn ghost', href: stripeLink || paypalLink, target: '_blank', rel: 'noopener', textContent: stripeLink ? 'Open in Stripe ↗' : 'Open in PayPal ↗' }) : null,
+        ] : [el('p', { className: 'sl-dim', textContent: c.pending ? `A ${c.pending.provider === 'paypal' ? 'PayPal' : 'card'} checkout was opened ${date(new Date(c.pending.at).getTime(), true)}; not paid yet.` : 'Not paid yet.' })]),
+        el('section', { className: 'sl-block' }, [button('Delete this commission', () => askDeleteCommission(c), 'ia-btn ghost sl-danger')]),
+      ]),
+      el('footer', { className: 'sl-panel-foot' }, [said]),
+    ])
+    panel.querySelector('.sl-panel-body').dataset.keepScroll = `commission-${id}`
+    const shade = el('div', { className: 'sl-shade' })
+    shade.addEventListener('click', closeCommission)
+    // the newest message in view, unless they scrolled up to read
+    requestAnimationFrame(() => { if (cState.stick) thread.scrollTop = thread.scrollHeight })
+    return [shade, panel]
+  }
+
   // ---------- drawing ----------
   const draw = () => {
     if (!root) return
@@ -1106,9 +1406,10 @@ window.IASales = (() => {
     const caret = typing >= 0 ? document.activeElement.selectionStart : null
     const hadModal = Boolean(root.querySelector('.sl-modal-shade')) // drawn again: no fade in
     const inner = Object.fromEntries([...root.querySelectorAll('[data-keep-scroll]')].map((n) => [n.dataset.keepScroll, n.scrollTop]))
-    const open = state.view === 'orders' && state.open && state.orders.find((o) => o.id === state.open)
-    const views = { orders: ordersView, customers: customersView, discounts: discountsView }
-    const panels = open ? orderPanel(open) : []
+    const onCommissions = state.view === 'orders' && state.ordersTab === 'commissions'
+    const open = state.view === 'orders' && !onCommissions && state.open && state.orders.find((o) => o.id === state.open)
+    const views = { orders: onCommissions ? commissionsView : ordersView, customers: customersView, discounts: discountsView }
+    const panels = open ? orderPanel(open) : onCommissions && cState.open ? commissionPanel(cState.detail) : []
     const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea') // typing in a panel: leave it as it is
     if (keep) return
     root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels, ...modalLayer())
@@ -1120,6 +1421,7 @@ window.IASales = (() => {
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !root || !root.isConnected) return
     if (state.modal) { closeModal(); return }
+    if (state.view === 'orders' && state.ordersTab === 'commissions' && cState.open) { closeCommission(); return }
     if (state.open) { state.open = null; draw() }
   })
 
@@ -1128,6 +1430,16 @@ window.IASales = (() => {
     const before = state.view
     state.view = ['customers', 'discounts'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
+    // Orders has two tabs: the shop's orders, and the commissions (?tab=commissions, &c=<id> opens one)
+    const tabBefore = state.ordersTab
+    if (state.view === 'orders') state.ordersTab = params.get('tab') === 'commissions' ? 'commissions' : 'shop'
+    if (state.view === 'orders' && state.ordersTab === 'commissions') {
+      const id = params.get('c') || ''
+      if (id && id !== cState.open) { cState.open = id; cState.detail = null; cState.stick = true; loadCommission(id) }
+      if (!id && tabBefore === 'commissions' && cState.open) { cState.open = null; cState.detail = null }
+    }
+    // the commissions are asked for once on Orders too, for the count on their tab
+    if (state.view === 'orders' && !cState.loaded && !cState.loading) loadCommissions(true)
     if (before !== state.view) { state.open = null; state.modal = null }
     // Customers shows each one's codes; Discounts offers every customer, account holders too
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()

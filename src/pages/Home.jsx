@@ -11,7 +11,7 @@ import ScrollRow from '../components/ScrollRow'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
 import Runner from '../components/Runner'
-import QuoteLink from '../components/QuoteLink'
+import QuoteLink, { QuoteGo, quoteSign } from '../components/QuoteLink'
 import { useFinePointer, useReducedMotion } from '../hooks/useMedia'
 
 const EASE = [0.16, 1, 0.3, 1]
@@ -214,7 +214,7 @@ function Hire({ page }) {
                 <p className="lead">{intro}</p>
                 <div className="actions">
                   <Magnetic><Link className="btn" to="/commissions">{home.commissionsButton} <span className="arrow">→</span></Link></Magnetic>
-                  {quote.url && <Magnetic><a className="btn ghost" href={quote.url} target="_blank" rel="noreferrer">{quote.label} <span className="arrow">↗</span></a></Magnetic>}
+                  {!quote.closed && <Magnetic><QuoteLink className="btn ghost">{quote.label}</QuoteLink></Magnetic>}
                 </div>
               </div>
             </div>
@@ -222,12 +222,11 @@ function Hire({ page }) {
           {tiers.length > 0 && (
             <ul className="offers">
               {tiers.map((t, i) => {
-                const inside = <span className="hp-in"><strong>{t.name}</strong><span>{t.text}</span><em>{t.price || quote.label} <i aria-hidden="true">↗</i></em></span>
+                // the offer's price (or the quote button's words), or, closed, that it is closed for now
+                const inside = <span className="hp-in"><strong>{t.name}</strong><span>{t.text}</span><em>{quote.closed ? 'Closed for now' : t.price || quote.label} <i aria-hidden="true">{quoteSign()}</i></em></span>
                 return (
                   <Reveal as="li" className="cell" key={t.name} delay={0.06 + i * 0.06} y={20}>
-                    {quote.url
-                      ? <a className="hp is-loud offer" href={quote.url} target="_blank" rel="noreferrer">{inside}</a>
-                      : <Link className="hp is-loud offer" to="/commissions">{inside}</Link>}
+                    <QuoteGo className="hp is-loud offer" tier={t.name}>{inside}</QuoteGo>
                   </Reveal>
                 )
               })}

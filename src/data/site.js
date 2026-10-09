@@ -126,7 +126,7 @@ function assemble(content) {
   commissions = {
     title: 'Get something drawn', processLabel: 'The process', processTitle: 'How it works',
     requestLabel: 'Request', requestTitle: 'Tell me the idea',
-    closedTitle: 'Join the queue', closedText: 'The books are closed for now. Send the idea anyway and you will hear back when a slot opens.',
+    closedTitle: 'Closed for now', closedText: 'New requests are paused while I work through the queue. They open again here soon.',
     tiers: [], steps: [], notes: [],
     ...given(page('commissions')),
   }
@@ -172,7 +172,23 @@ function assemble(content) {
   const insta = social.find((s) => /instagram/i.test(s.label || ''))
   brand.instagram = insta?.url
   brand.handle = insta?.handle
-  quote = { label: commissions.quoteLabel || 'Get a quote', url: commissions.quoteUrl || brand.instagram || '' }
+  /* Where the quote buttons go (Page text → Commissions → The quote button, `quoteVia`): 'site' (the
+     request card on the Commissions page, with the offer picked), 'email' (an email to the address
+     under Name, colour and contact), 'instagram', or 'link' (quoteUrl). A choice with nothing to go
+     to (no email, no Instagram, no address) falls back to the site. An older file with only an
+     address set keeps going there. `to(tier)` is where a button on that offer goes; `closed` is
+     true when it would go to a request card that is closed. */
+  const asked = String(commissions.quoteVia || (commissions.quoteUrl ? 'link' : 'site'))
+  const via = asked === 'email' && brand.email ? 'email' : asked === 'instagram' && brand.instagram ? 'instagram' : asked === 'link' && /^(https?:|mailto:)/.test(String(commissions.quoteUrl || '')) ? 'link' : 'site'
+  quote = {
+    label: commissions.quoteLabel || 'Get a quote',
+    via,
+    external: via === 'instagram' || via === 'link',
+    closed: via === 'site' && !commissions.open,
+    to: (tier = '') => (via === 'email' ? `mailto:${brand.email}?subject=${encodeURIComponent(tier ? `Commission: ${tier}` : 'Commission')}`
+      : via === 'instagram' ? brand.instagram : via === 'link' ? commissions.quoteUrl
+        : `/commissions${tier ? `?kind=${encodeURIComponent(tier)}` : ''}#request`),
+  }
   footer = { fine: 'Characters shown in fan art belong to their owners.', ...given({ line: footerLine, fine: footerFine }) }
 
   nav = [

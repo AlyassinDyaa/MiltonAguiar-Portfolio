@@ -7,6 +7,7 @@ import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
 import { useAccount } from '../hooks/useAccount'
 import { useCart } from '../hooks/useCart'
+import AccountCommissions, { useCommissionList } from '../components/AccountCommissions'
 
 /* Customer accounts: log in, make an account, forgotten and new passwords, confirming the email
    address, and the account itself (orders with their tracking, details, security). Everything
@@ -958,7 +959,7 @@ function Security() {
 }
 
 /* the first thing a customer sees: hello, how things stand, their pieces, what is new */
-function Overview({ orders, go }) {
+function Overview({ orders, go, commissions = null, openCommissions = () => {} }) {
   const { user } = useAccount()
   const shopOrders = keptOrders(orders)
   const collected = piecesIn(orders)
@@ -982,6 +983,14 @@ function Overview({ orders, go }) {
         <button type="button" onClick={() => go('saved')}><strong>{saved.length}</strong><span>Saved for later</span></button>
       </div>
       </div>
+
+      {commissions && commissions.unread > 0 && (
+        <button type="button" className="acc-cnotice" onClick={openCommissions}>
+          <b>{commissions.unread}</b>
+          <span><strong>{commissions.unread === 1 ? 'A new message' : 'New messages'} about your commission</strong><small>Read and answer under Orders → Commissions</small></span>
+          <i aria-hidden="true">→</i>
+        </button>
+      )}
 
       {latest ? (
         <section className="acct-block">
@@ -1334,6 +1343,9 @@ function Home() {
   const [resent, setResent] = useState('')
   const paid = params.get('thanks') === '1'
   const { orders, problem, drop } = useOrders(paid)
+  // their commissions (components/AccountCommissions.jsx): the Orders tab counts new messages
+  const commissions = useCommissionList(Boolean(user))
+  const view = tab === 'orders' && params.get('view') === 'commissions' ? 'commissions' : 'shop'
   // back from paying: what was bought leaves the cart
   const { settle } = useCart()
   useEffect(() => { if (paid) settle() }, [paid, settle])
@@ -1415,7 +1427,7 @@ function Home() {
     return true
   }).slice(0, 12)
   const LEADS = {
-    orders: 'Every piece you have ordered, and where it is now.',
+    orders: view === 'commissions' ? 'The pieces drawn for you: the conversation with Milton, the quote, and each stage of the work.' : 'Every piece you have ordered, and where it is now.',
     rewards: 'What you have earned, and how close you are to the next one.',
     saved: 'The pieces you are keeping an eye on.',
     details: 'Your name, how to reach you, and your picture.',
@@ -1464,6 +1476,7 @@ function Home() {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={TAB_ICONS[k]} /></svg>
               <span>{label}</span>
               {counts[k] > 0 && <small className={k === 'rewards' ? 'is-alert' : ''} aria-label={k === 'rewards' ? `${counts[k]} new` : undefined}>{counts[k]}</small>}
+              {k === 'orders' && commissions.unread > 0 && <small className="is-alert" title="New messages about your commissions" aria-label={`${commissions.unread} new ${commissions.unread === 1 ? 'message' : 'messages'} about your commissions`}>{commissions.unread}</small>}
             </button>
           ))}
         </nav>
@@ -1488,8 +1501,22 @@ function Home() {
                 <p>{LEADS[tab]}</p>
               </div>
             )}
-            {tab === 'overview' && <Overview orders={orders} go={go} />}
-            {tab === 'orders' && <Orders orders={orders} problem={problem} onRemoved={drop} />}
+            {tab === 'overview' && <Overview orders={orders} go={go} commissions={commissions} openCommissions={() => setParams({ tab: 'orders', view: 'commissions' }, { replace: true })} />}
+            {tab === 'orders' && (
+              <>
+                {/* the shop's orders, and the commissions: a tab each (?view=commissions) */}
+                <div className="acc-csub" role="tablist" aria-label="Which orders">
+                  <button type="button" role="tab" aria-selected={view === 'shop'} className={view === 'shop' ? 'on' : ''} onClick={() => setParams({ tab: 'orders' }, { replace: true })}>Shop orders<small>{orders ? shopOrders.length : '–'}</small></button>
+                  <button type="button" role="tab" aria-selected={view === 'commissions'} className={view === 'commissions' ? 'on' : ''} onClick={() => setParams({ tab: 'orders', view: 'commissions' }, { replace: true })}>
+                    Commissions<small>{commissions.list ? commissions.list.length : '–'}</small>
+                    {commissions.unread > 0 && <small className="is-alert" aria-label={`${commissions.unread} new`}>{commissions.unread} new</small>}
+                  </button>
+                </div>
+                {view === 'commissions'
+                  ? <AccountCommissions list={commissions.list} reload={commissions.reload} params={params} setParams={setParams} />
+                  : <Orders orders={orders} problem={problem} onRemoved={drop} />}
+              </>
+            )}
             {tab === 'rewards' && <Rewards fresh={freshGifts} onPreview={setPreview} prints={orders ? `${prints} ${prints === 1 ? 'piece' : 'pieces'}` : '…'} />}
             {tab === 'saved' && <Saved />}
             {tab === 'details' && <Details onPreview={setPreview} owned={owned} progress={orders ? { verified: Boolean(user.verified), orders: keptOrders(orders).length, pieces: piecesIn(orders) } : null} />}

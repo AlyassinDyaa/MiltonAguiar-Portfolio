@@ -229,8 +229,19 @@ const smtp = () => transport || (transport = nodemailer.createTransport({
   secure: (Number(process.env.SMTP_PORT) || 465) === 465,
   auth: { user: process.env.SMTP_USER, pass: String(process.env.SMTP_PASS).replace(/\s+/g, '') },
 }))
+/* Addresses that can never receive email: the reserved test domains (example.com/.net/.org and
+   anything under them, *.test, *.example, *.invalid, *.localhost, localhost). Test accounts use
+   them; sending there only bounces back into the site's own inbox, so those emails are skipped
+   (and printed in the log) while the journey carries on as if they were sent. */
+const TEST_DOMAIN = /(^|\.)(example\.(com|net|org)|[^.]+\.(test|example|invalid|localhost)|test|example|invalid|localhost)$/i
+export const testAddress = (to) => {
+  const m = String(to || '').trim().toLowerCase().match(/<([^>]+)>\s*$/)
+  const domain = String(m ? m[1] : to || '').trim().toLowerCase().split('@').pop().replace(/\.$/, '')
+  return TEST_DOMAIN.test(domain)
+}
 export const sendMail = async (mail) => {
   const { to, subject, lines, button, after } = mail
+  if (testAddress(to)) { console.log(`[email skipped: test address] ${to} / ${subject}`); return true }
   const brand = process.env.MAIL_BRAND || siteName()
   const text = [mail.title || subject, '', ...lines, ...(Array.isArray(mail.orders) ? mail.orders.map((o) => ['', ...[`${o.title}${o.sub ? ` (${o.sub})` : ''}`, ...(o.rows || []).map(([l, v]) => `  ${l}  ${v || ''}`), o.total ? `  Total  ${o.total}` : '', o.foot ? `  ${o.foot}` : ''].filter(Boolean)].join('\n')) : []), mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
   if (!mailReady()) {

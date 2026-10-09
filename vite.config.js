@@ -206,10 +206,13 @@ const ART_FOLDERS = ['work', 'gallery-sections', 'redraws', 'comics'] // whose p
 const readBrand = () => { try { return JSON.parse(readFileSync(resolve('content/site/brand.json'), 'utf8')) } catch { return {} } }
 // the logo on the artwork can be switched off (Show / hide → Artwork); on unless switched off
 const watermarkOn = () => { try { return (JSON.parse(readFileSync(resolve('content/site/visibility.json'), 'utf8')).art || {}).watermark !== false } catch { return true } }
+// the comic samples can go without it while the rest of the artwork keeps it (Show / hide → Artwork)
+const comicsMarked = () => { try { return (JSON.parse(readFileSync(resolve('content/site/visibility.json'), 'utf8')).art || {}).comicsWatermark !== false } catch { return true } }
 // every /uploads picture named in the Shop, Work, before-and-after and comic samples content
 const artPictures = () => {
   const art = new Set()
   for (const folder of ART_FOLDERS) {
+    if (folder === 'comics' && !comicsMarked()) continue
     const at = resolve('content', folder)
     if (!existsSync(at)) continue
     for (const f of readdirSync(at)) {
@@ -287,7 +290,7 @@ const protectArt = () => ({
         const { default: sharp } = await import('sharp')
         sharp.cache(false)
         const at = statSync(file).mtimeMs
-        const mark = watermarkOn()
+        const mark = `${watermarkOn()}:${comicsMarked()}`
         let hit = made.get(url)
         if (!hit || hit.at !== at || hit.mark !== mark) {
           const copy = await artCopy(sharp, readFileSync(file), url, artPictures(), readBrand())

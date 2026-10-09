@@ -768,6 +768,7 @@ collections:
             hint: 'The Milton Aguiar logo inside the pictures of the Work, Shop and Gallery pages and the pencils-to-colours sets: clear in a corner, faint and large in the middle, so nobody can pass the art off as theirs. It is put on when the site is rebuilt, a minute or two after you save. Pictures stay web-sized either way. Your uploads are never changed.'
             fields:
               - { name: watermark, label: Logo on the artwork (watermark), widget: boolean, default: true, required: false }
+              - { name: comicsWatermark, label: Logo on the comic samples too, widget: boolean, default: true, required: false, hint: 'Off: the comic books under Work → Samples are shown without the logo, while the rest of the artwork keeps it.' }
           - name: shop
             label: Parts of the Shop page
             widget: object
@@ -794,6 +795,7 @@ collections:
               - { name: ticker, label: Moving band of words, widget: boolean, default: true }
               - { name: project, label: Current project, widget: boolean, default: true }
               - { name: latest, label: Latest pieces, widget: boolean, default: true }
+              - { name: samples, label: Samples (comic books to read), widget: boolean, default: true, required: false }
               - { name: redraws, label: Step by step, widget: boolean, default: true }
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: events, label: Conventions, widget: boolean, default: true }

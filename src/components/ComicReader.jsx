@@ -55,7 +55,12 @@ const halvesOf = (shown) => {
   if (shown.length === 2) return { L: half(shown[0], 'whole'), R: half(shown[1], 'whole') }
   return shown[0].cover ? { L: null, R: half(shown[0], 'whole') } : { L: half(shown[0], 'whole'), R: null }
 }
-const TURN_MS = 750
+const TURN_MS = 850
+/* How far a page has turned, in degrees, as a CSS variable the page and its shadows follow. On a
+   wide screen the right-hand page turns from 0 to -180 (forward) and the left-hand one from 0 to 180
+   (back). On a phone the page peels from 0 to -180, or comes back from -180 to 0. */
+const startOf = (wide, dir) => (wide ? 0 : dir > 0 ? 0 : -180)
+const endOf = (wide, dir) => (wide ? (dir > 0 ? -180 : 180) : dir > 0 ? -180 : 0)
 
 /* The comic reader: a comic full screen, page by page. Turn the page with the arrows at the sides,
    the arrow keys (also Page Up / Page Down, Home and End), a sideways swipe, or a click on the right
@@ -78,9 +83,11 @@ function Reader({ comic, onClose }) {
   const sheets = useMemo(() => sheetsOf(comic), [comic])
   const views = useMemo(() => viewsOf(sheets, wide), [sheets, wide])
   const [at, setAt] = useState(0) // the sheet being read (its view is worked out from it, so a turned phone keeps the place)
-  const [flip, setFlip] = useState(null) // a page turning: { from, to, dir, n } (views)
+  const [flip, setFlip] = useState(null) // a page turning: { from, to, dir, n, drag, cancel } (views)
+  const [angle, setAngle] = useState(0) // how far it has turned
   const flipping = useRef(null)
   flipping.current = flip
+  const bookRef = useRef(null)
   const [ratio, setRatio] = useState(0.66) // a page's width to its height, from the cover
   const [zoom, setZoom] = useState(null) // { x, y }: how far a zoomed page is moved, in px
   const [dx, setDx] = useState(0) // how far a finger has pulled the page sideways
@@ -94,7 +101,7 @@ function Reader({ comic, onClose }) {
   const tapTimer = useRef(0)
 
   const settled = Math.max(0, views.findIndex((list) => list.includes(at)))
-  const v = flip ? flip.to : settled // where the reader is going (the label, the strip and the keys follow it)
+  const v = flip && !flip.drag && !flip.cancel ? flip.to : settled // where the reader is going (the label, the strip and the keys follow it)
   const view = views[v]
   const shown = view.map((i) => sheets[i])
   const inside = shown.filter((s) => !s.cover)
@@ -104,19 +111,29 @@ function Reader({ comic, onClose }) {
   const stripShown = stripOpen ?? tall
   const first = v === 0, last = v === views.length - 1
 
-  // a page turned: the next view is where the reader is; a turn still going lands at once
+  // a page turned: it lifts and turns over (a turn still going lands at once); the next view is where the reader is
   const go = (to) => {
     const next = Math.min(views.length - 1, Math.max(0, to))
     if (next === v) return
     setZoom(null)
     if (still) { setFlip(null); setAt(views[next][0]); return }
+    const dir = next > v ? 1 : -1
     setAt(views[v][0])
-    setFlip({ from: v, to: next, dir: next > v ? 1 : -1, n: Date.now() })
+    const n = Date.now()
+    // the page is first put where it starts (without moving there), then turns: two frames, so the
+    // browser has drawn the start before the turn begins
+    setFlip({ from: v, to: next, dir, n, starting: true })
+    setAngle(startOf(wide, dir))
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setFlip((f) => (f && f.n === n ? { ...f, starting: false } : f))
+      setAngle(endOf(wide, dir))
+    }))
   }
-  const landed = () => { const f = flipping.current; if (!f) return; setAt(views[f.to][0]); setFlip(null) }
+  // the turn is over: on the next view, or (a drag let go too early) back where it was
+  const landed = () => { const f = flipping.current; if (!f || f.drag || f.starting) return; if (!f.cancel) setAt(views[f.to][0]); setFlip(null) }
   const jump = (i) => { const to = views.findIndex((list) => list.includes(i)); if (to >= 0) go(to) }
   // should the animation's end never be heard (a hidden tab), the page lands anyway
-  useEffect(() => { if (!flip) return; const t = setTimeout(landed, TURN_MS + 150); return () => clearTimeout(t) }, [flip]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!flip || flip.drag) return; const t = setTimeout(landed, TURN_MS + 250); return () => clearTimeout(t) }, [flip]) // eslint-disable-line react-hooks/exhaustive-deps
   // a phone turned mid-turn: the views change, so the turn just lands
   useEffect(() => { setFlip(null) }, [wide])
   // the shape of a page, from the cover, so the open book is the comic's own shape
@@ -193,7 +210,7 @@ function Reader({ comic, onClose }) {
 
   const down = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, zx: zoom?.x ?? 0, zy: zoom?.y ?? 0, moved: false }
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, zx: zoom?.x ?? 0, zy: zoom?.y ?? 0, moved: false, last: e.clientX, at: e.timeStamp, speed: 0 }
     e.currentTarget.setPointerCapture?.(e.pointerId)
   }
   const move = (e) => {
@@ -202,18 +219,43 @@ function Reader({ comic, onClose }) {
     const mx = e.clientX - d.x, my = e.clientY - d.y
     if (!d.moved && Math.hypot(mx, my) < 8) return
     if (!d.moved) { d.moved = true; setPanning(true) }
-    if (zoom) setZoom(fit(d.zx + mx, d.zy + my))
-    else if (Math.abs(mx) > Math.abs(my)) setDx(mx)
+    if (zoom) { setZoom(fit(d.zx + mx, d.zy + my)); return }
+    d.speed = (e.clientX - d.last) / Math.max(1, e.timeStamp - d.at) // px per ms
+    d.last = e.clientX
+    d.at = e.timeStamp
+    if (!d.turning && Math.abs(mx) <= Math.abs(my)) return
+    // the page under the finger lifts and turns as far as it is pulled (at either end it only gives a little)
+    if (!d.turning) {
+      const dir = mx < 0 ? 1 : -1
+      const to = v + dir
+      if (still || flipping.current || to < 0 || to >= views.length) { setDx(mx * 0.2); return }
+      const w = bookRef.current ? bookRef.current.getBoundingClientRect().width / (wide ? 2 : 1) : 300
+      d.turning = { dir, w }
+      setAt(views[v][0])
+      setFlip({ from: v, to, dir, n: Date.now(), drag: true })
+    }
+    const t = d.turning
+    d.p = Math.min(1, Math.max(0, (-mx * t.dir) / t.w))
+    setAngle(startOf(wide, t.dir) + (endOf(wide, t.dir) - startOf(wide, t.dir)) * d.p)
   }
   const up = (e) => {
     const d = drag.current
     drag.current = null
     setPanning(false)
     setDx(0)
+    if (d && d.turning && e.type === 'pointercancel') { setFlip((f) => (f ? { ...f, drag: false, cancel: true } : f)); setAngle(startOf(wide, d.turning.dir)); return }
     if (!d || e.type === 'pointercancel') return
     const mx = e.clientX - d.x, my = e.clientY - d.y
+    if (d.turning) {
+      // let go: far enough (or flicked), the page turns over; otherwise it falls back
+      const t = d.turning
+      const done = d.p > 0.33 || -d.speed * t.dir > 0.45
+      setFlip((f) => (f ? { ...f, drag: false, cancel: !done } : f))
+      setAngle(done ? endOf(wide, t.dir) : startOf(wide, t.dir))
+      return
+    }
     if (d.moved) {
-      // a sideways swipe turns the page
+      // with reduced motion, a sideways swipe turns the page at once
       if (!zoom && Math.abs(mx) > 50 && Math.abs(mx) > Math.abs(my)) go(v + (mx < 0 ? 1 : -1))
       return
     }
@@ -241,21 +283,28 @@ function Reader({ comic, onClose }) {
   )
   const sheetsAt = (i) => views[i].map((k) => sheets[k])
   const leaf = (cls, front, back) => (
-    <div key={flip.n} className={`reader-leaf ${cls}`} style={{ animationDuration: `${TURN_MS}ms` }} onAnimationEnd={(e) => { if (e.target === e.currentTarget) landed() }}>
+    <div key={flip.n} className={`reader-leaf ${cls}`}>
       {face(front, 'is-front')}{face(back, 'is-back')}
     </div>
   )
-  const pair = (L, R, turning) => (
-    <div className="reader-book is-pair" style={{ '--r': 2 * ratio }}>
-      <div className="reader-cell is-left">{face(L)}</div>
-      <div className="reader-cell is-right">{face(R)}</div>
-      {turning}
+  // the open book; while a page turns it carries how far (--turn), and which way (for the shadows)
+  const turning = flip ? `is-turning is-${flip.dir > 0 ? (wide ? 'fwd' : 'peel') : wide ? 'back' : 'unpeel'} ${flip.drag || flip.starting ? 'is-dragging' : ''}` : ''
+  const bookProps = (r) => ({
+    ref: bookRef,
+    style: { '--r': r, '--turn': `${flip ? angle : 0}deg`, '--turn-ms': `${TURN_MS}ms` },
+    onTransitionEnd: (e) => { if (e.target === e.currentTarget && e.propertyName === '--turn') landed() },
+  })
+  const pair = (L, R, leafEl, under) => (
+    <div className={`reader-book is-pair ${turning}`} {...bookProps(2 * ratio)}>
+      <div className={`reader-cell is-left ${under === 'L' ? 'is-under' : ''}`}>{face(L)}</div>
+      <div className={`reader-cell is-right ${under === 'R' ? 'is-under' : ''}`}>{face(R)}</div>
+      {leafEl}
     </div>
   )
-  const one = (sh, turning) => (
-    <div className="reader-book is-one" style={{ '--r': sh.spread ? 2 * ratio : ratio }}>
-      <div className="reader-cell">{face(half(sh, 'whole'))}</div>
-      {turning}
+  const one = (sh, leafEl) => (
+    <div className={`reader-book is-one ${turning}`} {...bookProps(sh.spread ? 2 * ratio : ratio)}>
+      <div className={`reader-cell ${leafEl ? 'is-under' : ''}`}>{face(half(sh, 'whole'))}</div>
+      {leafEl}
     </div>
   )
   let book
@@ -263,7 +312,7 @@ function Reader({ comic, onClose }) {
     if (!flip) { const h = halvesOf(shown); book = pair(h.L, h.R) }
     else {
       const a = halvesOf(sheetsAt(flip.from)), b = halvesOf(sheetsAt(flip.to))
-      book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L)) : pair(b.L, a.R, leaf('is-back', a.L, b.R))
+      book = flip.dir > 0 ? pair(a.L, b.R, leaf('is-fwd', a.R, b.L), 'R') : pair(b.L, a.R, leaf('is-back', a.L, b.R), 'L')
     }
   } else if (!flip) book = one(shown[0])
   else {

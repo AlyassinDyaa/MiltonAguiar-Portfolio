@@ -1947,18 +1947,28 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .reader-book.is-pair .reader-face:not(.is-blank)::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
 .reader-book.is-pair .is-left > .reader-face:not(.is-blank)::after, .reader-leaf.is-back .reader-face.is-front::after, .reader-leaf.is-fwd .reader-face.is-back::after { background: linear-gradient(90deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
 .reader-book.is-pair .is-right > .reader-face:not(.is-blank)::after, .reader-leaf.is-fwd .reader-face.is-front::after, .reader-leaf.is-back .reader-face.is-back::after { background: linear-gradient(270deg, transparent 82%, rgba(0, 0, 0, 0.32)); }
-/* the turning page: two faces back to back, turning on the spine */
-.reader-leaf { position: absolute; z-index: 2; top: 0; bottom: 0; width: 50%; transform-style: preserve-3d; animation-timing-function: cubic-bezier(0.45, 0.05, 0.25, 1); animation-fill-mode: both; }
+/* the turning page: two faces back to back, turning on the spine as far as --turn says. --turn moves
+   smoothly when the page turns by itself, and follows the finger while it is dragged */
+@property --turn { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+.reader-book { --turn: 0deg; }
+.reader-book.is-turning { transition: --turn var(--turn-ms, 850ms) cubic-bezier(0.32, 0, 0.18, 1); }
+.reader-book.is-dragging { transition: none; }
+.reader-leaf { position: absolute; z-index: 2; top: 0; bottom: 0; width: 50%; transform: rotateY(var(--turn)); transform-style: preserve-3d; will-change: transform; }
 .reader-leaf .reader-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.reader-leaf .reader-face.is-back { transform: rotateY(180deg); }
-.reader-leaf .reader-face:not(.is-blank)::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 60%); opacity: 0; animation: leaf-shade 0.75s cubic-bezier(0.45, 0.05, 0.25, 1) both; }
-.reader-leaf.is-fwd { left: 50%; transform-origin: left center; animation-name: leaf-fwd; }
-.reader-leaf.is-back { left: 0; transform-origin: right center; animation-name: leaf-back; }
+.reader-leaf .reader-face.is-front { transform: translateZ(0.5px); }
+.reader-leaf .reader-face.is-back { transform: rotateY(180deg) translateZ(0.5px); }
+.reader-leaf.is-fwd { left: 50%; transform-origin: left center; }
+.reader-leaf.is-back { left: 0; transform-origin: right center; }
 .reader-leaf.is-peel, .reader-leaf.is-unpeel { left: 0; width: 100%; transform-origin: left center; }
-.reader-leaf.is-peel { animation-name: leaf-fwd; }
-.reader-leaf.is-unpeel { animation-name: leaf-in; }
-@keyframes leaf-fwd { from { transform: rotateY(0deg); } 50% { transform: rotateY(-90deg) translateZ(18px); } to { transform: rotateY(-180deg); } }
-@keyframes leaf-back { from { transform: rotateY(0deg); } 50% { transform: rotateY(90deg) translateZ(18px); } to { transform: rotateY(180deg); } }
-@keyframes leaf-in { from { transform: rotateY(-180deg); } 50% { transform: rotateY(-90deg) translateZ(18px); } to { transform: rotateY(0deg); } }
-@keyframes leaf-shade { from { opacity: 0; } 50% { opacity: 1; } to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .reader-leaf { animation: none; display: none; } }
+/* the light on the turning page: darkest when it stands up off the book */
+.reader-leaf .reader-face:not(.is-blank)::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.5), transparent 75%); }
+.reader-leaf.is-back .reader-face:not(.is-blank)::before { background: linear-gradient(270deg, rgba(0, 0, 0, 0.5), transparent 75%); }
+.reader-leaf.is-fwd .reader-face::before, .reader-leaf.is-peel .reader-face::before, .reader-leaf.is-unpeel .reader-face::before { opacity: calc(sin(var(--turn)) * -1); }
+.reader-leaf.is-back .reader-face::before { opacity: sin(var(--turn)); }
+/* its shadow on the page underneath, from the spine, fading as it lands */
+.reader-cell.is-under > .reader-face:not(.is-blank)::before { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(90deg, rgba(0, 0, 0, 0.55), transparent 65%); }
+.reader-book.is-back .reader-cell.is-under > .reader-face::before { background: linear-gradient(270deg, rgba(0, 0, 0, 0.55), transparent 65%); }
+.reader-book.is-fwd .reader-cell.is-under > .reader-face::before, .reader-book.is-peel .reader-cell.is-under > .reader-face::before { opacity: calc(1 + cos(var(--turn))); }
+.reader-book.is-back .reader-cell.is-under > .reader-face::before { opacity: calc(1 + cos(var(--turn))); }
+.reader-book.is-unpeel .reader-cell.is-under > .reader-face::before { opacity: calc(sin(var(--turn)) * -1); }
+@media (prefers-reduced-motion: reduce) { .reader-leaf { display: none; } .reader-book.is-turning { transition: none; } }

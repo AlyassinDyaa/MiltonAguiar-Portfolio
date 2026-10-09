@@ -8,7 +8,10 @@ export function useMedia(query) {
     const on = () => setMatch(m.matches)
     on()
     m.addEventListener('change', on)
-    return () => m.removeEventListener('change', on)
+    // some browsers only say so on a resize or a turned phone: ask again then too
+    addEventListener('resize', on)
+    addEventListener('orientationchange', on)
+    return () => { m.removeEventListener('change', on); removeEventListener('resize', on); removeEventListener('orientationchange', on) }
   }, [query])
   return match
 }

@@ -96,6 +96,7 @@ function Reader({ comic, onClose }) {
   const [at, setAt] = useState(0) // the sheet being read (its view is worked out from it, so a turned phone keeps the place)
   const [flip, setFlip] = useState(null) // a page turning: { from, to, dir, n, drag, cancel } (views)
   const [angle, setAngle] = useState(0) // how far it has turned
+  const [fade, setFade] = useState(0) // a page that appears without turning fades in
   const flipping = useRef(null)
   flipping.current = flip
   const bookRef = useRef(null)
@@ -132,7 +133,9 @@ function Reader({ comic, onClose }) {
     const next = Math.min(views.length - 1, Math.max(0, to))
     if (next === v) return
     setZoom(null)
-    if (still) { setFlip(null); setAt(views[next][0]); return }
+    // to or from a spread on a wide screen the spread simply appears, whole (a page turning over it
+    // would draw a line down its middle); with reduced motion every page simply changes
+    if (still || spreadStep(v, next)) { setFlip(null); setAt(views[next][0]); setFade((f) => f + 1); return }
     const dir = next > v ? 1 : -1
     setAt(views[v][0])
     const n = Date.now()
@@ -146,6 +149,7 @@ function Reader({ comic, onClose }) {
     }))
   }
   // the turn is over: on the next view, or (a drag let go too early) back where it was
+  const spreadStep = (a, b) => wide && [a, b].some((k) => views[k] && views[k].some((x) => sheets[Math.floor(x)].spread))
   const landed = () => { const f = flipping.current; if (!f || f.drag || f.starting) return; if (!f.cancel) setAt(views[f.to][0]); setFlip(null) }
   const jump = (i) => { const to = viewOf(i); if (to >= 0) go(to) }
   // should the animation's end never be heard (a hidden tab), the page lands anyway
@@ -244,7 +248,7 @@ function Reader({ comic, onClose }) {
     if (!d.turning) {
       const dir = mx < 0 ? 1 : -1
       const to = v + dir
-      if (still || flipping.current || to < 0 || to >= views.length) { setDx(mx * 0.2); return }
+      if (still || flipping.current || to < 0 || to >= views.length || spreadStep(v, to)) { setDx(mx * 0.2); d.plain = true; return }
       const w = bookRef.current ? bookRef.current.getBoundingClientRect().width / (wide ? 2 : 1) : 300
       d.turning = { dir, w }
       setAt(views[v][0])
@@ -271,7 +275,7 @@ function Reader({ comic, onClose }) {
       return
     }
     if (d.moved) {
-      // with reduced motion, a sideways swipe turns the page at once
+      // with reduced motion (or to or from a spread), a sideways swipe turns the page at once
       if (!zoom && Math.abs(mx) > 50 && Math.abs(mx) > Math.abs(my)) go(v + (mx < 0 ? 1 : -1))
       return
     }
@@ -361,7 +365,8 @@ function Reader({ comic, onClose }) {
       <div ref={stage} className={`reader-stage ${zoom ? 'is-zoomed' : ''} ${panning ? 'is-panning' : ''}`}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
         <div className="reader-zoom" style={look}>
-          {book}
+          {/* a page that appears without turning (a spread) fades in */}
+          <div key={fade} className={`reader-show ${fade ? 'is-fading' : ''}`}>{book}</div>
         </div>
         {spreadOnPhone && !zoom && <p className="reader-note">A two-page spread: turn the phone sideways, or double-tap to zoom in</p>}
       </div>

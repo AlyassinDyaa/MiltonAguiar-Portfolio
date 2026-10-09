@@ -2058,3 +2058,10 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .reader-face.is-half { box-shadow: none; }
 .reader-face.is-half::after { content: none !important; }
 .reader-book.is-spreading::before { content: ''; position: absolute; inset: 0; z-index: -1; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); pointer-events: none; }
+/* a spread turning in or out: no shading on its halves at all (the turning page's light and the
+   shadow it casts would draw a crease down the spread's middle) */
+.reader-face.is-half::before { content: none !important; }
+.reader-show { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.reader-show.is-fading { animation: reader-show 0.35s ease-out; }
+@keyframes reader-show { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .reader-show.is-fading { animation: none; } }

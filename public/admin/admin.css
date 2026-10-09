@@ -382,6 +382,8 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 [class*='ControlPaneContainer']:not([class*='PreviewPaneContainer'])::before {
   content: 'Fields marked with a red * must be filled in.'; grid-column: 1 / -1; font-size: 0.78rem; color: var(--mute); margin-bottom: -4px;
 }
+/* phones: the narrow padding again (the rule above came later and won, leaving the form 64px narrower) */
+@media (max-width: 899px) { [class*='ControlPaneContainer']:not([class*='PreviewPaneContainer']) { padding: 18px 14px 26px !important; } }
 [class*='ControlPaneContainer']:not([class*='PreviewPaneContainer']) > * { grid-column: 1 / -1; margin-top: 0 !important; min-width: 0; }
 [class*='ControlPaneContainer']:not([class*='PreviewPaneContainer']) > [data-ia-half] { grid-column: auto; }
 
@@ -560,6 +562,14 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 [class*='ControlContainer'] div:has(> [class*='FileWidgetButton']) > [class*='FileWidgetButton']:first-child:hover,
 [class*='ControlContainer'] span > [class*='FileWidgetButton']:first-child:hover { background: #fff !important; }
 [class*='FileLink'], [class*='FileLinkList'] a { color: var(--fg) !important; }
+/* phones: the picture on top, its buttons full width under it, their words wrapping instead of running out */
+@media (max-width: 599px) {
+  #nc-root [class*='ControlContainer'] div:has(> [class*='ImageWrapper']):not(.ia-pics *) { flex-direction: column !important; flex-wrap: nowrap !important; align-items: stretch !important; gap: 10px !important; padding: 0 !important; }
+  #nc-root [class*='ControlContainer'] div:has(> [class*='ImageWrapper']):not(.ia-pics *) > [class*='ImageWrapper'] { flex: none !important; width: 100% !important; height: 180px !important; }
+  #nc-root [class*='ControlContainer'] div:has(> [class*='FileWidgetButton']):not(.ia-pics *) { flex: none !important; width: 100%; min-width: 0; }
+  #nc-root [class*='ControlContainer'] span:has(> [class*='FileWidgetButton']):not(.ia-pics *) { flex-direction: column; }
+  #nc-root [class*='FileWidgetButton']:not(.ia-pics *) { width: 100%; min-width: 0; height: auto !important; min-height: 42px; padding: 9px 12px !important; font-size: 0.94rem !important; line-height: 1.15; letter-spacing: 0.03em !important; white-space: normal; overflow-wrap: anywhere; }
+}
 
 /* colour */
 [class*='ControlContainer']:has(> [class*='ColorSwatch']) { position: relative; }
@@ -606,6 +616,11 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 }
 [class*='-listControlItem'] > div:not([class*='StyledListItemTopBar']):not([class*='NestedObjectLabel']) { border: 0 !important; padding: 4px 16px 18px !important; background: transparent !important; }
 [class*='-listControlItem'] [class*='ControlContainer'] { margin-top: 16px !important; }
+/* phones: the drag handle sits by the remove cross, off the item's name; a long Add label wraps inside its button */
+@media (max-width: 599px) {
+  [class*='-listControlItem'] > [class*='StyledListItemTopBar'] > :first-child { margin-right: auto; }
+  [class*='AddButton'] { height: auto !important; min-height: 34px; padding: 5px 12px !important; line-height: 1.1; }
+}
 
 /* pieces with a picture (gallery artwork, hero covers: the items holding a field called "src"):
    thumbnail on the left, the rest beside it, nothing to fold */
@@ -626,6 +641,15 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 [class*='-listControlItem'] [class*='ControlContainer']:has(label[for^='src-field']) div:has(> [class*='FileWidgetButton']) { flex: none !important; }
 [class*='-listControlItem'] [class*='ControlContainer']:has(label[for^='src-field']) span:has(> [class*='FileWidgetButton']) { padding: 0; }
 [class*='-listControlItem'] [class*='ControlContainer']:has(label[for^='src-field']) [class*='FileWidgetButton'] { height: 36px !important; font-size: 0.78rem !important; }
+
+/* phones: no room for the picture beside its fields (they were squeezed to one letter wide), so the fields go under it */
+@media (max-width: 699px) {
+  [class*='-listControlItem']:has(label[for^='src-field']) > div:last-child > div { grid-template-columns: minmax(0, 1fr); }
+  [class*='-listControlItem']:has(label[for^='src-field']) > div:last-child > div > [class*='ControlContainer'] { grid-column: 1 !important; grid-row: auto !important; }
+  /* the full width, with room at the top for the move and remove buttons (a comic page's number sits beside them) */
+  [class*='-listControlItem']:has(label[for^='src-field']) > div:last-child { padding: 52px 14px 16px !important; }
+  [class*='-listControlItem'][data-ia-page]:has(label[for^='src-field']) > div:last-child { padding: 16px 14px 16px !important; }
+}
 
 /* a comic's pages (Comic samples): each headed with its page number, which shell.js keeps
    counted ("Page 1", "Pages 3–4 (spread)"); a spread's picture gets the room of two pages */
@@ -1018,6 +1042,8 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
 /* one order, in a panel sliding in from the right */
 .sl-shade { position: fixed; inset: 0; z-index: 360; background: rgba(0, 0, 0, 0.55); animation: ia-fade 0.2s ease-out; }
 .sl-panel { position: fixed; z-index: 361; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; width: min(520px, 100%); background: var(--bg); border-left: 1px solid var(--line-strong); box-shadow: -30px 0 80px rgba(0, 0, 0, 0.5); animation: sl-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+/* phones: the order or customer window and the small windows start under the top bar (they sit inside the Sales page, which is under it), so their heading and close button show */
+@media (max-width: 899px) { .ia-sales .sl-shade, .ia-sales .sl-panel, .ia-sales .sl-modal-shade { top: var(--bar); } }
 @keyframes sl-in { from { transform: translateX(40px); opacity: 0; } }
 .sl-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 24px 20px; background: linear-gradient(135deg, var(--accent) 30%, #7a1219); color: #fff; }
 .sl-panel-head .ia-kicker { color: rgba(255, 255, 255, 0.8); }
@@ -1168,6 +1194,14 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .ia-face-slider b { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg); }
 .ia-face-reset { all: unset; justify-self: start; cursor: pointer; font-size: 0.82rem; font-weight: 650; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .ia-face-reset:disabled { color: var(--mute); text-decoration: none; cursor: default; }
+.ia-face { flex: 0 0 auto; } /* the circles never squash into ovals */
+/* phones: the big circle centred, each slider's name on its own line so the slider gets the width */
+@media (max-width: 699px) {
+  .ia-facecrop { justify-content: center; gap: 18px; padding: 16px 14px; }
+  .ia-face-row { flex-wrap: wrap; gap: 10px 14px; }
+  .ia-face-slider { grid-template-columns: minmax(0, 1fr) 44px; row-gap: 2px; }
+  .ia-face-slider > span { grid-column: 1 / -1; }
+}
 
 /* the free profile pictures: a grid of round tiles, each with its name and a small "Change" */
 .ia-pics div:has(> [class*='-listControlItem']) { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px; padding: 14px !important; }
@@ -1278,12 +1312,24 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .ia-cardcrop .ia-cardprev { flex: 0 1 340px; }
 .ia-cardcrop-side { flex: 1 1 240px; display: grid; gap: 12px; min-width: 0; }
 .ia-cardcrop-side .ia-cardprev-note { margin: 0; }
+/* phones: a smaller card, so its lettering is smaller too and the name and number stay on it */
+@media (max-width: 599px) {
+  .ia-cardcrop { justify-content: center; gap: 18px; padding: 14px 12px 18px; }
+  .ia-cardprev { padding: 10px 12px; }
+  .ia-cardprev-top b { font-size: 0.8rem; }
+  .ia-cardprev-top em { padding: 2px 6px; font-size: 0.52rem; }
+  .ia-cardprev-chip { width: 28px; height: 20px; margin-top: 6px; }
+  .ia-cardprev-name { font-size: 1.15rem; }
+  .ia-cardprev-foot { margin-top: 4px; font-size: 0.7rem; }
+}
 
 /* the Orders table, polished: room to breathe, the customer's badge, the pieces' pictures, the
    totals in the display face, a red edge on the row in hand, and the icons coming forward on it */
 .is-orders .sl-row { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.55fr) minmax(0, 1.75fr) minmax(0, 0.75fr) minmax(0, 0.9fr) minmax(0, 0.8fr) 112px; gap: 18px; padding: 14px 18px; }
 .is-orders .sl-row:not(.sl-th):hover { background: linear-gradient(90deg, rgba(216, 35, 47, 0.08), rgba(243, 243, 241, 0.02) 40%); box-shadow: inset 3px 0 0 var(--accent); }
 .is-orders .sl-th { padding-block: 11px; }
+/* the narrow list keeps its card layout (the rule above came later and gave it the table's columns again) */
+@container (max-width: 820px) { .is-orders .sl-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 14px 16px; } }
 .sl-c-order strong { color: var(--fg); }
 .sl-wait { justify-self: start; margin-top: 2px; padding: 1px 7px; font-style: normal; font-size: 0.7rem; font-weight: 700; background: rgba(216, 35, 47, 0.18); color: #ff7a82; }
 .sl-c-who { display: flex !important; align-items: center; gap: 12px; }

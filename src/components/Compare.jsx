@@ -51,7 +51,7 @@ export default function Compare({ set, show = null }) {
     pos.forEach((p, k) => { if (Math.abs(p - at) < Math.abs(pos[i] - at)) i = k })
     held.current = i
     setGliding(false)
-    box.current.setPointerCapture?.(e.pointerId)
+    try { box.current.setPointerCapture?.(e.pointerId) } catch { /* a pointer the browser no longer tracks */ }
     place(i, at)
   }
   const move = (e) => { if (held.current >= 0) place(held.current, percentAt(e)) }

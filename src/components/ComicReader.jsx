@@ -211,7 +211,7 @@ function Reader({ comic, onClose }) {
   const down = (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, zx: zoom?.x ?? 0, zy: zoom?.y ?? 0, moved: false, last: e.clientX, at: e.timeStamp, speed: 0 }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
+    try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* a pointer the browser no longer tracks */ }
   }
   const move = (e) => {
     const d = drag.current

@@ -61,18 +61,20 @@ export default function Nav() {
       <AnimatePresence>
         {open && (
           <motion.div className="menu" initial={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} animate={{ clipPath: 'circle(150% at calc(100% - 44px) 37px)' }} exit={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}>
-            <div className="container menu-inner">
-              <ul className="menu-links">
-                {nav.map((n, i) => (
-                  <motion.li key={n.to} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.12 + i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
-                    <NavLink to={n.to} end onClick={() => setOpen(false)}>{n.label}</NavLink>
-                  </motion.li>
-                ))}
-              </ul>
-              <div className="menu-foot">
-                {hire && <span className="nav-status"><Status /></span>}
-                {account.on && <Link className="menu-account" to={account.user ? '/account' : '/account/login'} onClick={() => setOpen(false)}>{account.user ? 'Your account' : 'Log in / make an account'} <span aria-hidden="true">→</span></Link>}
-                <ul>{social.map((s) => <li key={s.label}><a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></li>)}</ul>
+            <div className="menu-scroll" data-lenis-prevent>
+              <div className="container menu-inner">
+                <ul className="menu-links">
+                  {nav.map((n, i) => (
+                    <motion.li key={n.to} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.12 + i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+                      <NavLink to={n.to} end onClick={() => setOpen(false)}>{n.label}</NavLink>
+                    </motion.li>
+                  ))}
+                </ul>
+                <div className="menu-foot">
+                  {hire && <span className="nav-status"><Status /></span>}
+                  {account.on && <Link className="menu-account" to={account.user ? '/account' : '/account/login'} onClick={() => setOpen(false)}>{account.user ? 'Your account' : 'Log in / make an account'} <span aria-hidden="true">→</span></Link>}
+                  <ul>{social.map((s) => <li key={s.label}><a href={s.url} target="_blank" rel="noreferrer">{s.label}</a></li>)}</ul>
+                </div>
               </div>
             </div>
           </motion.div>

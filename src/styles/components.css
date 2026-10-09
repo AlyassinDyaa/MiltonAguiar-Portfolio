@@ -70,21 +70,30 @@ a.nav-status:hover { background: var(--loud); color: var(--on-loud); }
 .theme-btn:hover { background: var(--loud); color: var(--on-loud); }
 .theme-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .nav-bar > .nav-status + .theme-btn { margin-left: -16px; }
-.burger { display: none; position: relative; width: 46px; height: 46px; background: var(--panel-2); }
-.burger span { position: absolute; left: 12px; right: 12px; height: 3px; background: var(--fg); top: calc(50% - 1.5px); transition: transform 0.4s var(--ease); }
+.burger { display: none; position: relative; flex: 0 0 auto; width: 40px; height: 40px; padding: 0; background: var(--panel-2); }
+.burger span { position: absolute; left: 10px; right: 10px; height: 3px; background: var(--fg); top: calc(50% - 1.5px); transition: transform 0.4s var(--ease); }
 .burger span:first-child { transform: translateY(-5px); }
 .burger span:last-child { transform: translateY(5px); }
 .burger.open span:first-child { transform: rotate(45deg); }
 .burger.open span:last-child { transform: rotate(-45deg); }
 /* the menu on a phone: a page of solid red, printed with dots */
-.menu { position: fixed; inset: 0; z-index: 90; overflow-y: auto; background: linear-gradient(150deg, var(--accent) 35%, var(--accent-deep)); color: #fff; }
+.menu { position: fixed; inset: 0; z-index: 90; overflow: hidden; background: linear-gradient(150deg, var(--accent) 35%, var(--accent-deep)); color: #fff; }
 .menu::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(11, 11, 12, 0.36) 0 2.4px, transparent 3px) 0 0 / 11px 11px; -webkit-mask-image: linear-gradient(160deg, transparent 40%, #000); mask-image: linear-gradient(160deg, transparent 40%, #000); }
-.menu-inner { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; min-height: 100%; padding-block: calc(var(--nav) + 32px) 36px; }
-.menu-links a { display: block; width: fit-content; padding: 2px 0.1em 2px 0; font-family: var(--display); font-size: clamp(3.2rem, 16.5vw, 6rem); font-weight: 900; font-style: italic; line-height: 0.98; text-transform: uppercase; color: #fff; text-shadow: 0.045em 0.045em 0 var(--k); }
+/* scrolls under the top bar, so a short phone can still reach the links at the bottom */
+.menu-scroll { position: absolute; inset: var(--nav) 0 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.menu-inner { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: clamp(20px, 5vh, 40px); min-height: 100%; padding-block: clamp(10px, 4vh, 32px) max(28px, calc(env(safe-area-inset-bottom) + 16px)); }
+/* the links size to the height of the screen too, so all of it fits on a normal phone */
+.menu-links a { display: block; width: fit-content; padding: 2px 0.1em 2px 0; font-family: var(--display); font-size: clamp(2rem, min(16.5vw, 7.4vh), 6rem); font-size: clamp(2rem, min(16.5vw, 7.4svh), 6rem); font-weight: 900; font-style: italic; line-height: 0.98; text-transform: uppercase; color: #fff; text-shadow: 0.045em 0.045em 0 var(--k); }
 .menu-links a.active { color: var(--k); text-shadow: 0.045em 0.045em 0 rgba(255, 255, 255, 0.92); }
 .menu-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
 .menu-foot .nav-status { background: var(--k); color: #fff; }
 .menu-foot ul { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--display); font-size: 1rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+/* a phone on its side: the links and the rest side by side */
+@media (orientation: landscape) and (max-height: 500px) {
+  .menu-inner { flex-direction: row; align-items: flex-end; }
+  .menu-links a { font-size: clamp(1.6rem, 9vh, 3rem); }
+  .menu-foot { flex: 0 1 340px; }
+}
 /* the menu button takes over once the links, the status and the buttons no longer fit on one line */
 @media (max-width: 1139px) {
   .nav-links, .nav-bar > .nav-status { display: none; }
@@ -233,7 +242,7 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
   .hero-page button.hp { aspect-ratio: 1 / 1.12; }
   .hero-page .hp .caption { bottom: 10px; }
   .hero-page[data-panels='1'] .hp-1, .hero-page[data-panels='3'] .hp-3 { grid-column: 1 / -1; aspect-ratio: 16 / 10; }
-  .hp-title .hp-in { display: flex; flex-direction: column; align-items: stretch; padding: 22px 18px 0; --name: min(24.5vw, 9rem); }
+  .hp-title .hp-in { display: flex; flex-direction: column; align-items: stretch; padding: 22px 18px 0; --name: min(24.5vw, 9rem, 34svh); } /* 34svh: a phone on its side keeps the name to about a third of the screen */
   .hp-title .hp-in:not(.has-figure) { padding-bottom: 24px; }
   .has-figure .hero-tag, .has-figure .lead, .has-figure .hero-actions { max-width: none; }
   /* on a phone the drawing stands under the words, in the same panel */
@@ -703,7 +712,7 @@ a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3p
 /* ---------- contact: an open page, not panels ---------- */
 /* Two columns from the top of the page: the heading with the form under it, and beside them,
    starting level with the heading, where else to reach him. */
-.open { padding-block: calc(var(--nav) + clamp(32px, 5vw, 72px)) clamp(40px, 6vw, 88px); }
+section.open { padding-block: calc(var(--nav) + clamp(32px, 5vw, 72px)) clamp(40px, 6vw, 88px); }
 .request { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: start; }
 .page-head { margin-bottom: clamp(30px, 4vw, 54px); }
 .page-head .display { font-size: clamp(3.2rem, 7.4vw, 7rem); }
@@ -835,13 +844,14 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .pc-alt { position: absolute; z-index: 1; inset: 0; box-sizing: border-box; padding: var(--mat) var(--mat) var(--mat-b); overflow: hidden; opacity: 0; transition: opacity 0.5s var(--ease-out); pointer-events: none; }
 .pc-alt img { display: block; box-sizing: border-box; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
 .pc:hover .pc-alt.is-ready, .pc:focus-within .pc-alt.is-ready { opacity: 1; }
-/* a touch screen: the first tap shows the second picture (ShopCard), with a word to tap again */
+/* a touch screen: the first tap shows the second picture (ShopCard), with a word to tap again
+   (in the middle of the art, clear of the cart button, and wrapping on a small card rather than running off it) */
 @media (hover: none) {
   .pc:focus-within .pc-alt.is-ready { opacity: 0; }
   .pc.is-alt .pc-alt.is-ready { opacity: 1; }
 }
-.pc-tap { position: absolute; z-index: 3; left: 50%; bottom: 14px; translate: -50% 0; padding: 5px 10px 4px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; background: #0b0b0c; color: #fff; box-shadow: 3px 3px 0 var(--accent); pointer-events: none; animation: pc-tap-in 0.3s var(--ease-out) both; }
-@keyframes pc-tap-in { from { opacity: 0; translate: -50% 6px; } }
+.pc-tap { position: absolute; z-index: 3; left: 50%; top: 50%; translate: -50% -50%; padding: 5px 10px 4px; font-family: var(--display); font-size: 0.72rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; width: max-content; max-width: calc(100% - 16px); line-height: 1.15; text-align: center; background: #0b0b0c; color: #fff; box-shadow: 3px 3px 0 var(--accent); pointer-events: none; animation: pc-tap-in 0.3s var(--ease-out) both; }
+@keyframes pc-tap-in { from { opacity: 0; translate: -50% calc(-50% + 6px); } }
 .pc.is-gone .pc-frame > img, .pc.is-gone .pc-alt img { filter: grayscale(1) brightness(0.7); }
 /* the tag, and the cart button that shows when the card is pointed at */
 .sc-tag { position: absolute; z-index: 3; top: 20px; left: 20px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 7px 12px; font-family: var(--display); font-size: 1.02rem; font-weight: 900; font-style: italic; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent); color: #fff; border: 2px solid #0b0b0c; box-shadow: 3px 3px 0 #0b0b0c; transform: rotate(-2deg); pointer-events: none; }
@@ -1124,7 +1134,7 @@ a.buy-btn { text-decoration: none; }
 .acc-items b, .acc-total b { color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .acc-total { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line-strong); font-weight: 600; }
 .acc-total.is-discount { border: 0; padding-top: 0; color: var(--accent); }
-.acc-steps { counter-reset: none; display: grid; grid-template-columns: repeat(4, 1fr); margin: 24px 0 4px; padding: 0; list-style: none; }
+.acc-steps { counter-reset: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 24px 0 4px; padding: 0; list-style: none; }
 .acc-steps li { position: relative; display: grid; justify-items: center; gap: 8px; text-align: center; font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-mute); }
 .acc-steps li::before { content: ''; position: absolute; top: 7px; left: -50%; right: 50%; height: 2px; background: var(--line-strong); }
 .acc-steps li:first-child::before { display: none; }
@@ -1134,7 +1144,7 @@ a.buy-btn { text-decoration: none; }
 .acc-steps li.done i { border-color: var(--accent); background: var(--accent); }
 .acc-steps li[aria-current='step'] i { box-shadow: 0 0 0 5px oklch(0.76 0.19 var(--h) / 0.25); }
 .acc-refund { margin: 16px 0 0; color: var(--acc-bad); }
-.acc-order-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 30px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.acc-order-foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 18px 30px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
 .acc-order-foot p { margin: 8px 0 12px; color: var(--fg-dim); }
 .acc-order-foot code { color: var(--fg); font-family: var(--display); }
 .acc-empty { display: grid; justify-items: start; gap: 10px; padding: clamp(24px, 4vw, 40px); border: 1px dashed var(--line-strong); }
@@ -1144,6 +1154,8 @@ a.buy-btn { text-decoration: none; }
   .nav-account { width: 44px; height: 44px; }
   .acc-steps li span { font-size: 0.6rem; }
 }
+/* a small phone: the four steps keep to their quarter of the card */
+@media (max-width: 374px) { .acc-steps li { letter-spacing: 0.04em; } }
 
 /* the browser's own autofill colour (pale blue) is painted over with the page's dark ground */
 .field input:-webkit-autofill, .field input:-webkit-autofill:hover, .field input:-webkit-autofill:focus {

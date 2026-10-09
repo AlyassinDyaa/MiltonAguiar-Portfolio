@@ -150,6 +150,9 @@ body::after {
 .runner { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; font-family: var(--display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; color: var(--fg-mute); }
 .runner i { flex: 1; min-width: 20px; height: 1px; background: var(--line-strong); }
 .runner b { font-weight: 700; color: var(--accent); }
+/* a small phone: the line gives up its room first, then the left words are cut short, so the page number stays on screen */
+.runner > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 374px) { .runner { gap: 10px; letter-spacing: 0.14em; } .runner i { min-width: 12px; } }
 
 /* buttons: solid blocks */
 .btn {

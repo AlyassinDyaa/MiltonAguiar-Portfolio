@@ -312,8 +312,10 @@ function Reader({ comic, onClose }) {
   })
   // a spread (or half of one) in the book: no fold or shadow where its halves meet, one shadow round it
   const spreading = (...cs) => cs.some((c) => c && c.part !== 'whole')
+  // closed on its cover, the comic sits in the middle; turning past the cover opens it out
+  const closed = v === 0
   const pair = (L, R, leafEl, under, also = []) => (
-    <div className={`reader-book is-pair ${turning} ${L && R && spreading(L, R, ...also) ? 'is-spreading' : ''}`} {...bookProps(2 * ratio)}>
+    <div className={`reader-book is-pair ${turning} ${L && R && spreading(L, R, ...also) ? 'is-spreading' : ''} ${closed ? 'is-closed' : ''}`} {...bookProps(2 * ratio)}>
       <div className={`reader-cell is-left ${under === 'L' ? 'is-under' : ''}`}>{face(L)}</div>
       <div className={`reader-cell is-right ${under === 'R' ? 'is-under' : ''}`}>{face(R)}</div>
       {leafEl}

@@ -1981,7 +1981,10 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
    smoothly when the page turns by itself, and follows the finger while it is dragged */
 @property --turn { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
 .reader-book { --turn: 0deg; }
-.reader-book.is-turning { transition: --turn var(--turn-ms, 850ms) cubic-bezier(0.32, 0, 0.18, 1); }
+.reader-book.is-pair { transition: translate var(--turn-ms, 850ms) cubic-bezier(0.32, 0, 0.18, 1); }
+.reader-book.is-turning { transition: --turn var(--turn-ms, 850ms) cubic-bezier(0.32, 0, 0.18, 1), translate var(--turn-ms, 850ms) cubic-bezier(0.32, 0, 0.18, 1); }
+/* closed on its cover: the comic (the right-hand half of the open book) sits in the middle */
+.reader-book.is-pair.is-closed { translate: -25% 0; }
 .reader-book.is-dragging { transition: none; }
 .reader-leaf { position: absolute; z-index: 2; top: 0; bottom: 0; width: 50%; transform: rotateY(var(--turn)); transform-style: preserve-3d; will-change: transform; }
 .reader-leaf .reader-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }

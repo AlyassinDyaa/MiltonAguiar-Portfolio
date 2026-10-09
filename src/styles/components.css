@@ -1971,8 +1971,13 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .reader-face { position: absolute; inset: 0; overflow: hidden; background: #17171a; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
 .reader-face.is-blank { background: transparent; box-shadow: none; }
 .reader-face img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
-.reader-face img.is-left { object-fit: cover; object-position: left center; }
-.reader-face img.is-right { object-fit: cover; object-position: right center; }
+/* a half of a spread: a window onto the whole spread laid across both pages (twice the page's
+   width), so its halves meet exactly and match the whole spread once the page has landed */
+.reader-face img.is-left, .reader-face img.is-right { position: absolute; top: 0; width: 200%; max-width: none; height: 100%; object-fit: cover; object-position: center; }
+.reader-face img.is-left { left: 0; }
+.reader-face img.is-right { left: -100%; }
+/* the whole spread at rest fills the open book the same way */
+.reader-book.is-spread .reader-face img { object-fit: cover; object-position: center; }
 /* the fold: a little shade either side of the spine */
 .reader-book.is-pair .reader-face:not(.is-blank)::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
 .reader-book.is-pair .is-left > .reader-face:not(.is-blank)::after, .reader-leaf.is-back .reader-face.is-front::after, .reader-leaf.is-fwd .reader-face.is-back::after { background: linear-gradient(90deg, transparent 90%, rgba(0, 0, 0, 0.16)); }

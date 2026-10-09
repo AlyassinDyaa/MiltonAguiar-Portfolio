@@ -2284,3 +2284,14 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
   .acc-orow.acc-crow.is-picking { grid-template-columns: auto minmax(0, 1fr) auto; }
   .acc-crow-del { width: 34px; height: 34px; }
 }
+
+/* ---------- commissions: received, closed ---------- */
+.acc-pill.is-complete { background: var(--open); color: #06140c; }
+.acc-received { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin: 0 0 14px; padding: 14px 16px; border: 2px solid var(--open); background: color-mix(in srgb, var(--open) 10%, transparent); }
+.acc-received > div { display: grid; gap: 3px; flex: 1 1 260px; }
+.acc-received strong { font-family: var(--display); font-size: 1.15rem; font-weight: 900; font-style: italic; text-transform: uppercase; color: var(--fg); }
+.acc-received span { color: var(--fg-dim); }
+.acc-closed { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0; padding: 12px 14px; border: 1px dashed var(--line-strong); color: var(--fg-dim); }
+.acc-closed p { margin: 0; }
+.acc-closed b { color: var(--fg); }
+.acc-modal-icon.is-ok { background: var(--open); color: #06140c; font-weight: 900; }

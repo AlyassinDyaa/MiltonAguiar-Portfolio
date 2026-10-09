@@ -18,7 +18,7 @@ window.IASales = (() => {
     kids.forEach((k) => k != null && k !== false && n.append(k))
     return n
   }
-  const STAGES = [['new', 'New'], ['packed', 'Packed'], ['shipped', 'Shipped'], ['delivered', 'Delivered'], ['cancelled', 'Cancelled']]
+  const STAGES = [['new', 'New'], ['packed', 'Packed'], ['shipped', 'Shipped'], ['delivered', 'Delivered'], ['complete', 'Complete'], ['cancelled', 'Cancelled']]
   const stageName = Object.fromEntries(STAGES)
   const PAYMENT = { paid: 'Paid', 'part-refunded': 'Part refunded', refunded: 'Refunded', unpaid: 'Not paid', expired: 'Abandoned' }
   const PERIODS = [['all', 'All time'], ['today', 'Today'], ['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['year', 'This year']]
@@ -1116,7 +1116,7 @@ window.IASales = (() => {
     ['to-answer', 'To quote', (c) => ['requested', 'discussing'].includes(c.status)],
     ...C_STATUS.map(([k, t]) => [k, t, (c) => c.status === k]),
   ]
-  const cState = { loaded: false, loading: false, list: [], problem: '', chip: 'all', q: '', page: 1, per: perSaved(), open: null, detail: null, detailProblem: '', drafts: {}, said: '', stick: true }
+  const cState = { deliver: {}, saidBad: false, loaded: false, loading: false, list: [], problem: '', chip: 'all', q: '', page: 1, per: perSaved(), open: null, detail: null, detailProblem: '', drafts: {}, said: '', stick: true }
   const cApi = async (body) => {
     try {
       const r = await fetch('/api/commissions', { method: 'POST', cache: 'no-store', headers: { Authorization: `token ${pass()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) })
@@ -1145,9 +1145,11 @@ window.IASales = (() => {
   const openCommission = (id) => {
     cState.open = id; cState.detail = cState.detail && cState.detail.id === id ? cState.detail : null; cState.detailProblem = ''; cState.said = ''; cState.stick = true
     history.replaceState(null, '', `#/sales/orders?tab=commissions&c=${encodeURIComponent(id)}`)
-    draw(); loadCommission(id)
+    cFails = 0
+    draw(); loadCommission(id); cListen()
   }
   const closeCommission = () => {
+    cHush()
     cState.open = null; cState.detail = null
     history.replaceState(null, '', '#/sales/orders?tab=commissions')
     draw()
@@ -1160,8 +1162,72 @@ window.IASales = (() => {
     const fresh = { id: c.id, number: c.number, title: c.title, kind: c.kind, status: c.status, price: c.price, currency: c.currency, ship: c.ship, paid: c.paid, updatedAt: c.updatedAt, lastAt: last ? last.at : c.lastAt, lastFrom: last ? last.from : '', lastText: last ? last.text : '', unread: 0, email: c.email, name: c.name, userId: c.userId, test: c.test, createdAt: c.createdAt }
     if (row) Object.assign(row, fresh); else cState.list.unshift(fresh)
   }
-  // while the Commissions tab shows (and this browser tab is in view): the open conversation is asked
-  // again every 3 seconds (every 10 once nothing has changed for a minute), the list every 15
+  /* The open conversation, live: api/commissions.js sends every change down a line held open
+     (Server-Sent Events, read with fetch so the pass goes in the Authorization header, never in an
+     address), opened again whenever it ends. The window is only drawn again when something changed.
+     A database that cannot do it says so (`fallback`), and a line failing three times running gives
+     up for that commission: then the conversation is asked for, as below. Hidden: the line closes. */
+  let cLive = false // the line is open and talking
+  let cNoWatch = false // the database cannot: ask, for as long as this page is open
+  let cLineFor = '' // the commission the line is for
+  let cLine = null
+  let cFails = 0
+  const cOn = () => Boolean(root && root.isConnected && document.visibilityState === 'visible' && state.view === 'orders' && state.ordersTab === 'commissions' && document.documentElement.hasAttribute('data-ia-sales'))
+  const cRead = async (url, signal, onEvent) => {
+    const answer = await fetch(url, { headers: { Authorization: `token ${pass()}`, Accept: 'text/event-stream' }, cache: 'no-store', signal })
+    if (!answer.ok || !answer.body) throw new Error(`stream ${answer.status}`)
+    const reader = answer.body.getReader()
+    const decoder = new TextDecoder()
+    let held = ''
+    for (;;) {
+      const { value, done: ended } = await reader.read()
+      if (ended) return
+      held += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+      let at
+      while ((at = held.indexOf('\n\n')) >= 0) {
+        const block = held.slice(0, at)
+        held = held.slice(at + 2)
+        let event = 'message'
+        const data = []
+        for (const line of block.split('\n')) { if (line.startsWith('event:')) event = line.slice(6).trim(); else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, '')) }
+        if (!data.length) continue // a comment, to keep the line open
+        try { onEvent(event, JSON.parse(data.join('\n'))) } catch { /* not ours */ }
+      }
+    }
+  }
+  const cHush = () => { cLineFor = ''; cLive = false; if (cLine) { cLine.abort(); cLine = null } }
+  const cListen = async () => {
+    const id = cState.open
+    if (!id || cNoWatch || !cOn() || cLineFor === id) return
+    if (cLineFor) cHush()
+    cLineFor = id
+    while (cLineFor === id && cState.open === id && !cNoWatch && cOn()) {
+      cLine = new AbortController()
+      let heard = false
+      try {
+        await cRead(`/api/commissions?stream=${encodeURIComponent(id)}&admin=1`, cLine.signal, (event, data) => {
+          if (cState.open !== id) return
+          if (event === 'commission' && data.commission) {
+            heard = true; cLive = true; cFails = 0
+            const before = `${cKey(cState.detail)}|${cState.detailProblem || ''}`
+            keepCommission(data.commission); cState.detailProblem = ''
+            if (`${cKey(cState.detail)}|` !== before) draw()
+          } else if (event === 'fallback') cNoWatch = true
+          else if (event === 'gone') { cState.detailProblem = 'It is not there any more.'; cState.detail = null; draw() }
+        })
+      } catch { /* opened again below */ }
+      cLive = false
+      if (cLineFor !== id || cNoWatch) break
+      if (!heard && ++cFails >= 3) break // asked for instead, until another one is opened
+      await new Promise((resolve) => { setTimeout(resolve, heard ? 200 : 1500 * cFails) })
+    }
+    if (cLineFor === id) cLineFor = ''
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cListen(); else cHush() })
+
+  // while the Commissions tab shows (and this browser tab is in view): the list is asked for every 15
+  // seconds; the open conversation comes down its live line, or (without one) is asked for every 3
+  // seconds (every 10 once nothing has changed for a minute)
   let cQuietSince = Date.now()
   let cSeen = ''
   let cListAt = 0
@@ -1170,13 +1236,14 @@ window.IASales = (() => {
       const on = root && root.isConnected && document.visibilityState === 'visible' && state.view === 'orders' && state.ordersTab === 'commissions' && document.documentElement.hasAttribute('data-ia-sales')
       if (on) {
         if (Date.now() - cListAt > 15000) { cListAt = Date.now(); loadCommissions(true) }
-        if (cState.open) {
+        if (cState.open && cFails < 3 && !cNoWatch && cLineFor !== cState.open) cListen() // its line, if it is not open
+        if (cState.open && !cLive) {
           await loadCommission(cState.open)
           const d = cState.detail
           const k = d ? `${(d.messages || []).length}:${d.status}:${d.updatedAt || ''}` : ''
           if (k !== cSeen) { cSeen = k; cQuietSince = Date.now() }
         }
-      }
+      } else if (cLineFor) cHush() // not showing: the line closes
     } catch { /* asked again next time */ }
     setTimeout(cTick, Date.now() - cQuietSince > 60000 ? 10000 : 3000)
   }
@@ -1255,7 +1322,7 @@ window.IASales = (() => {
           el('span', { className: 'sl-c-who' }, [avatar({ name: c.name, email: c.email, member: memberOf(c.email) }), el('span', {}, [el('strong', { textContent: c.name || '—' }), el('small', { textContent: c.email })])]),
           el('span', {}, [el('strong', { textContent: c.title }), el('small', { textContent: c.kind })]),
           el('span', {}, [badge(`c-${c.status}`, cStatusName[c.status] || c.status), c.removed ? el('small', { textContent: 'Removed by the customer' }) : null]),
-          el('span', { className: 'sl-c-total' }, [el('strong', { textContent: c.price != null ? money(c.price, c.currency) : '—' }), el('small', { textContent: c.paid ? 'Paid' : c.price != null ? 'Not paid yet' : 'No quote yet' })]),
+          el('span', { className: 'sl-c-total' }, [el('strong', { textContent: c.price != null ? money(c.price, c.currency) : '—' }), el('small', { textContent: c.paid ? (c.paidWith ? `Paid · ${c.paidWith}` : 'Paid') : c.price != null ? 'Not paid yet' : 'No quote yet' })]),
           el('span', { className: 'sl-c-last' }, [
             el('strong', {}, [c.unread ? el('b', { className: 'sl-unread', textContent: String(c.unread) }) : null, ago(c.lastAt || c.updatedAt)]),
             el('small', { textContent: `${c.lastFrom === 'customer' ? '' : c.lastFrom === 'artist' ? 'You: ' : ''}${c.lastText || ''}` }),
@@ -1288,18 +1355,20 @@ window.IASales = (() => {
     const id = cState.open
     const draft = cState.drafts[id] || (cState.drafts[id] = {})
     const block = (title, kids, cls = '') => el('section', { className: `sl-block ${cls}` }, [el('h3', { textContent: title }), ...kids])
-    const said = el('p', { className: 'sl-said', role: 'status', textContent: cState.said })
+    const said = el('p', { className: `sl-said ${cState.saidBad ? 'is-bad' : ''}`, role: 'status', textContent: cState.said })
     const fail = (r) => { said.classList.add('is-bad'); said.textContent = r.json.message || 'That did not work. Try again.' }
     const run = async (btn, body, done) => {
       btn.disabled = true; said.classList.remove('is-bad'); said.textContent = 'Saving…'
       const r = await cApi({ id, ...body })
       btn.disabled = false
       if (!r.ok) return fail(r)
+      cState.saidBad = false
       keepCommission(r.json.commission); done(); cState.stick = true
       draw()
     }
     const input = (key, props, tag = 'input') => {
       const n = el(tag, { className: 'sl-input', ...props })
+      n.dataset.draft = key // drawn again while typed in: found again by this, and given the focus back
       if (draft[key] !== undefined) { if (props.type === 'checkbox') n.checked = draft[key]; else n.value = draft[key] }
       n.addEventListener(props.type === 'checkbox' ? 'change' : 'input', () => { draft[key] = props.type === 'checkbox' ? n.checked : n.value })
       return n
@@ -1382,6 +1451,63 @@ window.IASales = (() => {
       return b
     }))
 
+
+    // the finished piece, sent to their email: the files go up in pieces of 3 MB (20 MB in all), then
+    // one email carries them (api/commissions.js adminFileChunk, adminDeliver). Chosen files are kept
+    // while the window is drawn again.
+    const CHUNK = 3 * 1048576
+    const CAP = 20 * 1048576
+    const dv = cState.deliver[id] || (cState.deliver[id] = { files: [], busy: false, progress: '' })
+    const sizeOf = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`)
+    const b64 = (blob) => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = () => reject(new Error('A file could not be read.')); r.readAsDataURL(blob) })
+    const deliver = async () => {
+      if (dv.busy) return
+      const upload = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => x.toString(16).padStart(2, '0')).join('')
+      dv.busy = true; cState.said = ''; cState.saidBad = false
+      try {
+        for (const [fi, f] of dv.files.entries()) {
+          const total = Math.max(1, Math.ceil(f.size / CHUNK))
+          for (let i = 0; i < total; i++) {
+            dv.progress = `Uploading ${f.name}${total > 1 ? ` (${i + 1} of ${total})` : ''}…`; draw()
+            const r = await cApi({ action: 'adminFileChunk', id, upload, file: fi, name: f.name, type: f.type, index: i, total, data: await b64(f.slice(i * CHUNK, (i + 1) * CHUNK)) })
+            if (!r.ok) throw new Error(r.json.message || 'A file could not be sent. Try again.')
+          }
+        }
+        dv.progress = 'Emailing it to them…'; draw()
+        const r = await cApi({ action: 'adminDeliver', id, upload, note: draft.dnote || '', link: draft.dlink || '' })
+        if (!r.ok) throw new Error(r.json.message || 'It could not be sent. Try again.')
+        keepCommission(r.json.commission)
+        cState.said = `Sent to ${c.email} ✓${r.json.sent && r.json.sent.length ? ` (${r.json.sent.join(', ')})` : ''}`
+        dv.files = []; draft.dnote = ''; draft.dlink = ''; cState.stick = true
+      } catch (e) { cState.said = e.message; cState.saidBad = true }
+      dv.busy = false; dv.progress = ''
+      draw()
+    }
+    const deliverBlock = () => {
+      const total = dv.files.reduce((n, f) => n + f.size, 0)
+      const over = total > CAP
+      const picker = el('input', { type: 'file', multiple: true, id: `dv-${id}`, className: 'sl-file', accept: 'image/*,application/pdf,application/zip,.zip,.psd,.tif,.tiff', disabled: dv.busy })
+      picker.addEventListener('change', () => { dv.files.push(...picker.files); draw() })
+      const dnote = input('dnote', { rows: 2, maxLength: 2000, placeholder: 'A note with it (optional)', ariaLabel: 'A note with it' }, 'textarea')
+      const dlink = input('dlink', { placeholder: 'https://… (Google Drive, WeTransfer)', maxLength: 500, ariaLabel: 'Download link' })
+      const go = button(dv.busy ? dv.progress || 'Sending…' : 'Send to their email', deliver, 'ia-btn')
+      go.disabled = dv.busy || over || (!dv.files.length && !String(draft.dlink || '').trim())
+      dlink.addEventListener('input', () => { go.disabled = dv.busy || over || (!dv.files.length && !dlink.value.trim()) })
+      return [
+        el('label', { className: 'sl-label', htmlFor: `dv-${id}` }, [el('span', { textContent: 'The finished files (images, PDF or zip)' })]),
+        el('div', { className: 'sl-file-pick' }, [picker, el('small', { className: 'sl-hint', textContent: 'Choose one or more. Up to 20 MB in all, sent attached to one email.' })]),
+        dv.files.length ? el('ul', { className: 'sl-files' }, dv.files.map((f, i) => {
+          const x = button('×', () => { dv.files.splice(i, 1); draw() }, 'sl-file-x')
+          x.setAttribute('aria-label', `Remove ${f.name}`); x.disabled = dv.busy
+          return el('li', {}, [el('span', { textContent: f.name }), el('small', { textContent: sizeOf(f.size) }), x])
+        })) : null,
+        dv.files.length ? el('p', { className: `sl-files-total ${over ? 'is-over' : ''}`, textContent: over ? `${sizeOf(total)} in all: over 20 MB, too big for an email. Remove some, or put them in Google Drive or WeTransfer and send the link below.` : `${dv.files.length} ${dv.files.length === 1 ? 'file' : 'files'}, ${sizeOf(total)} in all` }) : null,
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'A note (optional)' }), dnote]),
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'A download link for big files (optional)' }), dlink]),
+        el('div', { className: 'sl-save' }, [go, el('small', { className: 'sl-hint', textContent: c.status === 'complete' ? 'They have confirmed it already: this only sends the files.' : 'It is marked Delivered, with a note in the conversation. They confirm when they have it.' })]),
+      ]
+    }
+
     const p = c.payment
     const stripeLink = p && p.provider === 'stripe' && p.pi ? `https://dashboard.stripe.com/${p.test ? 'test/' : ''}payments/${p.pi}` : ''
     const paypalLink = p && p.provider === 'paypal' && p.captureId ? `https://www.${p.test ? 'sandbox.' : ''}paypal.com/activity/payment/${p.captureId}` : ''
@@ -1405,7 +1531,11 @@ window.IASales = (() => {
             mem ? el('small', { textContent: `Member ${memberNo(mem.memberNo)}${mem.verified ? ' · email confirmed' : ''}` }) : null,
           ]),
         ]),
-        block('Conversation', [thread, el('div', { className: 'sl-reply' }, [reply, links, el('div', { className: 'sl-save' }, [send, el('small', { className: 'sl-hint', textContent: 'They see it in their account and get an email.' })])])]),
+        block('Conversation', [thread, c.status === 'complete'
+          ? el('div', { className: 'sl-closed' }, [el('p', { textContent: `Complete — confirmed by the customer${c.completedAt ? ` on ${date(new Date(c.completedAt).getTime())}` : ''}; the conversation is closed.` }), button('Reopen conversation', () => ask({ title: `Reopen ${c.number}?`, text: `${c.name || c.email} · ${c.title}`, more: 'It goes back to Delivered and you can write to each other again. They get an email saying so.', yes: 'Reopen it', plain: true, run: async () => { const r = await cApi({ action: 'adminReopen', id }); if (!r.ok) return r.json.message || 'Not reopened. Try again.'; keepCommission(r.json.commission); cState.said = 'Reopened ✓'; return '' } }), 'ia-btn ghost')])
+          : c.status === 'cancelled'
+            ? el('div', { className: 'sl-closed' }, [el('p', { textContent: 'Cancelled — the conversation is closed.' })])
+            : el('div', { className: 'sl-reply' }, [reply, links, el('div', { className: 'sl-save' }, [send, el('small', { className: 'sl-hint', textContent: 'They see it in their account and get an email.' })])])]),
         block('What they asked for', [el('dl', { className: 'sl-dl' }, [
           el('dt', { textContent: 'Kind' }), el('dd', { textContent: d.kind || '—' }),
           d.size ? el('dt', { textContent: 'Size' }) : null, d.size ? el('dd', { textContent: d.size }) : null,
@@ -1416,10 +1546,13 @@ window.IASales = (() => {
           d.refs && d.refs.length ? el('dd', {}, d.refs.map((l) => el('a', { href: l, target: '_blank', rel: 'noopener noreferrer', textContent: l.replace(/^https?:\/\//, '') }))) : null,
         ])]),
         block('Quote', paid || c.status === 'cancelled' ? [quoteNow || el('p', { className: 'sl-dim', textContent: 'No quote was sent.' })] : [quoteNow, quoteForm].filter(Boolean)),
-        block('Stage', [stages, note, el('small', { className: 'sl-hint', textContent: paid ? 'Each step is saved at once, with a note in the conversation and an email to them.' : 'The work stages open once it is paid.' })]),
+        block('Stage', c.status === 'complete'
+          ? [el('p', { className: 'sl-dim', textContent: `Complete: they confirmed they received it${c.completedAt ? ` on ${date(new Date(c.completedAt).getTime())}` : ''}.` })]
+          : [stages, note, el('small', { className: 'sl-hint', textContent: paid ? 'Each step is saved at once, with a note in the conversation and an email to them. Delivered: send the files below.' : 'The work stages open once it is paid.' })]),
+        paid && c.status !== 'cancelled' ? block('Upload the finished piece', deliverBlock(), 'sl-deliver') : null,
         block('Payment', p && p.paidAt ? [
+          el('div', { className: 'sl-paid-with' }, [el('small', { textContent: 'Paid with' }), el('strong', { textContent: p.paidWith || (p.provider === 'paypal' ? 'PayPal' : 'Card') })]),
           el('div', { className: 'sl-sum' }, [el('span', { textContent: 'Paid' }), el('strong', { textContent: money(p.amount, p.currency) })]),
-          el('div', { className: 'sl-sum is-method' }, [el('span', { textContent: 'With' }), el('strong', { textContent: p.paidWith || p.provider })]),
           p.code ? el('div', { className: 'sl-sum is-refund' }, [el('span', { textContent: `Code ${p.code}` }), el('strong', { textContent: `− ${money(p.discount || 0, p.currency)}` })]) : null,
           el('p', { className: 'sl-dim', textContent: `${date(new Date(p.paidAt).getTime(), true)}${p.test ? ' · test payment' : ''}${p.refunded ? ' · refunded' : ''}` }),
           a ? el('p', { className: 'sl-address' }, [a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), country(a.country)].filter(Boolean).flatMap((line, i) => (i ? [el('br'), line] : [line]))) : el('p', { className: 'sl-dim', textContent: c.quote && c.quote.ship ? 'No address came with the payment.' : 'Digital: nothing to post.' }),
@@ -1451,13 +1584,24 @@ window.IASales = (() => {
     const open = state.view === 'orders' && !onCommissions && state.open && state.orders.find((o) => o.id === state.open)
     const views = { orders: onCommissions ? commissionsView : ordersView, customers: customersView, discounts: discountsView }
     const panels = open ? orderPanel(open) : onCommissions && cState.open ? commissionPanel(cState.detail) : []
-    const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('.sl-panel input, .sl-panel textarea') // typing in a panel: leave it as it is
-    if (keep) return
+    // typing in an order's panel: leave it as it is. In a commission's window (its words are kept as
+    // they are typed) it is drawn again, so a message arriving shows at once, and the field gets the
+    // focus and the caret back
+    const active = document.activeElement
+    const typingIn = active && root.contains(active) && active.matches('.sl-panel input, .sl-panel textarea') ? active : null
+    const draftKey = typingIn && typingIn.closest('.sl-panel.is-commission') ? typingIn.dataset.draft || '' : ''
+    if (typingIn && !draftKey) return
+    let sel = null
+    if (draftKey) { try { sel = [typingIn.selectionStart, typingIn.selectionEnd, typingIn.scrollTop] } catch { sel = null } }
     root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels, ...modalLayer())
     root.scrollTop = scroll
     if (hadModal) root.querySelector('.sl-modal-shade')?.classList.add('is-still')
     root.querySelectorAll('[data-keep-scroll]').forEach((n) => { if (inner[n.dataset.keepScroll]) n.scrollTop = inner[n.dataset.keepScroll] })
     if (typing >= 0) { const s = root.querySelectorAll('.sl-search')[typing]; if (s) { s.focus(); try { s.setSelectionRange(caret, caret) } catch { /* not a text box */ } } }
+    if (draftKey) {
+      const again = root.querySelector(`.sl-panel.is-commission [data-draft="${draftKey}"]`)
+      if (again) { again.focus({ preventScroll: true }); if (sel) { try { again.setSelectionRange(sel[0], sel[1]); again.scrollTop = sel[2] } catch { /* not a text box */ } } }
+    }
   }
   addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || !root || !root.isConnected) return
@@ -1476,7 +1620,7 @@ window.IASales = (() => {
     if (state.view === 'orders') state.ordersTab = params.get('tab') === 'commissions' ? 'commissions' : 'shop'
     if (state.view === 'orders' && state.ordersTab === 'commissions') {
       const id = params.get('c') || ''
-      if (id && id !== cState.open) { cState.open = id; cState.detail = null; cState.stick = true; loadCommission(id) }
+      if (id && id !== cState.open) { cState.open = id; cState.detail = null; cState.stick = true; cFails = 0; loadCommission(id); setTimeout(cListen, 0) }
       if (!id && tabBefore === 'commissions' && cState.open) { cState.open = null; cState.detail = null }
     }
     // the commissions are asked for once on Orders too, for the count on their tab

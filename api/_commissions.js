@@ -29,9 +29,14 @@ export const SETTINGS = {
   maxLinks: 10, // reference links on one message
   maxMessages: 400, // a thread stops taking messages after this many
   mailQuietHours: 6, // a new message is emailed when the other side has read everything, or after this long
+  deliveryCap: 20 * 1024 * 1024, // the finished files sent by email, all together (Gmail takes 25 MB, encoding adds a third)
+  deliveryChunk: 3 * 1024 * 1024, // each piece of a file the admin's browser sends (Vercel takes 4.5 MB a request)
 }
 
-export const STATUSES = ['requested', 'discussing', 'quoted', 'paid', 'sketch', 'inks', 'colours', 'delivered', 'cancelled']
+export const STATUSES = ['requested', 'discussing', 'quoted', 'paid', 'sketch', 'inks', 'colours', 'delivered', 'complete', 'cancelled']
+/* complete: the customer said they received it (only from delivered). Complete or cancelled, the
+   conversation is closed: neither side can write in it any more. */
+export const isClosed = (c) => c.status === 'complete' || c.status === 'cancelled'
 export const WORK_STAGES = ['sketch', 'inks', 'colours', 'delivered', 'cancelled'] // what the admin moves it to once paid
 /* What the piece goes through, set on the quote (quote.stages): a sketch is sketched and delivered,
    an inked piece is inked too, full colour (and anything bigger) gets its colours. A quote from
@@ -49,14 +54,14 @@ export const guessStages = (kind) => {
   if (/sketch|pencil/.test(words)) return 'sketch'
   return 'full'
 }
-export const STATUS_WORDS = { requested: 'Requested', discussing: 'Discussing', quoted: 'Quoted', paid: 'Paid', sketch: 'Sketch', inks: 'Inks', colours: 'Colours', delivered: 'Delivered', cancelled: 'Cancelled' }
+export const STATUS_WORDS = { requested: 'Requested', discussing: 'Discussing', quoted: 'Quoted', paid: 'Paid', sketch: 'Sketch', inks: 'Inks', colours: 'Colours', delivered: 'Delivered', complete: 'Complete', cancelled: 'Cancelled' }
 const OPEN = ['requested', 'discussing', 'quoted'] // not paid yet: the customer can still cancel
 export const isOpen = (c) => OPEN.includes(c.status)
 /* The commissions that count toward rewards ('A number of commissions'), kept apart from the shop's
    orders and pieces: paid (paid, sketch, inks, colours, delivered), not refunded, and still in the
    customer's account. As with shop orders, one the customer removed from their account no longer
    counts. */
-export const COUNTED = ['paid', 'sketch', 'inks', 'colours', 'delivered']
+export const COUNTED = ['paid', 'sketch', 'inks', 'colours', 'delivered', 'complete']
 export const countedMatch = (userId) => ({ userId, status: { $in: COUNTED }, 'payment.refunded': { $ne: true }, customerRemoved: { $ne: true } })
 export const counts = (c) => COUNTED.includes(c.status) && !(c.payment && c.payment.refunded) && !c.customerRemoved
 export const isPaid = (c) => Boolean(c && c.payment && c.payment.paidAt)
@@ -120,6 +125,7 @@ const summary = (c) => {
     id: c._id, number: c.number, title: c.title, kind: (c.details && c.details.kind) || '', status: c.status,
     price: c.quote ? c.quote.price : null, currency: (c.quote && c.quote.currency) || SETTINGS.currency, ship: Boolean(c.quote && c.quote.ship),
     stages: stagesOf(c), counted: counts(c), removed: Boolean(c.customerRemoved),
+    paidWith: c.payment && c.payment.paidAt ? c.payment.paidWith || (c.payment.provider === 'paypal' ? 'PayPal' : 'Card') : '', completedAt: c.completedAt || null,
     paid: isPaid(c), createdAt: c.createdAt, updatedAt: c.updatedAt,
     lastAt: last ? last.at : c.createdAt, lastFrom: last ? last.from : '', lastText: last ? String(last.text || '').slice(0, 140) : '',
   }
@@ -188,13 +194,14 @@ export const mailArtistMessage = (c, msg, site, what = 'A new message') => (!ema
   lines: [`${c.name || c.email} wrote about "${c.title}":`, ...paras(msg.text), ...(msg.links && msg.links.length ? [`Links: ${msg.links.join(' ')}`] : [])],
   button: { label: 'Open the commission', url: adminLink(site, c._id) },
 }))
-export const mailCustomer = (c, site, { subject, kicker, title, lines, orders, label = 'See your commission' }) => safely('commission', {
+export const mailCustomer = (c, site, { subject, kicker, title, lines, orders, label = 'See your commission', attachments }) => safely('commission', {
   to: c.email,
   subject,
   kicker: kicker || `Commission ${c.number}`,
   title,
   lines: [`Hi${firstName(c) ? ` ${firstName(c)}` : ''},`, ...lines],
   orders,
+  attachments,
   button: { label, url: accountLink(site, c._id) },
   after: 'You can answer from your account, or just reply to this email.',
   replyTo: artistInbox() || undefined,
@@ -243,6 +250,16 @@ export const copyBox = (c) => {
   ]
   return { title: `Commission ${c.number}`, sub: [c.title, STATUS_WORDS[c.status]].filter(Boolean).join(' · '), rows, total: p ? price(p.amount, p.currency) : q ? price(q.price, q.currency) : '' }
 }
+
+// the customer has it (their "I've received it"): the artist hears of it, unless switched off
+export const mailArtistReceived = (c, site) => (!emailsToArtist('commissions') ? Promise.resolve(false) : safely('commission received', {
+  to: artistInbox(),
+  subject: `Commission ${c.number} received by ${c.name || c.email}`,
+  kicker: `Commission ${c.number}`,
+  title: 'Received: complete',
+  lines: [`${c.name || c.email} confirmed they have received "${c.title}". The commission is complete and its conversation is closed.`],
+  button: { label: 'Open the commission', url: adminLink(site, c._id) },
+}))
 
 /* ---------- paid ----------
    A payment taken (Stripe's webhook, or PayPal's capture): the commission is marked paid, once,

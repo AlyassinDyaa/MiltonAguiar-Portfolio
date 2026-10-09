@@ -212,7 +212,8 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
    is where replies go. With neither set, on this computer the email is printed instead.
    An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text },
    code: { label, text, note } (a discount code, in a dashed box), orders: [{ title, sub, rows: [[what, price]],
-   total, foot }] (orders written out, a box each), after, replyTo }. */
+   total, foot }] (orders written out, a box each), after, replyTo, attachments: [{ filename, content (a Buffer),
+   contentType }] (files sent with it: a finished commission) }. */
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
 // the artist's own inbox, as for the Contact form: CONTACT_TO, else the contact email in the admin
 // (Site → Name, colour and contact), else the address the site sends from
@@ -252,12 +253,13 @@ export const testAddress = (to) => {
 }
 export const sendMail = async (mail) => {
   const { to, subject, lines, button, after } = mail
-  if (testAddress(to)) { console.log(`[email skipped: test address] ${to} / ${subject}`); return true }
+  const files = Array.isArray(mail.attachments) ? mail.attachments.filter((a) => a && a.filename && a.content) : []
+  if (testAddress(to)) { console.log(`[email skipped: test address] ${to} / ${subject}${files.length ? ` / ${files.length} file${files.length === 1 ? '' : 's'}: ${files.map((a) => a.filename).join(', ')}` : ''}`); return true }
   const brand = process.env.MAIL_BRAND || siteName()
   const text = [mail.title || subject, '', ...lines, ...(Array.isArray(mail.orders) ? mail.orders.map((o) => ['', ...[`${o.title}${o.sub ? ` (${o.sub})` : ''}`, ...(o.rows || []).map(([l, v]) => `  ${l}  ${v || ''}`), o.total ? `  Total  ${o.total}` : '', o.foot ? `  ${o.foot}` : ''].filter(Boolean)].join('\n')) : []), mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
   if (!mailReady()) {
     // on this computer the link is printed instead, so the whole journey can be tried without email
-    if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n`)
+    if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n${files.length ? `(with ${files.map((a) => `${a.filename}, ${a.content.length} bytes`).join('; ')})\n` : ''}`)
     else console.warn('email not sent: no SMTP_* or RESEND_API_KEY / MAIL_FROM set')
     return false
   }
@@ -266,12 +268,12 @@ export const sendMail = async (mail) => {
   const replyTo = mail.replyTo || process.env.MAIL_REPLY_TO || undefined // a contact message: replies go to the visitor
   if (smtpReady()) {
     try {
-      await smtp().sendMail({ from, to, subject, text, html, replyTo })
+      await smtp().sendMail({ from, to, subject, text, html, replyTo, ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType || undefined })) } : {}) })
       return true
     } catch (e) { console.error('the email server refused the email:', e && (e.response || e.message)); return false }
   }
   try {
-    const answer = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}) }) })
+    const answer = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}) }) })
     if (!answer.ok) console.error('resend refused the email:', answer.status)
     return answer.ok
   } catch (e) { console.error('could not reach resend:', e.message); return false }

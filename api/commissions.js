@@ -1,11 +1,12 @@
 import { adminOk } from './_session.js'
 import { accountsMode } from './_buyer.js'
 import { SITE, checkCode, discountCents } from './_orders.js'
+import { db } from './_db.js'
 import { checkPassword, clean, currentUser, fromThisSite, newId, noteTry, sendMail, siteUrl, tooMany } from './_users.js'
 import {
   SETTINGS, STAGE_SETS, STATUS_WORDS, WORK_STAGES, stagesOf, cents, cleanLinks, cleanText, closePending, col, dbReady, dueWords, forAdmin, forCustomer, isOpen, isPaid, kinds,
   addMessage, mailArtistMessage, mailArtistRequest, mailCustomer, message, nextNumber, noteMailed, paidByPaypal, paypal, paypalSandbox, price, quoteBox,
-  commissionsOpen, copyBox, shopSettings, stripe, titleFrom,
+  commissionsOpen, copyBox, isClosed, mailArtistReceived, shopSettings, stripe, titleFrom,
 } from './_commissions.js'
 
 /* Commissions, for the customer and for the admin. One function for all of it (Vercel's plan
@@ -20,6 +21,8 @@ import {
      { action: 'pay', id, provider: 'card' | 'paypal' }          accept the quote: answers { url } of the payment page
      { action: 'capture', id, order }                            back from PayPal: the payment is taken
      { action: 'cancel', id }                                    while it is not paid
+     { action: 'confirm', id }                                   "I've received it": delivered becomes complete,
+                                                                 and the conversation closes
      { action: 'remove', ids, password }                         out of their account, after a copy of each is
                                                                  emailed (nothing goes if it cannot be sent): an
                                                                  unpaid one is cancelled and deleted, a paid one
@@ -30,6 +33,9 @@ import {
      { action: 'adminQuote', id, price, includes, due, ship }
      { action: 'adminStage', id, status: sketch | inks | colours | delivered | cancelled, note }
      { action: 'adminDelete', id }
+     { action: 'adminReopen', id }                               a completed one back to delivered (they are told)
+     { action: 'adminFileChunk', id, upload, file, name, type, index, total, data }   a piece of a finished file
+     { action: 'adminDeliver', id, upload, note, link }          the finished files emailed to the customer
    Stripe's payments arrive through api/stripe-webhook.js (metadata kind = commission), which marks
    the commission paid and never records it as a shop order. */
 const ID = /^c_[a-f0-9]{24}$/
@@ -56,6 +62,7 @@ const adminAction = async (req, action, body) => {
   }
 
   if (action === 'adminMessage') {
+    if (isClosed(found)) return [409, { message: found.status === 'complete' ? 'This commission is complete: the customer confirmed they received it, so the conversation is closed. Reopen it to write.' : 'This commission was cancelled: the conversation is closed.' }]
     const textValue = cleanText(body.text)
     const links = cleanLinks(body.links)
     if (!textValue && !links.length) return [400, { message: 'Write something first.' }]
@@ -105,6 +112,7 @@ const adminAction = async (req, action, body) => {
   if (action === 'adminStage') {
     const status = String(body.status || '')
     if (!WORK_STAGES.includes(status)) return [400, { message: 'Unknown stage.' }]
+    if (found.status === 'complete') return [409, { message: 'It is complete (the customer has it): reopen the conversation first.' }]
     if (status !== 'cancelled' && !isPaid(found)) return [409, { message: 'It is not paid yet: the work stages start once it is.' }]
     if (status !== 'cancelled' && !stagesOf(found).includes(status)) return [400, { message: `This piece does not go through ${STATUS_WORDS[status]}: the quote says ${stagesOf(found).map((k) => STATUS_WORDS[k]).join(' → ')}.` }]
     if (status === found.status) return [409, { message: `It is at ${STATUS_WORDS[status]} already.` }]
@@ -126,6 +134,83 @@ const adminAction = async (req, action, body) => {
     })
     await noteMailed(id, 'customer')
     return [200, { commission: forAdmin({ ...after, unread: { ...(after.unread || {}), artist: 0 } }, true) }]
+  }
+
+  if (action === 'adminReopen') {
+    // a completed commission opened again (the customer is told): back to delivered, the conversation open
+    if (found.status !== 'complete') return [409, { message: 'Only a completed commission can be reopened.' }]
+    const { after } = await addMessage(id, message('system', 'Milton reopened the conversation.'), { forSide: 'customer', set: { status: 'delivered', completedAt: null } })
+    await mailCustomer(after, site, {
+      subject: `Your commission ${after.number}: the conversation is open again`,
+      title: 'The conversation is open again',
+      lines: [`Milton reopened the conversation about "${after.title}". You can write to each other in your account again.`],
+      label: 'Open the conversation',
+    })
+    return [200, { commission: forAdmin({ ...after, unread: { ...(after.unread || {}), artist: 0 } }, true) }]
+  }
+
+  /* The finished piece, sent to the customer by email. The admin's browser sends each file in pieces
+     (adminFileChunk, about 3 MB each, base64: a request may carry 4.5 MB on Vercel), kept for a day at
+     most in `deliveryChunks`; adminDeliver puts them back together, emails them as attachments
+     (20 MB at most, all together: a download link is for anything bigger), marks it delivered, and
+     notes it in the conversation. Only once it is paid. */
+  if (action === 'adminFileChunk' || action === 'adminDeliver') {
+    if (!isPaid(found)) return [409, { message: 'It is not paid yet: the finished piece goes once it is.' }]
+    if (found.status === 'cancelled') return [409, { message: 'It was cancelled.' }]
+    const upload = String(body.upload || '')
+    if (!/^[a-z0-9]{8,40}$/i.test(upload)) return [400, { message: 'That upload is not one of ours.' }]
+    const chunks = (await db()).collection('deliveryChunks')
+    if (action === 'adminFileChunk') {
+      await chunks.deleteMany({ createdAt: { $lt: new Date(Date.now() - 864e5) } }) // anything left over from a day ago
+      const file = Math.round(Number(body.file) || 0)
+      const index = Math.round(Number(body.index))
+      const total = Math.round(Number(body.total))
+      const data = String(body.data || '')
+      if (!(file >= 0 && file < 50 && total >= 1 && total <= 20 && index >= 0 && index < total)) return [400, { message: 'That piece of the file is not in order.' }]
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data) || data.length > Math.ceil(SETTINGS.deliveryChunk / 3) * 4 + 8) return [400, { message: 'That piece of the file is not right. Try again.' }]
+      const size = Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0)
+      const others = await chunks.find({ upload, commission: id }).toArray()
+      const sofar = others.filter((x) => !(x.file === file && x.index === index)).reduce((n, x) => n + (x.size || 0), 0)
+      if (sofar + size > SETTINGS.deliveryCap) return [413, { message: `Together the files are over ${SETTINGS.deliveryCap / 1048576} MB, too big for an email. Put them in Google Drive or WeTransfer and send the download link instead (or with fewer files).` }]
+      await chunks.deleteMany({ upload, commission: id, file, index })
+      await chunks.insertOne({ _id: `${upload}:${file}:${index}`, upload, commission: id, file, index, total, name: clean(body.name, 150) || `file-${file + 1}`, type: clean(body.type, 100), size, data, createdAt: new Date() })
+      return [200, { ok: true, received: sofar + size }]
+    }
+    // adminDeliver: the files put back together, and sent
+    const note = cleanText(body.note, 2000)
+    const link = String(body.link || '').trim() ? cleanLinks([body.link])[0] || '' : ''
+    if (String(body.link || '').trim() && !link) return [400, { field: 'link', message: 'That download link does not look like a web address (https://…).' }]
+    const pieces = await chunks.find({ upload, commission: id }).toArray()
+    const files = []
+    for (const f of [...new Set(pieces.map((x) => x.file))].sort((a, b) => a - b)) {
+      const parts = pieces.filter((x) => x.file === f).sort((a, b) => a.index - b.index)
+      const total = parts[0].total
+      if (parts.length !== total || parts.some((x, i) => x.index !== i)) return [409, { message: `${parts[0].name} did not arrive whole. Send it again.` }]
+      files.push({ filename: parts[0].name, contentType: parts[0].type || undefined, content: Buffer.concat(parts.map((x) => Buffer.from(x.data, 'base64'))) })
+    }
+    if (!files.length && !link) return [400, { message: 'Add the finished files, or a download link.' }]
+    const bytes = files.reduce((n, f) => n + f.content.length, 0)
+    if (bytes > SETTINGS.deliveryCap) return [413, { message: `Together the files are over ${SETTINGS.deliveryCap / 1048576} MB, too big for an email. Send a download link instead.` }]
+    const names = files.map((f) => f.filename)
+    const sent = await mailCustomer(found, site, {
+      subject: `Your commission ${found.number} is here`,
+      kicker: 'Delivered',
+      title: 'Your commission is here',
+      lines: [
+        `"${found.title}" is finished.${files.length ? ` ${files.length === 1 ? 'The file is' : `The ${files.length} files are`} attached to this email: ${names.join(', ')}.` : ''}`,
+        ...(note ? note.split(/\n{2,}/) : []),
+        ...(link ? [`Download it here: ${link}`] : []),
+        'Once you have it, press "I\u2019ve received it" in your account.',
+      ],
+      label: 'See your commission',
+      attachments: files,
+    })
+    if (!sent) return [502, { message: 'The email could not be sent just now. Nothing was marked delivered: try again in a moment (the files are kept for a day).' }]
+    const words = `Delivered: ${files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} sent to your email (${names.join(', ')})` : 'sent to your email'}${link ? `. Download link: ${link}` : ''}${note ? `. ${note}` : ''}`
+    const set = found.status !== 'complete' && stagesOf(found).includes('delivered') ? { status: 'delivered', deliveredAt: new Date() } : { deliveredAt: new Date() }
+    const { after } = await addMessage(id, message('system', words, link ? [link] : []), { forSide: 'customer', set })
+    await chunks.deleteMany({ upload, commission: id })
+    return [200, { commission: forAdmin({ ...after, unread: { ...(after.unread || {}), artist: 0 } }, true), sent: names }]
   }
 
   if (action === 'adminDelete') {
@@ -213,6 +298,7 @@ const customerAction = async (req, user, action, body) => {
   }
 
   if (action === 'message') {
+    if (isClosed(found)) return [409, { message: found.status === 'complete' ? 'This commission is complete, so the conversation is closed. Want something new? Request a new commission.' : 'This commission was cancelled, so the conversation is closed.' }]
     if (await tooMany(`cmsg:${user._id}`, 40, 60)) return [429, { message: 'That is a lot of messages in an hour. Try again in a little while.' }]
     const textValue = cleanText(body.text)
     const links = cleanLinks(body.links)
@@ -222,6 +308,14 @@ const customerAction = async (req, user, action, body) => {
     const msg = message('customer', textValue, links)
     const { after, quiet } = await addMessage(id, msg, { forSide: 'artist', set: found.status === 'requested' ? { status: 'discussing' } : {} })
     if (!quiet) { await mailArtistMessage(after, msg, site); await noteMailed(id, 'artist') }
+    return [200, { commission: forCustomer({ ...after, unread: { ...(after.unread || {}), customer: 0 } }, true) }]
+  }
+
+  if (action === 'confirm') {
+    // "I've received it": only once it is delivered; it is then complete and the conversation closes
+    if (found.status !== 'delivered') return [409, { message: found.status === 'complete' ? 'You confirmed it already. Thank you!' : 'It is not delivered yet.' }]
+    const { after } = await addMessage(id, message('system', 'Received — this commission is complete.'), { forSide: 'artist', set: { status: 'complete', completedAt: new Date() } })
+    await mailArtistReceived(after, site)
     return [200, { commission: forCustomer({ ...after, unread: { ...(after.unread || {}), customer: 0 } }, true) }]
   }
 
@@ -350,7 +444,107 @@ const payWays = () => {
   }
 }
 
+/* ---------- live: a conversation as it happens ----------
+   GET /api/commissions?stream=<id>           the customer's own commission (their login cookie)
+   GET /api/commissions?stream=<id>&admin=1   the admin's (their pass in the Authorization header, as
+                                              for everything else: the page reads this with fetch, so no
+                                              secret ever goes in an address)
+   Server-Sent Events: the commission once, as `get` / `adminGet` answer it, then again every time it
+   changes (a MongoDB change stream on that one document), a comment every 15 seconds so nothing
+   between closes it, and `bye` after 50 seconds (Vercel ends a function after 60): the page opens it
+   again. Watching marks it read for that side, as opening it does. A database that cannot watch (the
+   stand-in on this computer, or a plan without change streams) says `fallback` and the page asks
+   every few seconds instead. */
+export const STREAM = { life: 50000, beat: 15000 }
+const queryOf = (req) => {
+  try { return new URL(req.url || '/', 'http://site').searchParams } catch { return new URLSearchParams() }
+}
+const streamCommission = async (req, res, q) => {
+  const id = String(q.get('stream') || '')
+  const admin = q.get('admin') === '1'
+  if (!ID.test(id)) return say(res, 400, { message: 'Which commission?' })
+  if (!dbReady()) return say(res, 503, { message: 'Commissions need the database, which is not set up yet.' })
+  let user = null
+  if (admin) {
+    if (!adminOk(req)) return say(res, 401, { message: 'Your login has run out. Sign out of the admin and sign in again.' })
+  } else {
+    if (accountsMode() === 'off') return say(res, 403, { message: 'Accounts are switched off.' })
+    user = await currentUser(req)
+    if (!user) return say(res, 401, { login: true, message: 'Log in first.' })
+  }
+  const c = await col()
+  const theirs = (doc) => Boolean(doc) && (admin || (doc.userId === user._id && !doc.customerRemoved))
+  const first = await c.findOne({ _id: id })
+  if (!theirs(first)) return say(res, 404, { message: 'That commission is not there any more.' })
+  const side = admin ? 'artist' : 'customer'
+  const shape = (doc) => (admin
+    ? { commission: forAdmin({ ...doc, unread: { ...(doc.unread || {}), artist: 0 } }, true) }
+    : { commission: forCustomer({ ...doc, unread: { ...(doc.unread || {}), customer: 0 } }, true), payWays: payWays() })
+
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-store, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no') // nothing in between holds it back
+  if (typeof res.flushHeaders === 'function') res.flushHeaders()
+
+  let open = true
+  let watcher = null
+  let beat = 0
+  let life = 0
+  let done = () => {}
+  const finished = new Promise((resolve) => { done = resolve })
+  const stop = () => {
+    if (!open) return
+    open = false
+    clearInterval(beat); clearTimeout(life)
+    if (watcher) { try { Promise.resolve(watcher.close()).catch(() => {}) } catch { /* closed already */ } }
+    try { res.end() } catch { /* the visitor left */ }
+    done()
+  }
+  const write = (text) => {
+    if (!open) return
+    try { res.write(text); if (typeof res.flush === 'function') res.flush() } catch { stop() }
+  }
+  const send = (event, data) => write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+  // seen by this side: their unread count back to nothing (only when it is not already)
+  const seen = async (doc) => { if (doc && doc.unread && doc.unread[side] > 0) { try { await c.updateOne({ _id: id }, { $set: { [`unread.${side}`]: 0 } }) } catch { /* next time */ } } }
+  if (typeof res.on === 'function') res.on('close', stop) // the page went away, or reconnects
+
+  send('commission', shape(first))
+  await seen(first)
+  beat = setInterval(() => write(': still here\n\n'), STREAM.beat)
+  life = setTimeout(() => { send('bye', { reconnect: true }); stop() }, STREAM.life)
+  const fallback = (why) => { if (!open) return; console.warn('commission stream: no change stream,', why); send('fallback', { reason: 'This database cannot send changes as they happen.' }); stop() }
+  try {
+    if (typeof c.watch !== 'function') throw new Error('no watch() on this database')
+    watcher = c.watch([{ $match: { 'documentKey._id': id } }], { fullDocument: 'updateLookup' })
+    watcher.on('change', async (change) => {
+      if (!open) return
+      if (change.operationType === 'delete') { send('gone', {}); return stop() }
+      const doc = change.fullDocument || (await c.findOne({ _id: id }))
+      if (!theirs(doc)) { send('gone', {}); return stop() }
+      send('commission', shape(doc))
+      await seen(doc)
+    })
+    watcher.on('error', (e) => fallback(e && e.message))
+  } catch (e) { fallback(e && e.message) }
+  return finished
+}
+
 export default async function handler(req, res) {
+  // a conversation, live (Server-Sent Events): see above
+  if (req.method === 'GET') {
+    const q = queryOf(req)
+    if (q.get('stream')) {
+      try { return await streamCommission(req, res, q) } catch (e) {
+        console.error('commission stream:', e && e.message)
+        if (!res.headersSent) return say(res, 500, { message: 'Something went wrong on our side.' })
+        try { res.end() } catch { /* gone */ }
+        return undefined
+      }
+    }
+  }
   res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return say(res, 405, { message: 'Use POST.' })
   if (!dbReady()) return say(res, 503, { message: 'Commissions need the database, which is not set up yet.' })

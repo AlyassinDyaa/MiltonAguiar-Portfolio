@@ -130,10 +130,19 @@ const adminBundle = () => ({
         for await (const chunk of req) body += chunk
         let parsed = {}
         try { parsed = body ? JSON.parse(body) : {} } catch { /* not JSON: left empty */ }
+        // what Vercel's response does, and the real one underneath: a stream (api/commissions.js,
+        // ?stream=) writes to it and holds it open, as on Vercel
         const reply = {
           setHeader: (k, v) => res.setHeader(k, v),
           status(code) { res.statusCode = code; return reply },
           json(data) { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); return reply },
+          write: (chunk) => res.write(chunk),
+          end: (chunk) => res.end(chunk),
+          on: (event, fn) => { res.on(event, fn); return reply },
+          flushHeaders: () => res.flushHeaders(),
+          get statusCode() { return res.statusCode },
+          set statusCode(code) { res.statusCode = code },
+          get headersSent() { return res.headersSent },
         }
         // a file that fails to load (a typo, or a helper it needs that changed: those are only read
         // afresh when the dev server restarts) answers with the error instead of stopping the server

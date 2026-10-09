@@ -18,6 +18,37 @@ export async function askCommissions(action, data = {}) {
   return said
 }
 
+/* A live conversation (api/commissions.js ?stream=): Server-Sent Events read with fetch, so the
+   login cookie goes with it and nothing secret is put in the address. Calls onEvent(name, data)
+   for each event; ends when the server closes it (it does after 50 seconds: open it again). */
+export async function readStream(url, signal, onEvent, headers = {}) {
+  const answer = await fetch(url, { headers: { Accept: 'text/event-stream', ...headers }, cache: 'no-store', credentials: 'same-origin', signal })
+  if (!answer.ok || !answer.body) throw new Error(`stream ${answer.status}`)
+  const reader = answer.body.getReader()
+  const decoder = new TextDecoder()
+  let held = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) return
+    held += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+    let at
+    while ((at = held.indexOf('\n\n')) >= 0) {
+      const block = held.slice(0, at)
+      held = held.slice(at + 2)
+      let event = 'message'
+      const data = []
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''))
+      }
+      if (!data.length) continue // a comment, to keep the line open
+      try { onEvent(event, JSON.parse(data.join('\n'))) } catch { /* not ours */ }
+    }
+  }
+}
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
+const keyOf = (c) => `${(c.messages || []).length}:${c.status}:${c.updatedAt || ''}`
+
 /* The list, for the whole account page (the tab's count of unread messages): asked on arrival,
    on coming back to the page, and every minute. */
 export function useCommissionList(on = true) {
@@ -36,11 +67,12 @@ export function useCommissionList(on = true) {
 }
 
 export const STEPS = [['requested', 'Requested'], ['discussing', 'Discussing'], ['quoted', 'Quoted'], ['paid', 'Paid'], ['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered']]
-const WORDS = { ...Object.fromEntries(STEPS), cancelled: 'Cancelled' }
+const WORDS = { ...Object.fromEntries(STEPS), complete: 'Received', cancelled: 'Cancelled' }
 // what a piece goes through once paid (the quote's stages): a sketch skips inks and colours, an inked piece the colours
 const SETS = { sketch: ['sketch', 'delivered'], inks: ['sketch', 'inks', 'delivered'], full: ['sketch', 'inks', 'colours', 'delivered'] }
 const workOf = (stages) => (Array.isArray(stages) && stages.length ? stages : SETS[stages] || SETS.full)
-const stepsFor = (stages) => [...STEPS.slice(0, 4), ...workOf(stages).map((k) => [k, WORDS[k]])]
+// after delivery, the last step is theirs: they say they received it
+const stepsFor = (stages) => [...STEPS.slice(0, 4), ...workOf(stages).map((k) => [k, WORDS[k]]), ['complete', 'Received']]
 const stagesWords = (stages) => workOf(stages).map((k) => WORDS[k]).join(' → ')
 const priced = (n, code) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: code || 'EUR', currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(n) } catch { return money(n) } }
 const longDay = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -206,6 +238,38 @@ function CommissionList({ list, open, reload }) {
 }
 
 /* ---------- one commission ---------- */
+/* "Confirm you've received it?": a small window, asked once before it is complete. */
+function ReceivedWindow({ open, busy, onYes, onClose }) {
+  const box = useRef(null)
+  useEffect(() => {
+    if (!open) return undefined
+    const before = document.activeElement
+    const key = (e) => { if (e.key === 'Escape' && !busy) onClose() }
+    addEventListener('keydown', key)
+    const t = setTimeout(() => box.current?.querySelector('.acc-modal-actions .btn:not(.ghost)')?.focus(), 60)
+    return () => { removeEventListener('keydown', key); clearTimeout(t); before?.focus?.() }
+  }, [open, busy, onClose])
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }}>
+          <motion.div ref={box} className="acc-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="acc-rcv-title" aria-describedby="acc-rcv-text"
+            initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+            <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close" disabled={busy}>×</button>
+            <span className="acc-modal-icon is-ok" aria-hidden="true">✓</span>
+            <h2 id="acc-rcv-title">Received your commission?</h2>
+            <p id="acc-rcv-text" className="acc-del-text">Confirm you&rsquo;ve received your commission? The conversation closes once you do.</p>
+            <div className="acc-modal-actions">
+              <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>Not yet</button>
+              <button type="button" className="btn sm" onClick={onYes} disabled={busy}>{busy ? 'One moment…' : 'Yes, I have it'}</button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 function Tracker({ status, stages }) {
   if (status === 'cancelled') return <p className="acc-refund">This commission was cancelled.</p>
   const steps = stepsFor(stages)
@@ -365,34 +429,64 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
   const [problem, setProblem] = useState('')
   const [capture, setCapture] = useState(paypalToken ? 'taking' : '')
   const [cancelling, setCancelling] = useState(false)
+  const [confirming, setConfirming] = useState(false) // the "received it?" window
   const [busy, setBusy] = useState(false)
   const load = useCallback(() => askCommissions('get', { id }).then((s) => { setC(s.commission); setWays(s.payWays || {}); setProblem(''); onChange() }).catch((e) => setProblem(e.message)), [id, onChange])
   useEffect(() => {
     load()
     // just back from paying: Stripe tells the site a moment later, so asked again a few times
     const soon = paid ? [2500, 6000, 12000, 20000].map((ms) => setTimeout(load, ms)) : []
-    // new messages show almost as they are sent: asked again every 3 seconds while the conversation
-    // is open and in view, every 10 once nothing has changed for a minute, and at once on coming back
+    /* New messages show the moment they are sent: while the conversation is open and in view, the
+       site sends every change down a live line (readStream), opened again whenever it ends. Should
+       the database not be able to (it says so), or the line fail three times running, the page asks
+       instead: every 3 seconds, every 10 once nothing has changed for a minute. Hidden: nothing. */
     let timer = 0
     let gone = false
     let lastSeen = ''
     let quietSince = Date.now()
+    let live = false // the line is open: no need to ask
+    let lineOff = false // asking instead, from now on
+    let failures = 0
+    let line = null
+    let listening = false
+    const take = (s) => {
+      if (!s || !s.commission) return
+      const k = keyOf(s.commission)
+      if (k === lastSeen) return
+      lastSeen = k; quietSince = Date.now()
+      setC(s.commission); if (s.payWays) setWays(s.payWays); onChange()
+    }
+    const listen = async () => {
+      if (listening || lineOff || gone) return
+      listening = true
+      while (!gone && !lineOff && document.visibilityState === 'visible') {
+        line = new AbortController()
+        let heard = false
+        try {
+          await readStream(`/api/commissions?stream=${encodeURIComponent(id)}`, line.signal, (event, data) => {
+            if (event === 'commission') { heard = true; live = true; failures = 0; take(data) } else if (event === 'fallback' || event === 'gone') lineOff = true
+          })
+        } catch { /* opened again below */ }
+        live = false
+        if (gone || lineOff) break
+        if (!heard && ++failures >= 3) { lineOff = true; break }
+        await sleep(heard ? 200 : 1500 * failures)
+      }
+      listening = false
+    }
     const tick = async () => {
       if (gone) return
-      if (document.visibilityState === 'visible') {
-        const s = await askCommissions('get', { id }).catch(() => null)
-        if (gone) return
-        if (s && s.commission) {
-          const k = `${(s.commission.messages || []).length}:${s.commission.status}:${s.commission.updatedAt || ''}`
-          if (k !== lastSeen) { lastSeen = k; quietSince = Date.now(); setC(s.commission); setWays(s.payWays || {}); onChange() }
-        }
-      }
+      if (!live && document.visibilityState === 'visible') take(await askCommissions('get', { id }).catch(() => null))
+      if (gone) return
       timer = setTimeout(tick, Date.now() - quietSince > 60000 ? 10000 : 3000)
     }
     timer = setTimeout(tick, 3000)
-    const back = () => { if (document.visibilityState === 'visible') { quietSince = Date.now(); clearTimeout(timer); tick() } }
+    listen()
+    const back = () => {
+      if (document.visibilityState === 'visible') { quietSince = Date.now(); clearTimeout(timer); tick(); listen() } else if (line) line.abort()
+    }
     document.addEventListener('visibilitychange', back)
-    return () => { gone = true; soon.forEach(clearTimeout); clearTimeout(timer); document.removeEventListener('visibilitychange', back) }
+    return () => { gone = true; if (line) line.abort(); soon.forEach(clearTimeout); clearTimeout(timer); document.removeEventListener('visibilitychange', back) }
   }, [load, paid])
   // back from PayPal: the payment is taken now (only the order opened for this quote)
   useEffect(() => {
@@ -416,6 +510,7 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
   if (!c) return <p className="acc-wait">Opening it…</p>
   const isPaid = Boolean(c.payment)
   const d = c.details || {}
+  const received = async () => { setBusy(true); try { const s = await askCommissions('confirm', { id }); setC(s.commission); onChange(); setConfirming(false) } catch (e) { setProblem(e.message) } setBusy(false) }
   const cancel = async () => { setBusy(true); try { const s = await askCommissions('cancel', { id }); setC(s.commission); onChange() } catch (e) { setProblem(e.message) } setBusy(false); setCancelling(false) }
   return (
     <div className="acc-com">
@@ -455,7 +550,21 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
           <Thread messages={c.messages || []} />
           {/* the latest quote stays here, above the reply box, until it is paid */}
           {c.quote && !isPaid && c.status !== 'cancelled' && <QuoteCard c={c} ways={ways} />}
-          {c.status !== 'cancelled' ? <Reply id={c.id} onSent={(next) => { setC(next); onChange() }} /> : <p className="acc-com-dim">This commission is closed.</p>}
+          {/* delivered: they say when they have it, and it is complete */}
+          {c.status === 'delivered' && (
+            <div className="acc-received">
+              <div><strong>Has it reached you?</strong><span>Once you have your commission, let Milton know. The conversation closes once you do.</span></div>
+              <button type="button" className="btn" onClick={() => setConfirming(true)}>I&rsquo;ve received it <span className="arrow">✓</span></button>
+            </div>
+          )}
+          {c.status === 'complete' ? (
+            <div className="acc-closed">
+              <p><b>This commission is complete.</b>{c.completedAt ? ` You confirmed it on ${longDay(c.completedAt)}.` : ''} Want something new?</p>
+              <Link className="btn sm" to="/commissions#request">Request a new commission <span className="arrow">→</span></Link>
+            </div>
+          ) : c.status === 'cancelled' ? <p className="acc-closed"><b>This commission was cancelled.</b> The conversation is closed.</p>
+            : <Reply id={c.id} onSent={(next) => { setC(next); onChange() }} />}
+          <ReceivedWindow open={confirming} busy={busy} onYes={received} onClose={() => setConfirming(false)} />
           {problem && <p className="acc-problem">{problem}</p>}
         </section>
 

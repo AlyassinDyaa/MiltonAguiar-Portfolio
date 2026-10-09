@@ -28,5 +28,8 @@
   "themes": {
     "dark": true,
     "light": false
+  },
+  "art": {
+    "watermark": true
   }
 }

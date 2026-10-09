@@ -5,6 +5,7 @@ import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
 import Compare from '../components/Compare'
+import ScrollRow from '../components/ScrollRow'
 import Lightbox from '../components/Lightbox'
 import PageTitle from '../components/PageTitle'
 import Runner from '../components/Runner'
@@ -73,9 +74,10 @@ export default function Work() {
           <div className="container">
             <Runner label={home.redrawLabel} page={comics.length > 0 ? 4 : 3} />
             <div className="spread-head"><h2 className="display h-lg">{home.redrawTitle}</h2></div>
-            <div className="compare-grid">
-              {redraws.map((r, i) => <Reveal key={r.slug} delay={i * 0.1}><Compare set={r} /></Reveal>)}
-            </div>
+            {/* a row to scroll through, however many sets there are */}
+            <ScrollRow className="compare-row" label="Pencils to colours, one piece at each stage">
+              {redraws.map((r, i) => <Reveal key={r.slug} delay={Math.min(i, 3) * 0.1} className="compare-slot"><Compare set={r} /></Reveal>)}
+            </ScrollRow>
           </div>
         </section>
       )}

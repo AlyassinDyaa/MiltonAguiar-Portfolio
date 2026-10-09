@@ -1988,3 +1988,25 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .pager-per { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.14em; color: var(--fg-dim); }
 .pager-per select { height: 42px; padding: 0 30px 0 12px; font-family: var(--display); font-size: 1rem; font-weight: 800; color: var(--fg); background: var(--panel); border: 2px solid var(--line-strong); border-radius: 0; cursor: pointer; }
 @media (max-width: 599px) { .pager { justify-content: center; } .pager-info { flex: 1 1 100%; text-align: center; } }
+
+/* a row that scrolls sideways (ScrollRow): the pencils-to-colours sets and the comic samples. Room
+   above and below, so shadows and the turning books are not cut off; the edges fade where there
+   is more to see, and the arrows sit over the sides */
+.srow { position: relative; }
+.srow-track { display: flex; gap: clamp(20px, 2.6vw, 40px); margin: 0 calc(var(--gutter) * -1); padding: 18px var(--gutter) 26px; overflow-x: auto; overflow-y: hidden; list-style: none; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; outline: 0; }
+.srow-track > * { flex: 0 0 auto; scroll-snap-align: start; min-width: 0; }
+.srow-track:focus-visible { box-shadow: inset 0 0 0 3px var(--accent); }
+.srow-track::-webkit-scrollbar { height: 6px; }
+.srow-track::-webkit-scrollbar-thumb { background: var(--line-strong); }
+.srow.can-scroll:not(.at-end) .srow-track { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 70px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 70px), transparent); }
+.srow.can-scroll:not(.at-start):not(.at-end) .srow-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 70px, #000 calc(100% - 70px), transparent); mask-image: linear-gradient(90deg, transparent, #000 70px, #000 calc(100% - 70px), transparent); }
+.srow.can-scroll.at-end:not(.at-start) .srow-track { -webkit-mask-image: linear-gradient(90deg, transparent, #000 70px); mask-image: linear-gradient(90deg, transparent, #000 70px); }
+.srow-arrow { position: absolute; z-index: 3; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin-top: -24px; padding: 0 0 3px; font-size: 1.7rem; line-height: 1; color: var(--on-accent, #fff); background: var(--accent); border: 2px solid var(--k, #0b0b0c); box-shadow: 3px 3px 0 var(--k, #0b0b0c); cursor: pointer; transition: opacity 0.2s, transform 0.2s; }
+.srow-arrow.is-prev { left: calc(var(--gutter) * -0.5); }
+.srow-arrow.is-next { right: calc(var(--gutter) * -0.5); }
+.srow-arrow:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--k, #0b0b0c); }
+.srow-arrow:disabled { opacity: 0; pointer-events: none; }
+.srow-arrow:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+.compare-row .compare-slot { width: min(330px, 78vw); }
+.comic-row .srow-track > li { width: min(230px, 44vw); }
+@media (max-width: 599px) { .srow-arrow { width: 40px; height: 40px; margin-top: -20px; font-size: 1.4rem; } .srow-arrow.is-prev { left: 0; } .srow-arrow.is-next { right: 0; } }

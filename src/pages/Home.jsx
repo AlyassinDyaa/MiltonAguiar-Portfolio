@@ -7,6 +7,7 @@ import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Marquee from '../components/Marquee'
 import Compare from '../components/Compare'
+import ScrollRow from '../components/ScrollRow'
 import ComicShelf from '../components/ComicShelf'
 import Lightbox from '../components/Lightbox'
 import Inked from '../components/Inked'
@@ -275,9 +276,10 @@ export default function Home() {
               <h2 className="display h-lg">{home.redrawTitle}</h2>
               {home.redrawText && <p className="dim">{home.redrawText}</p>}
             </div>
-            <div className="compare-grid">
-              {redraws.map((r, i) => <Reveal key={r.slug} delay={i * 0.1}><Compare set={r} /></Reveal>)}
-            </div>
+            {/* a row to scroll through, however many sets there are */}
+            <ScrollRow className="compare-row" label="Pencils to colours, one piece at each stage">
+              {redraws.map((r, i) => <Reveal key={r.slug} delay={Math.min(i, 3) * 0.1} className="compare-slot"><Compare set={r} /></Reveal>)}
+            </ScrollRow>
           </div>
         </section>
       )}

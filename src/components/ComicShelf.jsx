@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { asset } from '../data/site'
 import Book from './Book'
 import ComicReader from './ComicReader'
+import ScrollRow from './ScrollRow'
 import Reveal from './Reveal'
 
 /* One comic on the shelf: its cover as a small 3D book, and under it the title, the line about it
@@ -60,13 +61,14 @@ export default function ComicShelf({ comics }) {
   const [open, setOpen] = useState(null) // index of the comic being read
   return (
     <>
-      <ul className="comic-shelf">
+      {/* a row to scroll through, however many comics there are */}
+      <ScrollRow as="ul" className="comic-row" label="Comic samples">
         {comics.map((c, i) => (
           <li key={c.slug}>
-            <Reveal delay={i * 0.08}><ComicCard comic={c} onOpen={() => setOpen(i)} /></Reveal>
+            <Reveal delay={Math.min(i, 4) * 0.08}><ComicCard comic={c} onOpen={() => setOpen(i)} /></Reveal>
           </li>
         ))}
-      </ul>
+      </ScrollRow>
       <ComicReader comic={open != null ? comics[open] : null} onClose={() => setOpen(null)} />
     </>
   )

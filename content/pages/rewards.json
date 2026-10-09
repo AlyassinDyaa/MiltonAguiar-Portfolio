@@ -45,7 +45,8 @@
       "count": 10,
       "hidden": false,
       "cardArt": "/uploads/batman-and-robin.webp",
-      "name": "Batman and Robin"
+      "name": "Batman and Robin",
+      "cardCrop": "100,19,112"
     }
   ],
   "discounts": [

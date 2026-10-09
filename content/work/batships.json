@@ -15,6 +15,7 @@
   "title": "Batships",
   "type": "Prints",
   "inShop": true,
+  "hover": "/uploads/batship-mockup.webp",
   "face": "0,21,100",
   "category": "Fan art",
   "look": "default"

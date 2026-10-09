@@ -30,6 +30,6 @@
     "light": false
   },
   "art": {
-    "watermark": true
+    "watermark": false
   }
 }

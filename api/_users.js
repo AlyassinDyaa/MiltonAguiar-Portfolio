@@ -128,7 +128,7 @@ const assetHost = () => {
 }
 const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}${path.startsWith('/') ? '' : '/'}${path}`)
 
-/* Every email in the site's comic style, on the red circuit picture: the name on black (the second
+/* Every email in the site's comic style, on the red circuit picture (across the top, running into its dark red): the name on black (the second
    word in red), a dark panel framed in ink with a small tag, a big italic heading, the words, a discount
    code in a dashed box and a picture when there are any, and a red inked button with a hard
    shadow; under it the link written out, and a quiet footer. Built from tables with the styles
@@ -141,7 +141,7 @@ const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}
 const DISPLAY = "'Arial Black', 'Helvetica Neue', Impact, Arial, sans-serif"
 const BODY = "Arial, 'Helvetica Neue', Helvetica, sans-serif"
 const MONO = "'Courier New', Consolas, Menlo, monospace"
-const C = { page: '#6d0d14', ink: '#0b0b0c', panel: '#17171a', red: '#d8232f', bright: '#ff2a36', text: '#d9d9d6', soft: '#8a8a8f', foot: '#b9b9be', gold: '#ffd34d', line: '#3a3a40' }
+const C = { page: '#3e0e1a', ink: '#0b0b0c', panel: '#17171a', red: '#d8232f', bright: '#ff2a36', text: '#d9d9d6', soft: '#8a8a8f', foot: '#b9b9be', gold: '#ffd34d', line: '#3a3a40' }
 const paint = (c) => `background-color:${c};background-image:linear-gradient(${c},${c});`
 // light words that must stay light in Gmail's dark mode
 const keep = (html, tag = 'div') => `<${tag} class="gmail-screen"><${tag} class="gmail-dif">${html}</${tag}></${tag}>`
@@ -181,9 +181,10 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
   u + .body .gmail-screen { background:#000; mix-blend-mode:screen; display:inline; }
   u + .body .gmail-dif { background:#000; mix-blend-mode:difference; display:inline; }
   u + .body div.gmail-screen, u + .body div.gmail-dif { display:block; }
+  @media (max-width:600px) { .email-back { background-size:240% auto !important; } }
 </style></head>
 <body class="body" style="margin:0;padding:0;${paint(C.page)}">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" background="${esc(back)}" style="background-color:${C.page};background-image:url('${esc(back)}');background-size:cover;background-position:center top;background-repeat:no-repeat;"><tr><td align="center" style="padding:28px 12px 36px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" background="${esc(back)}" style="background-color:${C.page};background-image:url('${esc(back)}');background-size:100% auto;background-position:center top;background-repeat:no-repeat;" class="email-back"><tr><td align="center" style="padding:28px 12px 36px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
   <tr><td style="${paint(C.ink)}border:3px solid ${C.ink};padding:16px 22px 15px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;color:#ffffff;line-height:1;"><span style="color:#ffffff;">${keep(esc(first), 'span')}</span>${second ? ` <span style="color:${C.bright};">${esc(second)}</span>` : ''}</td></tr>
   <tr><td style="${paint(C.panel)}border:3px solid ${C.ink};border-top:0;padding:30px 26px 30px;">

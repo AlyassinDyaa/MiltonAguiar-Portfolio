@@ -179,12 +179,16 @@ function assemble(content) {
      address set keeps going there. `to(tier)` is where a button on that offer goes; `closed` is
      true when it would go to a request card that is closed. */
   const asked = String(commissions.quoteVia || (commissions.quoteUrl ? 'link' : 'site'))
-  const via = asked === 'email' && brand.email ? 'email' : asked === 'instagram' && brand.instagram ? 'instagram' : asked === 'link' && /^(https?:|mailto:)/.test(String(commissions.quoteUrl || '')) ? 'link' : 'site'
+  // with the request card switched off (Show / hide → Parts of the Commissions page), a button meant
+  // for it goes to the artist's email instead, or nowhere when there is no email (then it is not shown)
+  const cardShown = shows('commissions', 'request')
+  const via = asked === 'email' && brand.email ? 'email' : asked === 'instagram' && brand.instagram ? 'instagram' : asked === 'link' && /^(https?:|mailto:)/.test(String(commissions.quoteUrl || '')) ? 'link' : cardShown ? 'site' : brand.email ? 'email' : 'none'
   quote = {
     label: commissions.quoteLabel || 'Get a quote',
     via,
     external: via === 'instagram' || via === 'link',
-    closed: via === 'site' && !commissions.open,
+    hidden: via === 'none', // nowhere to go: the buttons are left out
+    closed: via === 'none' || (via === 'site' && !commissions.open),
     to: (tier = '') => (via === 'email' ? `mailto:${brand.email}?subject=${encodeURIComponent(tier ? `Commission: ${tier}` : 'Commission')}`
       : via === 'instagram' ? brand.instagram : via === 'link' ? commissions.quoteUrl
         : `/commissions${tier ? `?kind=${encodeURIComponent(tier)}` : ''}#request`),

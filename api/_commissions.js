@@ -75,6 +75,8 @@ export const kinds = () => [...((read('content/pages/commissions.json') || {}).t
 export const commissionsOpen = () => {
   return (read('content/pages/commissions.json') || {}).open !== false
 }
+// the request card is on the site at all (Show / hide → Parts of the Commissions page → The request card)
+export const requestsShown = () => (((read('content/site/visibility.json') || {}).commissions || {}).request !== false)
 const brandName = () => (read('content/site/brand.json') || {}).name || 'Milton Aguiar'
 
 /* ---------- tidying what comes in ---------- */

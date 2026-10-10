@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAccount } from '../hooks/useAccount'
-import { money } from '../data/site'
+import { money, shows } from '../data/site'
 import { Lock, PaypalButton } from './Buy'
 
 /* The customer's commissions, under Orders in their account (api/commissions.js): a list, and
@@ -66,6 +66,8 @@ export function useCommissionList(on = true) {
   return { list, unread, reload }
 }
 
+// a new request can be made: the Commissions page and its request card are both shown (Show / hide)
+const canAsk = () => shows('pages', 'commissions') && shows('commissions', 'request')
 export const STEPS = [['requested', 'Requested'], ['discussing', 'Discussing'], ['quoted', 'Quoted'], ['paid', 'Paid'], ['sketch', 'Sketch'], ['inks', 'Inks'], ['colours', 'Colours'], ['delivered', 'Delivered']]
 const WORDS = { ...Object.fromEntries(STEPS), complete: 'Received', cancelled: 'Cancelled' }
 // what a piece goes through once paid (the quote's stages): a sketch skips inks and colours, an inked piece the colours
@@ -177,8 +179,12 @@ function CommissionList({ list, open, reload }) {
       {done && <p className="acc-welcome" role="status">{done}</p>}
       <div className="acc-empty">
         <strong>No commissions yet</strong>
-        <p>Ask for a piece of your own on the Commissions page: you talk it over with Milton here, get a quote, and follow it from sketch to delivery.</p>
-        <Link className="btn sm" to="/commissions#request">Request a commission <span className="arrow">→</span></Link>
+        {canAsk() ? (
+          <>
+            <p>Ask for a piece of your own on the Commissions page: you talk it over with Milton here, get a quote, and follow it from sketch to delivery.</p>
+            <Link className="btn sm" to="/commissions#request">Request a commission <span className="arrow">→</span></Link>
+          </>
+        ) : <p>Milton is not taking requests on the site right now. When they are back, you ask on the Commissions page, talk it over here, get a quote, and follow the piece from sketch to delivery.</p>}
       </div>
     </>
   )
@@ -560,7 +566,7 @@ function Commission({ id, close, onChange, paid, paypalToken, clearReturn, clear
           {c.status === 'complete' ? (
             <div className="acc-closed">
               <p><b>This commission is complete.</b>{c.completedAt ? ` You confirmed it on ${longDay(c.completedAt)}.` : ''} Want something new?</p>
-              <Link className="btn sm" to="/commissions#request">Request a new commission <span className="arrow">→</span></Link>
+              {canAsk() && <Link className="btn sm" to="/commissions#request">Request a new commission <span className="arrow">→</span></Link>}
             </div>
           ) : c.status === 'cancelled' ? <p className="acc-closed"><b>This commission was cancelled.</b> The conversation is closed.</p>
             : <Reply id={c.id} onSent={(next) => { setC(next); onChange() }} />}

@@ -74,7 +74,7 @@
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
-    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events'] },
+    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request'] },
   }
 
   /* The navigation and the Overview, group by group, in this order. An item is a section of
@@ -111,7 +111,7 @@
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
     'site/shop': 'Shop on or off, how buyers pay, currency, what you sell, signed pieces, delivery, emails to you.',
     'site/categories': 'Categories, sub categories and print sizes: add, rename, reorder or hide them.',
-    'site/visibility': 'Switch pages, dark or light mode, parts of the home page and test data on or off.',
+    'site/visibility': 'Switch pages, parts of the home and Commissions pages, dark or light mode, the watermark and test data on or off.',
     'site/account': 'Accounts on or off, the membership card, your note on their page, free profile pictures.',
     'site/rewards': 'Profile pictures, card designs and discounts members earn by confirming their email, ordering or collecting.',
     'site/sales': 'Automatic price cuts with a start and an end: 10% off everything, 25% off a category. No code needed.',

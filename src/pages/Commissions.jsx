@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { brand, commissions, quote, redraws, work } from '../data/site'
+import { brand, commissions, quote, redraws, shows, work } from '../data/site'
 import Compare from '../components/Compare'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
@@ -237,7 +237,7 @@ export default function Commissions() {
         <div className={`status ${open ? 'on' : ''}`}><i />{open ? 'Commissions are open' : 'Commissions are closed right now'}</div>
       </PageTitle>
 
-      {steps.length > 0 && (
+      {shows('commissions', 'process') && steps.length > 0 && (
         <section className="spread">
           <div className="container">
             <Runner label={processLabel} page={++n} />
@@ -291,7 +291,7 @@ export default function Commissions() {
         </section>
       )}
 
-      {tiers.length > 0 && (
+      {shows('commissions', 'offers') && tiers.length > 0 && (
         <section className="spread">
           <div className="container">
             <Runner label="What I draw" page={++n} />
@@ -310,7 +310,9 @@ export default function Commissions() {
                         {t.includes?.length > 0 && <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>}
                       </div>
                       {/* the foot: the price if there is one, and the way to a quote */}
-                      {quote.via !== 'site'
+                      {quote.hidden
+                        ? (t.price ? <div className="tier-go is-closed"><span>{t.price}</span></div> : null)
+                        : quote.via !== 'site'
                         ? <QuoteGo className="tier-go" tier={t.name}><span>{t.price || quote.label}</span><i aria-hidden="true">{quoteSign()}</i></QuoteGo>
                         : quote.closed
                           ? <div className="tier-go is-closed"><span>{t.price || quote.label}</span><small>Closed for now</small></div>
@@ -325,7 +327,9 @@ export default function Commissions() {
       )}
 
       {/* the request: one dark card, its red strip saying whether commissions are open (and who is
-          asking); the points to know beside the form (above it on a phone). Closed: no form. */}
+          asking); the points to know beside the form (above it on a phone). Closed: no form.
+          Switched off under Show / hide: not here at all. */}
+      {shows('commissions', 'request') && (
       <section className="spread" id="request" ref={requestRef}>
         <div className="container">
           <Runner label={requestLabel} page={++n} />
@@ -354,6 +358,7 @@ export default function Commissions() {
           </Reveal>
         </div>
       </section>
+      )}
     </Page>
   )
 }

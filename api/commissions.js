@@ -6,7 +6,7 @@ import { checkPassword, clean, currentUser, fromThisSite, newId, noteTry, sendMa
 import {
   SETTINGS, STAGE_SETS, STATUS_WORDS, WORK_STAGES, stagesOf, cents, cleanLinks, cleanText, closePending, col, dbReady, dueWords, forAdmin, forCustomer, isOpen, isPaid, kinds,
   addMessage, mailArtistMessage, mailArtistRequest, mailCustomer, message, nextNumber, noteMailed, paidByPaypal, paypal, paypalSandbox, price, quoteBox,
-  commissionsOpen, copyBox, currencyFor, currencyOk, isClosed, mailArtistReceived, shopSettings, stripe, titleFrom,
+  commissionsOpen, copyBox, currencyFor, requestsShown, currencyOk, isClosed, mailArtistReceived, shopSettings, stripe, titleFrom,
 } from './_commissions.js'
 
 /* Commissions, for the customer and for the admin. One function for all of it (Vercel's plan
@@ -236,6 +236,7 @@ const customerAction = async (req, user, action, body) => {
   const site = siteUrl(req)
 
   if (action === 'request') {
+    if (!requestsShown()) return [403, { closed: true, message: 'Requests for commissions are switched off on the site right now.' }]
     if (!commissionsOpen()) return [403, { closed: true, message: 'Commissions are closed right now, so new requests cannot be sent. Check back soon, or write to Milton.' }]
     if (await tooMany(`commission:${user._id}`, 5, 24 * 60)) return [429, { message: 'You have sent a few requests today already. Add to one of them, or try again tomorrow.' }]
     const idea = cleanText(body.idea, 5000)

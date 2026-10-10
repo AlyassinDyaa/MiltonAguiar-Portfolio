@@ -822,6 +822,15 @@ collections:
               - { name: redraws, label: Pencils to colours, widget: boolean, default: true }
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: events, label: Conventions, widget: boolean, default: true }
+          - name: commissions
+            label: Parts of the Commissions page
+            widget: object
+            collapsed: false
+            hint: 'The page itself is switched on or off under Pages. Whether new requests are being taken (open, or closed with a note) is under Page text → Commissions.'
+            fields:
+              - { name: offers, label: What I draw (the offers), widget: boolean, default: true, required: false }
+              - { name: process, label: How it works, widget: boolean, default: true, required: false }
+              - { name: request, label: The request card, widget: boolean, default: true, required: false, hint: 'Off: nobody can ask on the site. The card leaves the page and the account, and quote buttons go to your email instead (left out without one). Commissions already asked for carry on.' }
           - name: themes
             label: Dark and light
             widget: object

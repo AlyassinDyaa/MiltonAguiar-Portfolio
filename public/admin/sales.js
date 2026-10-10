@@ -271,6 +271,107 @@ window.IASales = (() => {
 
   /* Everything about one customer: their account (picture, member number, gifts), contact, every
      address they have had things sent to, what they have bought, and their discount codes. */
+  /* A member's collector card, as it is on their account: the design they chose (or the site's own red
+     card), their name, number, year and pieces, in 3D: it leans to the pointer, and a click, a tap or a
+     drag turns it over to its back. Built from the same faces as the admin's card preview. */
+  const cardModal = (m) => {
+    const email = String(m.email || '').toLowerCase()
+    const mem = memberOf(email)
+    if (!mem) return null
+    const design = mem.card ? rewardOf(mem.card) : null
+    const theirs = state.orders.filter((o) => String(o.email || '').toLowerCase() === email && done(o))
+    const pieces = theirs.reduce((n, o) => n + o.items.reduce((k, i) => k + (i.qty || 1), 0), 0)
+    const name = mem.name || email.split('@')[0]
+    const since = mem.createdAt ? new Date(mem.createdAt).getFullYear() : new Date().getFullYear()
+    const art = (side) => {
+      if (!design) return ''
+      return side === 'back' ? design.cardBack || design.cardArt || '' : design.cardArt || ''
+    }
+    const placed = (face, side) => {
+      const src = art(side)
+      if (!src) return
+      const own = side === 'back' && design.cardBack
+      const [x, y, z] = String((own ? design.cardBackCrop : design.cardCrop) || '').split(',').map((n) => (n.trim() === '' ? NaN : Number(n)))
+      face.style.setProperty('--card-art', `url("${src}")`)
+      face.style.setProperty('--art-x', `${Number.isFinite(x) ? x : 50}%`)
+      face.style.setProperty('--art-y', `${Number.isFinite(y) ? y : 25}%`)
+      face.style.setProperty('--art-zoom', String(Number.isFinite(z) && z >= 100 ? z / 100 : 1))
+    }
+    const look = design ? design.cardLook || 'art' : ''
+    const faceEl = (side) => {
+      const f = el('div', { className: `ia-cardprev sl-card3d-face is-${side} ${look ? `is-${look}` : ''} ${art(side) ? 'has-art' : ''}`, ariaHidden: side === 'back' ? 'true' : 'false' })
+      placed(f, side)
+      f.append(...(side === 'front'
+        ? [el('span', { className: 'ia-cardprev-top' }, [el('b', {}, ['MILTON ', el('i', { textContent: 'AGUIAR' })]), el('em', { textContent: 'Collector' })]),
+          el('span', { className: 'ia-cardprev-chip' }),
+          el('strong', { className: 'ia-cardprev-name', textContent: name }),
+          el('span', { className: 'ia-cardprev-foot sl-card3d-foot' }, [
+            el('span', {}, [el('small', { textContent: 'Member since' }), String(since)]),
+            el('span', {}, [el('small', { textContent: 'Member no.' }), memberNo(mem.memberNo)]),
+            el('span', {}, [el('small', { textContent: 'Points' }), String(mem.points || 0)]),
+            el('span', {}, [el('small', { textContent: 'Collected' }), `${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`]),
+          ])]
+        : [el('span', { className: 'ia-cardprev-stripe' }),
+          el('span', { className: 'ia-cardprev-sign' }, [el('i', { textContent: name }), el('b', { textContent: 'MA' })]),
+          el('span', { className: 'ia-cardprev-foot sl-card3d-foot' }, [
+            el('span', {}, [el('small', { textContent: 'Member no.' }), memberNo(mem.memberNo)]),
+            el('span', {}, [el('small', { textContent: 'Since' }), String(since)]),
+            el('span', {}, [el('small', { textContent: 'Points' }), String(mem.points || 0)]),
+            el('span', {}, [el('small', { textContent: 'Collected' }), `${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`]),
+          ])]))
+      return f
+    }
+    const flip = el('div', { className: 'sl-card3d-flip' }, [faceEl('front'), faceEl('back')])
+    const lean = el('div', { className: 'sl-card3d-lean' }, [flip])
+    const wrap = el('div', { className: 'sl-card3d-wrap' }, [lean])
+    let turn = 0, drag = null
+    const turnBtn = button('Turn over', () => setTurn(Math.round(turn / 180) * 180 + 180), 'ia-btn ghost')
+    const setTurn = (deg, moving = false) => {
+      turn = deg
+      flip.style.setProperty('--turn', `${deg}deg`)
+      flip.classList.toggle('is-dragging', moving)
+      const back = Math.abs(Math.round(deg / 180)) % 2 === 1
+      turnBtn.textContent = back ? 'See the front' : 'Turn over'
+      flip.children[0].setAttribute('aria-hidden', String(back)); flip.children[1].setAttribute('aria-hidden', String(!back))
+    }
+    const leanTo = (e) => {
+      if (drag && drag.moved) return
+      const r = lean.getBoundingClientRect()
+      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height
+      lean.style.setProperty('--rx', `${(y - 0.5) * -10}deg`); lean.style.setProperty('--ry', `${(x - 0.5) * 14}deg`); lean.style.setProperty('--mx', `${x * 100}%`)
+    }
+    const rest = () => { for (const k of ['--rx', '--ry', '--mx']) lean.style.removeProperty(k) }
+    flip.addEventListener('pointerdown', (e) => { if (e.button) return; drag = { x: e.clientX, from: turn, moved: false, id: e.pointerId }; leanTo(e) })
+    flip.addEventListener('pointermove', (e) => {
+      if (!drag) { leanTo(e); return }
+      const dx = e.clientX - drag.x
+      if (!drag.moved) { leanTo(e); if (Math.abs(dx) < 6) return; drag.moved = true; rest(); try { flip.setPointerCapture(drag.id) } catch { /* fine */ } }
+      setTurn(drag.from + dx * 0.55, true)
+    })
+    const up = (e) => {
+      const d = drag; drag = null
+      if (!d) return
+      if (!d.moved) { setTurn(Math.round(turn / 180) * 180 + 180); return }
+      const dx = e.clientX - d.x, base = Math.round(d.from / 180) * 180, went = turn - base
+      setTurn(Math.abs(dx) > 40 && Math.abs(went) < 180 ? base + Math.sign(dx) * 180 : Math.round(turn / 180) * 180)
+      if (e.pointerType === 'touch') rest()
+    }
+    flip.addEventListener('pointerup', up); flip.addEventListener('pointercancel', up)
+    wrap.addEventListener('pointerleave', () => { if (!drag) rest() })
+    return [
+      el('div', { className: 'sl-modal-head' }, [
+        el('div', { className: 'ia-kicker', textContent: 'Their collector card' }),
+        el('h2', { textContent: name }),
+        el('p', { className: 'sl-dim', textContent: design ? `The “${design.name}” design, chosen under Details in their account.` : 'The site’s own red card: they have not chosen a design (or have none yet).' }),
+      ]),
+      el('div', { className: 'sl-modal-body sl-card3d-body' }, [
+        wrap,
+        el('p', { className: 'sl-hint sl-card3d-hint', textContent: 'Click or drag the card to turn it over. This is the card as it looks on their account.' }),
+      ]),
+      el('div', { className: 'sl-modal-foot' }, [turnBtn, button('Back', closeModal, 'ia-btn')]),
+    ]
+  }
+
   const customerModal = (m) => {
     const key = m.key
     const theirs = state.orders.filter((o) => keyOf(o) === key).sort((a, b) => b.created - a.created)
@@ -327,6 +428,7 @@ window.IASales = (() => {
       ]),
       el('div', { className: 'sl-modal-foot' }, [
         email ? button('Give them a discount', () => discountFor([c ? c.key : email.toLowerCase()], email, name), 'ia-btn ghost') : null,
+        mem ? button('See their card', () => { state.modal = { kind: 'card', email, back: m }; draw() }, 'ia-btn ghost') : null,
         email ? copyBtn(email, 'email', 'ia-btn ghost') : null,
         theirs.length ? button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(email || first.name)}`; draw() }, 'ia-btn ghost') : null,
         button('Close', () => { state.modal = null; draw() }, 'ia-btn'),
@@ -336,7 +438,7 @@ window.IASales = (() => {
   const modalLayer = () => {
     const m = state.modal
     if (!m) return []
-    const inside = m.kind === 'customer' ? customerModal(m) : m.kind === 'gift' ? giftModal(m) : confirmModal(m)
+    const inside = m.kind === 'customer' ? customerModal(m) : m.kind === 'gift' ? giftModal(m) : m.kind === 'card' ? cardModal(m) : confirmModal(m)
     if (!inside) { state.modal = null; return [] }
     // the window keeps its place when it is drawn again (picking a reward, say)
     const body = inside.find((n) => n && n.classList && n.classList.contains('sl-modal-body'))

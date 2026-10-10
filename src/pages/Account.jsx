@@ -109,7 +109,7 @@ const barsOf = (number) => {
    number again as a barcode, the small print). It leans toward the pointer; a tap or click turns it
    over, and a drag spins it round by hand, settling on whichever side is nearer when let go. */
 const EDGE = [-3, -2, -1, 0, 1, 2, 3] // the slices of the card's body, from its back face to its front
-function CollectorCard({ name, since, number, prints, design = null }) {
+function CollectorCard({ name, since, number, prints, points = 0, design = null }) {
   const lean = useRef(null)
   const flip = useRef(null)
   const turn = useRef(0) // how far round it is turned, in degrees: 0 the front, 180 the back, 360 the front again
@@ -195,6 +195,7 @@ function CollectorCard({ name, since, number, prints, design = null }) {
             <div className="acc-card3d-foot">
               <span><small>Member since</small>{since}</span>
               <span><small>Member no.</small>{number}</span>
+              <span><small>Points</small>{points}</span>
               <span><small>Collected</small>{prints}</span>
             </div>
           </div>
@@ -209,6 +210,7 @@ function CollectorCard({ name, since, number, prints, design = null }) {
             <div className="acc-card3d-facts">
               <span><small>Member no.</small>{number}</span>
               <span><small>Since</small>{since}</span>
+              <span><small>Points</small>{points}</span>
               <span><small>Collected</small>{prints}</span>
             </div>
             <div className="acc-card3d-base">
@@ -1151,6 +1153,7 @@ function Overview({ orders, go, commissions = null, openCommissions = () => {} }
         <button type="button" onClick={() => go('orders')}><strong>{orders ? shopOrders.length : '–'}</strong><span>{shopOrders.length === 1 ? 'Order' : 'Orders'}</span></button>
         <button type="button" onClick={() => go('orders')}><strong>{orders ? collected : '–'}</strong><span>{collected === 1 ? 'Piece collected' : 'Pieces collected'}</span></button>
         <button type="button" onClick={() => go('saved')}><strong>{saved.length}</strong><span>Saved for later</span></button>
+        <button type="button" onClick={() => go('rewards')}><strong>{user.points || 0}</strong><span>Points <i className="acct-soon is-mini">Soon</i></span></button>
       </div>
       </div>
 

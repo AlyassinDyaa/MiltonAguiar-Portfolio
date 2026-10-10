@@ -1332,11 +1332,12 @@ a.buy-btn { text-decoration: none; }
 @media (max-width: 1099px) {
   .acct-top { grid-template-columns: minmax(0, 1fr); }
   .acct-top .acc-card3d-wrap { justify-self: center; }
-  .acct-stats.is-stacked { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .acct-stats.is-stacked { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .acct-stats.is-stacked button { grid-template-columns: minmax(0, 1fr); padding: 16px; }
 }
 @media (max-width: 599px) {
   .acct-top .acc-card3d-lean { --rx: 0deg; --ry: 0deg; }
+  .acct-stats.is-stacked { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .acct-stats.is-stacked button { padding: 12px 10px; }
 }
 
@@ -2382,3 +2383,7 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
   .acct-points-count { min-width: 92px; }
   .acct-points-count b { font-size: 2.1rem; }
 }
+
+/* the small 'Soon' beside Points on the overview's numbers */
+.acct-soon.is-mini { margin-left: 6px; padding: 2px 5px 1px; font-size: 0.5rem; letter-spacing: 0.1em; }
+.acct-stats.is-stacked button span { display: flex; align-items: center; flex-wrap: wrap; }

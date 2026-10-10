@@ -328,7 +328,7 @@ export const mailingAction = async (req, d, action, body) => {
     const problem = fieldsProblem(f)
     if (problem) return [400, { message: problem }]
     const to = artistInbox()
-    if (!to) return [400, { message: 'There is no address to send the test to. Add your email under Site → Name, colour and contact.' }]
+    if (!to) return [400, { message: 'There is no address to send the test to. Add your email under Site → Brand & contact.' }]
     if (await sentLastDay(d) >= DAILY_CAP) return [429, { message: CAPPED }]
     const mail = mailFor(f, { first: firstName(brand().artist || brandName()), unsubscribe: `${site}/account?tab=details`, site, audience })
     const ok = await mailer.send({ to, ...mail, subject: `[Test] ${mail.subject}` })

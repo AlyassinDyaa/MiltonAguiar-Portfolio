@@ -183,7 +183,7 @@ export const mailArtistRequest = (c, site) => (!emailsToArtist('commissions') ? 
     `Needed by: ${c.details.due || 'no deadline'}`,
   ],
   button: { label: 'Open the commission', url: adminLink(site, c._id) },
-  after: 'Answer in the admin (Sales → Orders → Commissions): they see it in their account, and get an email.',
+  after: 'Answer in the admin (Orders → Commissions): they see it in their account, and get an email.',
   replyTo: c.email ? `${String(c.name || '').replace(/[<>"]/g, '')} <${c.email}>` : undefined,
 }))
 export const mailArtistMessage = (c, msg, site, what = 'A new message') => (!emailsToArtist('replies') ? Promise.resolve(false) : safely('commission message', {
@@ -300,7 +300,7 @@ export const markPaid = async (id, payment, address, site) => {
     title: `${price(payment.amount, payment.currency)} paid`,
     lines: [`${got.name || got.email} (${got.email}) paid for "${got.title}"${payment.paidWith ? ` by ${payment.paidWith}` : ''}${payment.test ? ' (a test)' : ''}.`, ...(payment.code ? [`Discount code ${payment.code}: −${price(payment.discount || 0, payment.currency)}`] : []), ...(address ? [`Post to: ${addressWords(address)}`] : ['Delivery: digital.'])],
     button: { label: 'Open the commission', url: adminLink(site, got._id) },
-    after: 'Move it on to Sketch, Inks, Colours and Delivered in Sales → Orders → Commissions: they see each step in their account.',
+    after: 'Move it on to Sketch, Inks, Colours and Delivered in the admin (Orders → Commissions): they see each step in their account.',
   })
   return got
 }

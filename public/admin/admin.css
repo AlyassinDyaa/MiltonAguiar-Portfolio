@@ -833,6 +833,11 @@ html[data-ia-view='compact'] [class*='ListCardTitle'] { font-size: 1.15rem !impo
 .ia-side nav a.on::before { left: -12px; top: 0; bottom: 0; width: 4px; }
 .ia-foot a, .ia-foot button { font-size: 0.9rem; }
 .ia-search input { height: 38px; background: var(--panel); }
+/* phones: finger-sized rows in the drawer */
+@media (max-width: 899px) {
+  .ia-side nav a, .ia-side nav button, .ia-foot a, .ia-foot button { height: 46px; }
+  .ia-search input { height: 44px; }
+}
 
 /* the overview: tiles as panels; pointing at one draws the site's red frame round it */
 .ia-home-inner { padding-top: 48px; }
@@ -844,6 +849,41 @@ html[data-ia-view='compact'] [class*='ListCardTitle'] { font-size: 1.15rem !impo
 .ia-tile:hover { border-color: transparent; box-shadow: inset 0 0 0 3px var(--accent); }
 .ia-tile-icon { background: var(--accent); color: #fff; margin-bottom: 10px; }
 .ia-tile p { font-size: 0.98rem; }
+
+/* the count beside a name in the navigation (Orders: to ship plus unread messages) */
+.ia-count { flex: 0 0 auto; margin-left: auto; min-width: 22px; height: 20px; padding: 0 6px; box-sizing: border-box; display: grid; place-items: center; background: var(--accent); color: #fff; font: 700 0.74rem/1 var(--body); }
+.ia-count[hidden] { display: none; }
+/* the groups of the navigation: a little more air above each heading, a line between groups */
+.ia-scroll .ia-label { margin: 14px 10px 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ia-scroll nav + .ia-label:first-of-type { border-top: 0; }
+
+/* the Overview: what needs doing, at a glance (each one opens the list it counts) */
+.ia-glance { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.ia-glance:empty { display: none; }
+.ia-fact { display: grid; gap: 4px; padding: 16px 18px; background: var(--panel); text-decoration: none; transition: box-shadow 0.2s; }
+.ia-fact:hover { box-shadow: inset 0 0 0 3px var(--accent); }
+.ia-fact span { font-family: var(--display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute); }
+.ia-fact strong { font-family: var(--display); font-weight: 900; font-style: italic; font-size: 2.1rem; line-height: 1; color: var(--fg); }
+.ia-fact small { font-size: 0.8rem; color: var(--dim); }
+.ia-fact.is-hot { background: linear-gradient(135deg, rgba(216, 35, 47, 0.24), var(--panel) 70%); box-shadow: inset 3px 0 0 var(--accent); }
+.ia-fact.is-hot:hover { box-shadow: inset 0 0 0 3px var(--accent); }
+.ia-fact.is-hot strong { color: #fff; }
+@media (max-width: 899px) { .ia-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 22px; } .ia-fact { padding: 12px 14px; } .ia-fact strong { font-size: 1.7rem; } }
+
+/* Decap's screens get the same heading as the others: the group in small red capitals over the
+   title (shell.js puts it in data-ia-kicker), and on a form, a line about it (data-ia-lead) */
+[class*='CollectionTopContainer'][data-ia-kicker]::before,
+[class*='BackCollection'][data-ia-kicker]::before {
+  content: attr(data-ia-kicker); display: block; margin-bottom: 8px;
+  font-family: var(--display); font-weight: 700; font-style: normal; font-size: 0.84rem; line-height: 1.2; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+}
+[class*='BackCollection'][data-ia-kicker]::before { margin-bottom: 4px; font-size: 0.72rem; }
+[class*='ControlPaneContainer']:not([class*='PreviewPaneContainer'])[data-ia-lead]::after {
+  content: attr(data-ia-lead); order: -1; grid-column: 1 / -1; font-size: 1.02rem; line-height: 1.5; color: var(--dim);
+}
+
+/* phones: the bar across the top says where you are */
+.ia-top-where { margin-left: auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 6px; font-family: var(--display); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
 
 /* lists and cards: panels with no outline, a red frame when pointed at */
 [class*='ListCard-'], [class*='GridCard-'] { border-color: transparent !important; transition: box-shadow 0.2s, background 0.2s; }
@@ -942,11 +982,8 @@ html[data-ia-view='compact'] [class*='ListCard-']:hover { box-shadow: none !impo
 .ia-compact [class*='-listControlItem'] [class*='ControlContainer']:has(> div > [class*='ToggleContainer']) [class*='FieldLabel'] { font-size: 0.74rem !important; letter-spacing: 0.14em !important; padding: 0 !important; }
 @media (max-width: 699px) { .ia-compact [class*='-listControlItem'] > div:last-child > div, .ia-compact [class*='-listControlItem'] > div:last-child > div:has(> :nth-child(3)) { grid-template-columns: minmax(0, 1fr); } }
 
-/* 11. Sales (sales.js): Orders and Customers.
-   In the navigation they sit under a line, between the sections and the foot. The screens cover
-   the editing area the way the overview does. */
-.ia-sales-nav { flex: 0 0 auto; padding: 4px 12px 10px; border-top: 1px solid var(--line-strong); background: rgba(216, 35, 47, 0.04); }
-.ia-sales-nav .ia-label { margin-top: 12px; color: var(--accent); }
+/* 11. Orders, Customers, Emails and Discount codes (sales.js).
+   The screens cover the editing area the way the overview does. */
 .ia-sales { display: none; position: fixed; inset: 0 0 0 var(--side); z-index: 350; overflow-y: auto; background: var(--bg); font-family: var(--body); color: var(--text); }
 html[data-ia-sales] body:has([class*='AppHeader'], [class*='ToolbarContainer']) .ia-sales { display: block; }
 .sl-inner { max-width: 1240px; margin: 0 auto; padding: 48px clamp(18px, 3vw, 40px) 80px; }
@@ -1110,7 +1147,7 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
 #nc-root [class*='-listControlItem'], #nc-root div:has(> [class*='-listControlItem']), #nc-root [class*='ControlContainer'] > div:has(> [class*='TopBarContainer']) { overflow: visible !important; }
 #nc-root [class*='-listControlItem']:has([class*='-menu']) { position: relative; z-index: 20; }
 
-/* Sales → Discounts: the who-is-it-for switch, hints, problems */
+/* Shop → Discount codes: the who-is-it-for switch, hints, problems */
 .sl-seg { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .sl-seg .sl-stage { flex: 1 1 auto; min-width: 64px; padding: 0 12px; }
 .sl-hint { display: block; margin-top: 2px; font-size: 0.8rem; line-height: 1.45; color: var(--mute); }
@@ -1174,7 +1211,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .sl-pages { grid-column: 1 / -1; grid-row: 1; justify-content: center; flex-wrap: wrap; }
 }
 
-/* Show or hide: clearing test data, under the Sales screens switch */
+/* Show / hide: clearing test data, under the Test data switches */
 
 /* the profile-picture crop of a piece (shell.js, widget "facecrop") */
 .ia-facecrop { display: flex; flex-wrap: wrap; align-items: center; gap: 22px 30px; padding: 18px; border: 1px solid var(--line-strong); border-radius: var(--r-field); background: var(--field); }
@@ -1281,7 +1318,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .sl-piece-foot b { font-variant-numeric: tabular-nums; color: var(--fg); }
 .sl-sum.is-method strong { font-weight: 600; }
 
-/* the card design preview (Shop → Rewards → Membership card designs) */
+/* the card design preview (Members → Rewards → Membership card designs) */
 .ia-cardprev-wrap { padding: 4px 0 2px; }
 .ia-cardprev { position: relative; display: grid; grid-template-rows: auto auto 1fr auto; width: min(100%, 340px); aspect-ratio: 1.586; padding: 16px 18px; overflow: hidden; border: 3px solid #0b0b0c; border-radius: 12px; color: #fff; background: linear-gradient(135deg, #d8232f 35%, #6d0d14); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), 10px 10px 0 -2px #f3f3f1; font-family: var(--display); }
 .ia-cardprev.is-ink { background: linear-gradient(140deg, #26262b, #0b0b0c 70%); border-color: #d8232f; }
@@ -1351,7 +1388,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .ia-notice .ia-update-actions .ia-btn.ghost { background: var(--panel-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ia-notice .ia-update-actions .ia-btn.ghost:hover { background: var(--fg); color: #0b0b0c; box-shadow: none; }
 
-/* Gift a reward (Sales → Customers): the member, a tile for each reward, a note */
+/* Gift a reward (Customers): the member, a tile for each reward, a note */
 .sl-gift-body { display: grid; gap: 18px; }
 .sl-gift-who { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel-2); }
 .sl-gift-who > span { display: grid; gap: 2px; }
@@ -1539,7 +1576,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .sl-modal-head.sl-profile { align-items: flex-start; }
 }
 
-/* a shop sale (Shop → Sales): only the "which" field that goes with its "On what" shows; folded
+/* a price cut (Shop → Price cuts): only the "which" field that goes with its "On what" shows; folded
    shut, it says after its name what it covers and whether it is running (shell.js: tidySales) */
 [data-ia-off] { display: none !important; }
 [class*='NestedObjectLabel'][data-ia-covers]::after { content: '· ' attr(data-ia-covers); min-width: 0; margin-left: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; color: var(--dim); }
@@ -1547,7 +1584,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 [class*='NestedObjectLabel'][data-ia-state='ended']::after, [class*='NestedObjectLabel'][data-ia-state='off']::after { color: var(--mute); }
 
 /* =====================================================================
-   Sales → Orders → Commissions (sales.js): the two tabs, the list, one commission's panel
+   Orders → Commissions (sales.js): the two tabs, the list, one commission's panel
    ===================================================================== */
 .sl-otabs { display: flex; gap: 4px; margin: 0 0 26px; border-bottom: 1px solid var(--line-strong); }
 .sl-otab { position: relative; display: inline-flex; align-items: center; gap: 9px; padding: 10px 18px 12px; font-family: var(--display); font-size: 1rem; font-weight: 800; font-style: italic; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); text-decoration: none; transition: color 0.15s; }
@@ -1676,7 +1713,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .sl-paid-with small { font-family: var(--display); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
 .sl-paid-with strong { font-family: var(--display); font-size: 1.4rem; font-weight: 900; letter-spacing: 0.02em; color: var(--fg); }
 
-/* Emails (Sales → Emails): the new email beside its preview, the send's bar, the past mailings */
+/* Emails (Orders & customers → Emails): the new email beside its preview, the send's bar, the past mailings */
 .sl-mail-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 28px; }
 .sl-mail-grid > .sl-form { margin-top: 0; }
 .sl-mail-count { margin: 0; font-size: 0.95rem; color: var(--text); }

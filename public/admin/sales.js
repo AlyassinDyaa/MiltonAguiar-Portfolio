@@ -1,12 +1,12 @@
-/* Milton Aguiar admin: Sales.
-   Two screens under a line at the foot of the navigation, for keeping track of what the shop sells:
+/* Milton Aguiar admin: the screens for orders and customers (and the Shop's discount codes).
+   shell.js puts them in the navigation, under Orders & customers and Shop:
    - Orders: every purchase made through the shop's Stripe checkout, newest first, with totals at
      the top, chips to narrow them by where they are up to (to ship, shipped...), a search, a
      period and a sort, and a panel per order with what was bought, who bought it, where it goes,
      and where it is up to (status, tracking number and a note, kept on the order in Stripe);
    - Customers: everyone who has bought, and everyone with an account on the site, with what they
      have spent; one opens everything about them, and the rewards gifted to them;
-   - Discounts: a percentage off, for a while, for chosen customers (a code each) or anyone with
+   - Discount codes: a percentage off, for a while, for chosen customers (a code each) or anyone with
      a shared code;
    - Emails: news and notices to many customers at once (those who agreed to news, or every
      account for a notice about the service), from ready-made emails, sent a few at a time.
@@ -95,11 +95,11 @@ window.IASales = (() => {
     document.body.append(a); a.click(); a.remove()
   }
 
-  // ---------- the Show or hide switch for test data ----------
+  // ---------- the Show / hide switches for test data ----------
   /* Read from content/site/visibility.json as it is now: on the live site through the admin's
      own GitHub access (so a change shows before the site is rebuilt), on this computer from the
      file itself. Read again each time the Sales screens open. */
-  // test data, screen by screen (Show or hide → Sales screens): orders, customers, discount codes
+  // test data, screen by screen (Site → Show / hide → Test data): orders, customers, discount codes
   let showTest = { orders: true, customers: true, codes: true }
   const readSwitch = async () => {
     try {
@@ -119,11 +119,11 @@ window.IASales = (() => {
     } catch { showTest = { orders: true, customers: true, codes: true } }
   }
   const visible = (list, kind) => (showTest[kind] ? list : list.filter((x) => !x.test))
-  const hiddenNote = (all, what, kind) => (!showTest[kind] && all.some((x) => x.test) ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Test data is hidden' }), el('p', { textContent: `${all.filter((x) => x.test).length} test ${what} left out. Show them again under Show or hide → Sales screens.` })]) : null)
+  const hiddenNote = (all, what, kind) => (!showTest[kind] && all.some((x) => x.test) ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Test data is hidden' }), el('p', { textContent: `${all.filter((x) => x.test).length} test ${what} left out. Show them again under Site → Show / hide → Test data.` })]) : null)
 
   // ---------- the screen ----------
   let root = null
-  const mount = () => (root = root || el('main', { className: 'ia-sales', ariaLabel: 'Sales' }))
+  const mount = () => (root = root || el('main', { className: 'ia-sales', ariaLabel: 'Orders and customers' }))
 
   const load = async () => {
     state.loading = true; draw()
@@ -134,8 +134,10 @@ window.IASales = (() => {
     draw()
   }
 
+  // the group each screen sits in, in the navigation: the small red line over its title
+  const KICKER = { orders: 'Orders & customers', customers: 'Orders & customers', emails: 'Orders & customers', discounts: 'Shop' }
   const head = (title, lead, actions) => el('header', { className: 'sl-head' }, [
-    el('div', {}, [el('div', { className: 'ia-kicker', textContent: 'Sales' }), el('h1', { textContent: title }), el('p', { className: 'ia-lead', textContent: lead })]),
+    el('div', {}, [el('div', { className: 'ia-kicker', textContent: KICKER[state.view] || 'Orders & customers' }), el('h1', { textContent: title }), el('p', { className: 'ia-lead', textContent: lead })]),
     el('div', { className: 'sl-actions' }, actions),
   ])
   const button = (text, onClick, cls = 'ia-btn ghost') => { const b = el('button', { type: 'button', className: cls, textContent: text }); b.addEventListener('click', onClick); return b }
@@ -377,7 +379,7 @@ window.IASales = (() => {
       notices(),
       hiddenNote(state.orders, 'orders', 'orders'),
       el('div', { className: 'sl-stats' }, [
-        stat('Sales', money(income, cur), PERIODS.find((p) => p[0] === f.period)[1]),
+        stat('Income', money(income, cur), PERIODS.find((p) => p[0] === f.period)[1]),
         stat('Orders', String(sold.length), sold.length ? `${sold.reduce((n, o) => n + o.items.reduce((m, i) => m + i.qty, 0), 0)} pieces` : ''),
         stat('To ship', String(toShip), toShip ? 'waiting to be sent' : 'nothing waiting'),
         stat('Average order', money(sold.length ? income / sold.length : 0, cur)),
@@ -609,7 +611,7 @@ window.IASales = (() => {
         const t = el('button', { type: 'button', role: 'radio', ariaChecked: String(m.chosen === r.id), className: `sl-rtile ${m.chosen === r.id ? 'on' : ''}` }, [rewardThumb(r), el('strong', { textContent: r.name }), el('small', { textContent: r.kind === 'discount' ? `${r.percent}% off${r.days ? ` · ${r.days} days` : ''}` : KIND_NAME[r.kind] })])
         t.addEventListener('click', () => { m.chosen = r.id; m.said = ''; draw() })
         return t
-      })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Shop → Rewards.' })
+      })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Members → Rewards.' })
       const note = el('textarea', { className: 'sl-input', rows: 2, maxLength: 300, placeholder: 'A line from you, in the email (optional)', value: m.note || '' })
       note.addEventListener('input', () => { m.note = note.value })
       const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
@@ -657,7 +659,7 @@ window.IASales = (() => {
       ])
       b.addEventListener('click', () => { m.reward = r.id; m.said = ''; draw() })
       return b
-    })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Shop → Rewards.' })
+    })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Members → Rewards.' })
     const note = el('textarea', { className: 'sl-input', rows: 3, maxLength: 300, placeholder: 'A line from you, in the email (optional). E.g. "Thank you for the kind words at the convention."', value: m.note || '' })
     note.addEventListener('input', () => { m.note = note.value })
     const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
@@ -1074,7 +1076,7 @@ window.IASales = (() => {
       p.setup ? el('p', { textContent: 'Discount codes are kept in Stripe. In Stripe: Developers → API keys, copy the Secret key. In Vercel: the project’s Settings → Environment Variables, add STRIPE_SECRET_KEY with it, then redeploy.' }) : null,
     ]) : null
     return [
-      head('Discounts', 'Make a discount for chosen customers (each gets a code of their own) or one code for anyone you give it to. Buyers type it in the cart when they pay.', [
+      head('Discount codes', 'Make a discount for chosen customers (each gets a code of their own) or one code for anyone you give it to. Buyers type it in the cart when they pay.', [
         button(f.loading ? 'Loading…' : 'Refresh', () => { loadDiscounts(); if (!mState.loading) loadMembers() }),
       ]),
       problem,
@@ -1100,7 +1102,7 @@ window.IASales = (() => {
   }
 
   // ---------- Commissions ----------
-  /* Sales → Orders → Commissions (#/sales/orders?tab=commissions): every commission asked for on
+  /* Orders → Commissions (#/sales/orders?tab=commissions): every commission asked for on
      the site (api/commissions.js), a conversation with each customer, the quote they accept and
      pay, and the stages of the work. One opens in a panel; asked again every 20 seconds while this
      tab is showing. What is typed in the panel is kept while the screen is drawn again. */
@@ -1573,7 +1575,7 @@ window.IASales = (() => {
   }
 
   // ---------- Emails ----------
-  /* Sales → Emails (#/sales/emails): news and notices to many customers at once (api/_mailings.js,
+  /* Emails (#/sales/emails): news and notices to many customers at once (api/_mailings.js,
      through /api/account). Who it goes to (those who agreed to news, or every account for a notice
      about the service), why (a ready-made email for each reason, every word editable), a live
      preview drawn by the same code as the real email, a test to the artist's own inbox, then the
@@ -1642,7 +1644,7 @@ window.IASales = (() => {
         ...codes.map((d) => el('option', { value: d.id, textContent: `${d.code} · ${d.percent}% off · ${d.until ? `until ${date(d.until * 1000)}` : 'no end date'}`, selected: Boolean(f.discount && f.discount.code === d.code) })),
       ])
       s.addEventListener('change', () => { const d = codes.find((x) => x.id === s.value); f.discount = d ? { code: d.code, percent: d.percent, until: d.until || null } : null; eState.touched = true; preview() })
-      return [field('The code', s), el('p', { className: 'sl-hint', textContent: 'Only codes for anyone (one shared code) that are still running. Make one under Discounts → Anyone with the code. In the words, {percent}, {code} and {until} stand for it.' })]
+      return [field('The code', s), el('p', { className: 'sl-hint', textContent: 'Only codes for anyone (one shared code) that are still running. Make one under Shop → Discount codes → Anyone with the code. In the words, {percent}, {code} and {until} stand for it.' })]
     }
     if (r === 'pieces') {
       const all = eState.info.pieces
@@ -1660,7 +1662,7 @@ window.IASales = (() => {
       box.dataset.keepScroll = 'mail-pieces'
       return [el('div', { className: 'sl-pick-top' }, [count, el('small', { className: 'sl-hint', textContent: 'Newest first. Each shows with its picture, name and price.' })]), box]
     }
-    if (SOCIAL[r]) return [field(SOCIAL[r], mailInput('buttonUrl', { placeholder: 'https://…', spellcheck: false })), el('p', { className: 'sl-hint', textContent: 'The button in the email opens it. Filled in from your social links (Site → Name, colour and contact) when there is one: paste the link to the new one.' })]
+    if (SOCIAL[r]) return [field(SOCIAL[r], mailInput('buttonUrl', { placeholder: 'https://…', spellcheck: false })), el('p', { className: 'sl-hint', textContent: 'The button in the email opens it. Filled in from your social links (Site → Brand & contact) when there is one: paste the link to the new one.' })]
     if (r === 'event') {
       const ev = f.event || {}
       const list = eState.info.events
@@ -1819,7 +1821,7 @@ window.IASales = (() => {
           f ? step(3, 'The email', words) : null,
           f ? step(4, 'Check and send', [
             el('div', { className: 'sl-line' }, [testBtn, sendBtn]),
-            el('p', { className: 'sl-hint', textContent: `${info.testTo ? `The test goes to ${info.testTo}${info.testIsFake ? ' (a test address: it is only written in the server\'s log)' : ''}.` : 'Add your email under Site → Name, colour and contact to get tests.'} Sent by mailings in the last 24 hours: ${today.sent} of ${today.cap} (Gmail allows about 500 a day).` }),
+            el('p', { className: 'sl-hint', textContent: `${info.testTo ? `The test goes to ${info.testTo}${info.testIsFake ? ' (a test address: it is only written in the server\'s log)' : ''}.` : 'Add your email under Site → Brand & contact to get tests.'} Sent by mailings in the last 24 hours: ${today.sent} of ${today.cap} (Gmail allows about 500 a day).` }),
             today.sent >= today.cap ? el('p', { className: 'sl-said is-bad', textContent: "Gmail's daily limit is near: carry on tomorrow." }) : null,
             eState.note ? el('p', { className: `sl-said ${eState.note.ok ? '' : 'is-bad'}`, textContent: eState.note.text }) : null,
           ]) : null,
@@ -1837,7 +1839,11 @@ window.IASales = (() => {
   }
 
   // ---------- drawing ----------
+  // shell.js keeps the counts in the navigation and on the Overview from this
+  let telling = false
+  const tellShell = () => { if (telling) return; telling = true; queueMicrotask(() => { telling = false; dispatchEvent(new Event('ia-sales-change')) }) }
   const draw = () => {
+    tellShell()
     if (!root) return
     const scroll = root.scrollTop
     // a search box being typed in, and any list scrolled inside, stay as they are
@@ -1889,6 +1895,9 @@ window.IASales = (() => {
     const before = state.view
     state.view = ['customers', 'discounts', 'emails'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
+    // a link from the Overview can open a list already narrowed: ?stage=to-ship, &chip=unread
+    if (state.view === 'orders' && ORDER_CHIPS.some((c) => c[0] === params.get('stage'))) { state.o.stage = params.get('stage'); state.o.page = 1 }
+    if (state.view === 'orders' && C_CHIPS.some((c) => c[0] === params.get('chip'))) { cState.chip = params.get('chip'); cState.page = 1 }
     // Orders has two tabs: the shop's orders, and the commissions (?tab=commissions, &c=<id> opens one)
     const tabBefore = state.ordersTab
     if (state.view === 'orders') state.ordersTab = params.get('tab') === 'commissions' ? 'commissions' : 'shop'
@@ -1911,12 +1920,37 @@ window.IASales = (() => {
     if (before !== state.view) root.scrollTop = 0
   }
 
+  /* What the Overview shows at a glance, and the count beside Orders in the navigation. */
+  const glance = () => ({
+    ready: state.loaded && !state.problem,
+    toShip: visible(state.orders, 'orders').filter(ORDER_CHIPS[1][2]).length,
+    commissions: cState.loaded && !cState.problem,
+    unread: cUnread(),
+    toQuote: cState.list.filter((c) => ['requested', 'discussing'].includes(c.status)).length,
+    customers: state.loaded && (mState.loaded || mState.problem) ? customers().length : null,
+  })
+  /* Asked for by shell.js away from these screens (the Overview, every few minutes): the orders
+     and commissions again, and the members once, so the counts are up to date. */
+  let fetchedAt = 0
+  const prefetch = async ({ members = false } = {}) => {
+    const jobs = []
+    if (Date.now() - fetchedAt > 60 * 1000) {
+      fetchedAt = Date.now()
+      jobs.push(readSwitch().then(() => (state.loading ? null : load())))
+      if (!cState.loading) jobs.push(loadCommissions(true))
+    }
+    if (members && !mState.loaded && !mState.loading) jobs.push(loadMembers())
+    await Promise.all(jobs)
+  }
+
   return {
     mount,
     show,
+    glance,
+    prefetch,
     links: [
       { view: 'orders', href: '#/sales/orders', label: 'Orders', icon: 'M6 3h12l1 4H5z M5 7h14v13H5z M9 11h6 M9 15h4' },
-      { view: 'discounts', href: '#/sales/discounts', label: 'Discounts', icon: 'M20 12l-8 8-8.5-8.5V4h7.5z M8 8.01h.01 M15 9l-6 6 M10 9.5h.01 M14 14.5h.01' },
+      { view: 'discounts', href: '#/sales/discounts', label: 'Discount codes', icon: 'M20 12l-8 8-8.5-8.5V4h7.5z M8 8.01h.01 M15 9l-6 6 M10 9.5h.01 M14 14.5h.01' },
       { view: 'customers', href: '#/sales/customers', label: 'Customers', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20v-1a5.5 5.5 0 0 1 5.5-5.5h2A5.5 5.5 0 0 1 15.5 19v1 M16 4.3a3.5 3.5 0 0 1 0 6.4 M18 13.7a5.5 5.5 0 0 1 3.5 5.3v1' },
       { view: 'emails', href: '#/sales/emails', label: 'Emails', icon: 'M3 5.5h18v13H3z M3.5 6l8.5 7 8.5-7' },
     ],

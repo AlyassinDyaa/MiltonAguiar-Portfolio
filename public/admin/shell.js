@@ -1,7 +1,7 @@
 /* Milton Aguiar admin shell.
    Decap CMS renders the editing screens; this adds what makes them easy to get around:
-   1. a left navigation that never goes away, in three groups (what you add to, the words on
-      each page, the whole site), with an overview screen of tiles in the same groups;
+   1. a left navigation that never goes away, in groups (see NAV), with an overview screen of
+      tiles in the same groups and the same heading on every screen;
    2. edit forms broken into named groups, with short fields side by side;
    3. "Save" where Decap says "Publish", and after saving a return to the list the entry came from;
    4. a friendlier picture picker (the chosen picture is marked; double-click uses it);
@@ -45,62 +45,76 @@
   /* How each form is laid out. `groups` puts a heading above the named field;
      `half` fields sit two to a row; `inner` fields, which live inside a group of fields,
      sit three to a row. Field names are the ones in config.yml. A form in a collection of
-     single pages is looked up as "collection/page". A heading never goes on an on/off switch:
-     a switch is drawn as a box of its own and the heading would land inside it. */
+     single pages is looked up as "collection/page". A heading on an on/off switch is drawn
+     above the switch's box (admin.css, "10. The shop"). */
   const LAYOUT = {
     work: { groups: { title: 'The piece', src: 'Picture, and where it shows', inShop: 'For sale', sizes: 'Sizes and prices' }, half: ['title', 'category', 'date', 'link', 'featured', 'homeOrder', 'rough', 'hidden', 'type', 'look', 'price', 'salePrice', 'universe', 'shopOnly'] },
-    'site/categories': { groups: { subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
+    'site/categories': { groups: { categories: 'Categories', subcategories: 'Sub categories', sizes: 'Print sizes' }, half: [] },
     shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
     comics: { groups: { title: 'The comic', cover: 'Cover and pages', order: 'Rarely needed' }, half: ['title', 'text', 'order', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
     events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
     'pages/home': {
-      groups: { kicker: 'Top of the page', buttons: 'Buttons', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Step by step', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
+      groups: { kicker: 'Top of the page', buttons: 'Buttons', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Pencils to colours', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
       half: ['latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],
       inner: ['size', 'x', 'y', 'label', 'title', 'subtitle', 'buttonLabel', 'url', 'secondLabel', 'secondUrl', 'words', 'to', 'address', 'tone', 'off', 'text'],
     },
     'pages/lists': { groups: { workLabel: 'Work page', samplesLabel: 'Comic samples (on the Work page)', galleryLabel: 'Gallery page' }, half: ['workLabel', 'workTitle', 'samplesLabel', 'samplesTitle', 'galleryLabel', 'galleryTitle'] },
     'pages/commissions': {
-      groups: { title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
+      groups: { open: 'Open or closed', title: 'Top of the page', tiers: 'What you offer', quoteLabel: 'The quote button', processLabel: 'How it works', requestLabel: 'Request form', notes: 'Good to know' },
       half: ['quoteLabel', 'quoteVia', 'processLabel', 'processTitle', 'requestLabel', 'requestTitle'],
     },
     'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
     'site/shop': {
-      groups: { label: 'The Shop page', currency: 'Prices and the cart', note: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase' },
+      groups: { enabled: 'Selling online', label: 'The Shop page', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase', emails: 'Emails to you' },
       half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
     },
-    'site/account': { groups: { cardLabel: 'On their page', icons: 'Profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
+    'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events'] },
   }
 
-  /* The navigation and the Home screen list the sections in these groups, in this order. */
-  const GROUPS = [
-    { label: 'Artwork and events', short: 'Content', lead: 'What you add to over time.', has: (s) => !s.file && s.name !== 'shop' },
-    { label: 'Shop', short: 'Shop', lead: 'What you sell, and how it is sold: prices, delivery, payments and customer accounts.', has: (s) => s.name === 'shop' || s.key === 'site/shop' || s.key === 'site/categories' || s.key === 'site/account' || s.key === 'site/rewards' || s.key === 'site/sales' },
-    { label: 'Words on each page', short: 'Page text', lead: 'Headings, introductions and buttons, one short form per page.', has: (s) => s.name === 'pages' },
-    { label: 'Whole site', short: 'Site', lead: 'Your name and colour, and which parts are switched on.', has: (s) => s.name === 'site' && !['site/shop', 'site/categories', 'site/account', 'site/rewards', 'site/sales'].includes(s.key) },
+  /* The navigation and the Overview, group by group, in this order. An item is a section of
+     config.yml ("work", "site/shop"), a screen of sales.js ("sales:orders") or the picture
+     library ("media"). A section missing here still shows, at the end of Site. */
+  const NAV = [
+    { label: 'Orders & customers', lead: 'Who bought what, commissions, and writing to your customers.', items: ['sales:orders', 'sales:customers', 'sales:emails'] },
+    { label: 'Your art', lead: 'What you add to over time.', items: ['work', 'comics', 'gallery_sections', 'events'] },
+    { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'site/sales', 'sales:discounts', 'site/categories', 'site/shop'] },
+    { label: 'Members', lead: 'Customer accounts, and what members earn.', items: ['site/rewards', 'site/account'] },
+    { label: 'Page text', lead: 'Headings, introductions and buttons, one form per page.', items: ['pages/home', 'pages/lists', 'pages/commissions', 'pages/about', 'pages/contact'] },
+    { label: 'Site', lead: 'Your name and colour, what is switched on, and every picture.', items: ['site/brand', 'site/visibility', 'media'] },
   ]
-  /* The navigation is narrow, and under "Page text" every name would end in "page": there the
-     pages go by these shorter names. Tiles and form headings keep the full ones. */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Sales', 'site/visibility': 'Show / hide' }
-  /* One line about each single page, for its tile on the Home screen. */
+  /* Names in the navigation (narrow). Tiles and form headings use the label in config.yml,
+     which says the same thing in full ("Home page" for "Home"). */
+  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
+  /* One line about each part: its tile on the Overview, and the line under its heading. */
   const ABOUT = {
-    'pages/home': 'The top of the home page, the drawing in the title panel, the current project and its two buttons, the pencils-to-colours sets, and the heading of each part below it.',
-    'pages/lists': 'The heading and introduction above the Work page, its comic samples and the Gallery page.',
+    'sales:orders': 'Shop orders and commissions: mark them packed and shipped, answer messages, send quotes.',
+    'sales:customers': 'Everyone who has bought or has an account: their orders, codes and rewards.',
+    'sales:emails': 'News and notices to many customers at once, from ready-made emails.',
+    'sales:discounts': 'Codes buyers type at the checkout: one per chosen customer, or one to share.',
+    work: 'Your pieces. A new one shows on the Work page, the home page and the gallery.',
+    comics: 'A few pages of a comic, read as a small book on the Work page.',
+    gallery_sections: 'The Gallery page, in sections you name. Off until you switch it on in Show / hide.',
+    events: 'Conventions, markets and signings where people can meet you.',
+    shop: 'Everything you sell: prints, original art, comics, with prices and sizes.',
+    media: 'Every picture uploaded to the site. Upload new ones or remove old ones.',
+    'pages/home': 'The top of the home page, its drawing, the current project, the pencils-to-colours sets and the heading of each part.',
+    'pages/lists': 'The heading and introduction of the Work page, its comic samples and the Gallery page.',
     'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
-    'site/shop': 'Switch the Shop and online purchases on or off; currency, what you sell, signed pieces and delivery.',
-    'site/categories': 'Categories (Originals, Fan art...), sub categories (DC, Marvel...) and the print sizes items can be sold in: add, rename, reorder or hide them.',
-    'site/visibility': 'Switch whole pages, dark or light mode, or parts of the home page, on and off.',
-    'site/account': 'For members: accounts on or off, the membership card, your note on their page, and the free profile pictures. The people themselves are under Sales → Customers.',
-    'site/rewards': 'Profile pictures, membership card designs and discounts customers earn: by confirming their email, every few orders, or the pieces they collect.',
-    'site/sales': 'Price cuts that run by themselves: 10% off everything, 25% off one category... from a start to an end, no code needed.',
+    'site/shop': 'Shop on or off, how buyers pay, currency, what you sell, signed pieces, delivery, emails to you.',
+    'site/categories': 'Categories, sub categories and print sizes: add, rename, reorder or hide them.',
+    'site/visibility': 'Switch pages, dark or light mode, parts of the home page and test data on or off.',
+    'site/account': 'Accounts on or off, the membership card, your note on their page, free profile pictures.',
+    'site/rewards': 'Profile pictures, card designs and discounts members earn by confirming their email, ordering or collecting.',
+    'site/sales': 'Automatic price cuts with a start and an end: 10% off everything, 25% off a category. No code needed.',
   }
   Object.assign(ICONS, {
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
@@ -135,11 +149,11 @@
     const pick = (text, indent, key) => ((text.match(new RegExp(`^ {${indent}}${key}: (.+)$`, 'm')) || [])[1] || '').trim().replace(/^['"]|['"]$/g, '')
     return body.split(/\n {2}- name: /).slice(1).flatMap((block) => {
       const name = block.split('\n')[0].trim()
-      if (!/^ {4}files:$/m.test(block)) return [{ name, key: name, label: pick(block, 4, 'label'), singular: pick(block, 4, 'label_singular') || pick(block, 4, 'label'), description: pick(block, 4, 'description'), canAdd: /^ {4}create: true$/m.test(block) }]
+      if (!/^ {4}files:$/m.test(block)) return [{ name, key: name, label: pick(block, 4, 'label'), singular: pick(block, 4, 'label_singular') || pick(block, 4, 'label'), description: '', canAdd: /^ {4}create: true$/m.test(block) }]
       singles.add(name)
       return block.slice(block.indexOf('\n    files:')).split(/\n {6}- name: /).slice(1).map((entry) => {
         const file = entry.split('\n')[0].trim()
-        return { name, file, key: `${name}/${file}`, label: pick(entry, 8, 'label'), description: ABOUT[`${name}/${file}`] || '', canAdd: false }
+        return { name, file, key: `${name}/${file}`, label: pick(entry, 8, 'label'), description: '', canAdd: false }
       })
     })
   }
@@ -153,8 +167,28 @@
 
   const build = async () => {
     const sections = known = await readSections()
+    const Sales = window.IASales
     const hrefOf = (s) => (s.file ? `#/collections/${s.name}/entries/${s.file}` : `#/collections/${s.name}`)
-    const groups = GROUPS.map((g) => ({ ...g, sections: sections.filter(g.has) })).filter((g) => g.sections.length)
+    if (Sales) Sales.links.forEach((l) => { ICONS[`sales:${l.view}`] = l.icon })
+    ICONS.media = ICONS.library
+    // every item of NAV, made into what the navigation and the tiles need
+    const part = (id) => {
+      if (id === 'media') return { id, kind: 'media', label: 'Pictures', title: 'Pictures', about: ABOUT.media }
+      if (id.startsWith('sales:')) {
+        const l = Sales && Sales.links.find((x) => `sales:${x.view}` === id)
+        return l ? { id, kind: 'sales', view: l.view, href: l.href, label: l.label, title: l.label, about: ABOUT[id] || '' } : null
+      }
+      const s = sections.find((x) => x.key === id)
+      return s ? { id, kind: 'section', s, href: hrefOf(s), label: SHORT[s.key] || s.label, title: s.label, about: ABOUT[s.key] || s.description } : null
+    }
+    const listed = new Set(NAV.flatMap((g) => g.items))
+    const groups = NAV.map((g, i) => {
+      const ids = [...g.items]
+      // a section added to config.yml but not to NAV: in the last group, before Pictures
+      if (i === NAV.length - 1) ids.splice(ids.includes('media') ? ids.indexOf('media') : ids.length, 0, ...sections.map((s) => s.key).filter((k) => !listed.has(k)))
+      return { ...g, parts: ids.map(part).filter(Boolean) }
+    }).filter((g) => g.parts.length)
+    groupOf = (id) => (groups.find((g) => g.parts.some((p) => p.id === id)) || {}).label || ''
 
     // ---- left navigation
     const search = el('input', { type: 'search', placeholder: 'Search everything', ariaLabel: 'Search everything' })
@@ -165,9 +199,20 @@
       if (q) location.hash = `#/search/${encodeURIComponent(q)}`
     })
     const home = el('a', { href: HOME, className: 'ia-home-link' }, [icon('adminhome'), el('span', { textContent: 'Overview' })])
-    const links = []
-    const linkTo = (s) => { const a = Object.assign(el('a', { href: hrefOf(s), title: s.label }, [icon(s.key), el('span', { textContent: SHORT[s.key] || s.label })]), { section: s.name, file: s.file }); links.push(a); return a }
-    const media = el('button', { type: 'button' }, [icon('library'), el('span', { textContent: 'Pictures' })])
+    const links = [] // [link, part]
+    const badges = {} // part id -> its count in the navigation
+    const linkTo = (p) => {
+      if (p.kind === 'media') {
+        const b = el('button', { type: 'button', title: p.title }, [icon('library'), el('span', { textContent: p.label })])
+        b.addEventListener('click', () => openMedia())
+        return b
+      }
+      const badge = el('b', { className: 'ia-count', hidden: true })
+      badges[p.id] = badge
+      const a = el('a', { href: p.href, title: p.title }, [icon(p.id), el('span', { textContent: p.label }), badge])
+      links.push([a, p])
+      return a
+    }
     // Sign out: forget this browser's login and show the login page again. (Unsaved changes on
     // an open form still get the browser's "leave this page?" question first.)
     const out = el('button', { type: 'button', className: 'ia-out' }, [icon('signout'), el('span', { textContent: 'Sign out' })])
@@ -177,61 +222,100 @@
       location.hash = '#/'
       location.reload()
     })
-    media.addEventListener('click', () => openMedia())
-    // Sales (sales.js): orders and customers, under a line at the foot of the navigation
-    const Sales = window.IASales
-    if (Sales) Sales.links.forEach((l) => { ICONS[`sales-${l.view}`] = l.icon })
-    const salesLinks = Sales ? Sales.links.map((l) => Object.assign(el('a', { href: l.href, title: l.label }, [icon(`sales-${l.view}`), el('span', { textContent: l.label })]), { view: l.view })) : []
-    const salesNav = Sales ? el('div', { className: 'ia-sales-nav' }, [el('div', { className: 'ia-label', textContent: 'Sales' }), el('nav', { ariaLabel: 'Sales' }, salesLinks)]) : null
+    const scroller = el('div', { className: 'ia-scroll' }, [
+      el('nav', { ariaLabel: 'Admin' }, [home]),
+      ...groups.flatMap((g) => [el('div', { className: 'ia-label', textContent: g.label }), el('nav', { ariaLabel: g.label }, g.parts.map(linkTo))]),
+    ])
     const side = el('aside', { className: 'ia-side' }, [
       el('a', { className: 'ia-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('span', {}, [el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })]), el('small', { textContent: 'Admin' })])]),
       form,
-      // the list of sections scrolls by itself on a short screen; the brand above and the foot below stay put
-      el('div', { className: 'ia-scroll' }, [
-        el('nav', { ariaLabel: 'Admin' }, [home]),
-        ...groups.flatMap((g, i) => [el('div', { className: 'ia-label', textContent: g.short }), el('nav', { ariaLabel: g.label }, [...g.sections.map(linkTo), ...(i === 0 ? [media] : [])])]),
-      ]),
-      salesNav,
+      // the list scrolls by itself on a short screen; the brand above and the foot below stay put
+      scroller,
       el('div', { className: 'ia-foot' }, [
         el('a', { className: 'ia-site', href: '../', target: '_blank', rel: 'noopener' }, [icon('external'), el('span', { textContent: 'View site' })]),
         out,
       ]),
     ])
 
-    // ---- home screen: the same groups, as tiles
-    const tile = (s) => el('div', { className: 'ia-tile' }, [
-      el('div', { className: 'ia-tile-icon' }, [icon(s.key)]),
-      el('h3', { textContent: s.label }),
-      el('p', { textContent: s.description }),
-      el('div', { className: 'ia-tile-actions' }, [
-        el('a', { className: 'ia-btn', href: hrefOf(s), textContent: s.file ? 'Edit' : 'See all' }),
-        s.canAdd ? el('a', { className: 'ia-btn ghost', href: `#/collections/${s.name}/new`, textContent: `+ New ${s.singular.toLowerCase()}` }) : null,
-      ]),
+    // ---- overview: the same groups as tiles, under a strip of what needs doing
+    const btn = (text, href, ghost) => el('a', { className: `ia-btn${ghost ? ' ghost' : ''}`, href, textContent: text })
+    const actionsOf = (p) => {
+      if (p.kind === 'media') { const b = el('button', { type: 'button', className: 'ia-btn', textContent: 'Open the library' }); b.addEventListener('click', () => openMedia()); return [b] }
+      if (p.id === 'sales:orders') return [btn('Open', p.href), btn('Commissions', '#/sales/orders?tab=commissions', true)]
+      if (p.id === 'sales:emails') return [btn('Write an email', p.href)]
+      if (p.kind === 'sales') return [btn('Open', p.href)]
+      if (p.s.file) return [btn('Edit', p.href)]
+      return [btn('See all', p.href), p.s.canAdd ? btn(`+ New ${p.s.singular.toLowerCase()}`, `#/collections/${p.s.name}/new`, true) : null]
+    }
+    const tile = (p) => el('div', { className: 'ia-tile' }, [
+      el('div', { className: 'ia-tile-icon' }, [icon(p.id)]),
+      el('h3', { textContent: p.title }),
+      el('p', { textContent: p.about }),
+      el('div', { className: 'ia-tile-actions' }, actionsOf(p)),
     ])
-    const mediaTile = el('div', { className: 'ia-tile' }, [el('div', { className: 'ia-tile-icon' }, [icon('pictures')]), el('h3', { textContent: 'Pictures' }), el('p', { textContent: 'Every picture uploaded to the site. Upload new ones or remove old ones.' }), el('div', { className: 'ia-tile-actions' }, [(() => { const b = el('button', { type: 'button', className: 'ia-btn', textContent: 'Open the library' }); b.addEventListener('click', () => openMedia()); return b })()])])
+    // at a glance (sales.js): filled in once the orders and commissions have been asked for
+    const glance = Sales ? el('div', { className: 'ia-glance', ariaLabel: 'At a glance', role: 'group' }) : null
+    const fact = (label, n, href, hot, note) => el('a', { className: `ia-fact${hot ? ' is-hot' : ''}`, href }, [el('span', { textContent: label }), el('strong', { textContent: n == null ? '–' : String(n) }), el('small', { textContent: note })])
     const homeScreen = el('main', { className: 'ia-home' }, [
       el('div', { className: 'ia-home-inner' }, [
-        el('div', { className: 'ia-kicker', textContent: 'Milton Aguiar admin' }),
+        el('div', { className: 'ia-kicker', textContent: 'Overview' }),
         el('h1', { textContent: 'What do you want to update?' }),
         el('p', { className: 'ia-lead', textContent: 'Pick a part of the site. Changes go live when you press Save.' }),
-        ...groups.map((g, i) => el('section', { className: 'ia-group' }, [
+        glance,
+        ...groups.map((g) => el('section', { className: 'ia-group' }, [
           el('h2', { textContent: g.label }),
           el('p', { textContent: g.lead }),
-          el('div', { className: 'ia-tiles' }, [...g.sections.map(tile), ...(i === 0 ? [mediaTile] : [])]),
+          el('div', { className: 'ia-tiles' }, g.parts.map(tile)),
         ])),
       ]),
     ])
+    // the counts in the navigation and the strip, whenever sales.js has news
+    const paintCounts = () => {
+      const c = Sales && Sales.glance && Sales.glance()
+      if (!c) return
+      const orders = (c.ready ? c.toShip : 0) + (c.commissions ? c.unread : 0)
+      const b = badges['sales:orders']
+      if (b) {
+        b.hidden = !orders
+        b.textContent = String(orders)
+        b.title = [c.toShip ? `${c.toShip} to ship` : '', c.unread ? `${c.unread} unread ${c.unread === 1 ? 'message' : 'messages'}` : ''].filter(Boolean).join(' · ')
+      }
+      if (glance) glance.replaceChildren(
+        fact('To ship', c.ready ? c.toShip : null, '#/sales/orders?stage=to-ship', c.toShip > 0, c.ready ? (c.toShip ? 'paid, waiting to be posted' : 'nothing waiting') : 'loading…'),
+        fact('Unread messages', c.commissions ? c.unread : null, '#/sales/orders?tab=commissions&chip=unread', c.unread > 0, c.commissions ? 'on commissions' : 'loading…'),
+        fact('To quote', c.commissions ? c.toQuote : null, '#/sales/orders?tab=commissions&chip=to-answer', c.toQuote > 0, c.commissions ? 'commissions asked for' : 'loading…'),
+        fact('Customers', c.customers, '#/sales/customers', false, c.customers == null ? 'loading…' : 'buyers and members'),
+      )
+    }
+    addEventListener('ia-sales-change', paintCounts)
+
     // ---- phones and small tablets: the navigation is a drawer, opened from a bar across the top
     const menu = el('button', { type: 'button', className: 'ia-menu', ariaLabel: 'Menu' }, [icon('menu')])
-    const top = el('div', { className: 'ia-top' }, [menu, el('a', { className: 'ia-top-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })]), el('small', { textContent: 'Admin' })])])
+    menu.setAttribute('aria-expanded', 'false')
+    const where = el('span', { className: 'ia-top-where' })
+    const top = el('div', { className: 'ia-top' }, [menu, el('a', { className: 'ia-top-brand', href: HOME }, [el('img', { src: '../favicon.png', alt: '' }), el('strong', {}, ['Milton ', el('b', { textContent: 'Aguiar' })])]), where])
     const shade = el('div', { className: 'ia-shade' })
-    const drawer = (open) => { document.documentElement.toggleAttribute('data-ia-menu', open); menu.setAttribute('aria-expanded', String(open)) }
+    const drawer = (open) => {
+      document.documentElement.toggleAttribute('data-ia-menu', open)
+      menu.setAttribute('aria-expanded', String(open))
+      // opening: the entry for this screen in view
+      if (open) (scroller.querySelector('a.on') || home).scrollIntoView({ block: 'nearest' })
+    }
     menu.addEventListener('click', () => drawer(!document.documentElement.hasAttribute('data-ia-menu')))
     shade.addEventListener('click', () => drawer(false))
     side.addEventListener('click', (e) => { if (e.target.closest('a, button')) drawer(false) })
     addEventListener('hashchange', () => drawer(false))
     addEventListener('keydown', (e) => { if (e.key === 'Escape') drawer(false) })
     document.body.append(top, shade, side, homeScreen, ...(Sales ? [Sales.mount()] : []))
+
+    // the counts: asked for on the Overview, and every few minutes elsewhere (the Sales screens keep their own)
+    let askedAt = 0
+    const refresh = (members) => {
+      if (!Sales || !Sales.prefetch || document.hidden || document.documentElement.hasAttribute('data-ia-sales')) return
+      askedAt = Date.now()
+      Sales.prefetch({ members }).then(paintCounts, () => {})
+    }
+    setInterval(() => { if (Date.now() - askedAt > 4 * 60 * 1000) refresh(false) }, 30 * 1000)
 
     const sync = () => {
       // an address left over from an older layout of this panel (a bookmark, a tab left open)
@@ -244,12 +328,22 @@
       document.documentElement.toggleAttribute('data-ia-sales', Boolean(salesView && Sales))
       if (salesView && Sales) Sales.show(salesView, new URLSearchParams(salesQuery))
       home.classList.toggle('on', onHome)
-      salesLinks.forEach((a) => a.classList.toggle('on', a.view === salesView))
-      links.forEach((a) => a.classList.toggle('on', !onHome && !salesView && a.section === currentSection() && (!a.file || a.file === currentFile())))
+      let here = onHome ? 'Overview' : ''
+      for (const [a, p] of links) {
+        const on = !onHome && (p.kind === 'sales' ? p.view === salesView : !salesView && p.s.name === section && (!p.s.file || p.s.file === currentFile()))
+        a.classList.toggle('on', on)
+        if (on) { a.setAttribute('aria-current', 'page'); here = p.label } else a.removeAttribute('aria-current')
+      }
+      if (onHome) home.setAttribute('aria-current', 'page'); else home.removeAttribute('aria-current')
+      where.textContent = here
+      if (onHome) refresh(true)
     }
     addEventListener('hashchange', sync)
     sync()
+    paintCounts()
   }
+  // the group a part of the admin sits in ("Your art" for "work"), once the navigation is built
+  let groupOf = () => ''
 
   // Land on Home rather than on whichever section happens to be first.
   const landing = !location.hash || location.hash === '#/' || location.hash === '#'
@@ -360,7 +454,7 @@
       const name = (field.querySelector(':scope > [class*="ControlTopbar"] label[for]') || {}).htmlFor || ''
       const compact = currentSection() === 'site' ? /^(types|categories|subcategories|sizes)-field/.test(name) : /^sizes-field/.test(name)
       if (compact !== field.classList.contains('ia-compact')) field.classList.toggle('ia-compact', compact)
-      // the free profile pictures (Customer accounts): a grid of round tiles
+      // the free profile pictures (Member settings): a grid of round tiles
       const pics = currentSection() === 'site' && /^(icons|verifiedIcons)-field/.test(name)
       if (pics !== field.classList.contains('ia-pics')) field.classList.toggle('ia-pics', pics)
     }
@@ -370,9 +464,9 @@
     }
   }
 
-  /* ---------- a shop sale (Shop → Sales) ----------
-     Each sale has one "which" field to go with its "On what": the category, sub category or type
-     it covers. The other two are hidden (whatever they still hold is ignored by the site). A sale
+  /* ---------- a price cut (Shop → Price cuts) ----------
+     Each price cut has one "which" field to go with its "On what": the category, sub category or type
+     it covers. The other two are hidden (whatever they still hold is ignored by the site). One
      folded shut says what it covers and where it is up to, after its name and cut:
      "Black Friday — 10% off · everything · on now". */
   const SALE_ON = { 'A category': 'category', 'A sub category': 'subcategory', 'A type': 'type' }
@@ -423,6 +517,19 @@
     if (!title || !here) return
     const want = here.file ? here.label : /\/new/.test(location.hash) ? `New ${here.singular.toLowerCase()}` : here.label
     if (title.textContent !== want) title.textContent = want
+  }
+
+  /* Every screen is headed the same way: its group in small red capitals over the title, and a
+     line about it (shell.js and sales.js screens draw their own). On Decap's screens the group
+     goes on the list's heading panel and on the form's heading bar, the line on top of the form. */
+  const headers = () => {
+    const name = currentSection()
+    const here = known.find((s) => s.name === name && (s.file ? s.file === currentFile() : true))
+    const kicker = here ? groupOf(here.key) : ''
+    const set = (node, key, value) => { if (node && (node.dataset[key] || '') !== value) { if (value) node.dataset[key] = value; else delete node.dataset[key] } }
+    set(document.querySelector('[class*="CollectionTopContainer"]'), 'iaKicker', kicker)
+    set(document.querySelector('[class*="ToolbarContainer"] [class*="BackCollection"]'), 'iaKicker', kicker)
+    set(document.querySelector('[class*="ControlPaneContainer"]:not([class*="PreviewPaneContainer"])'), 'iaLead', (here && ABOUT[here.key]) || '')
   }
 
   /* Decap only labels the optional fields ("(optional)"); everything else must be filled in.
@@ -502,7 +609,7 @@
   document.addEventListener('click', (e) => { if (e.target.closest?.('button[role="switch"]')) setTimeout(numberPages, 40) })
 
   let tagTimer
-  const scheduleTag = () => { clearTimeout(tagTimer); tagTimer = setTimeout(() => { tagFields(); syncViews(); paintThumbs(); numberPages() }, 60) }
+  const scheduleTag = () => { clearTimeout(tagTimer); tagTimer = setTimeout(() => { tagFields(); headers(); syncViews(); paintThumbs(); numberPages() }, 60) }
 
   /* ---------- list views ----------
      Decap offers rows or cards, one choice for the whole admin. Here every list gets four views
@@ -938,7 +1045,7 @@
     cards: { what: 'card design', text: 'Customers who earned it lose it, and anyone using it goes back to the usual card. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     discounts: { what: 'discount', text: 'Customers no longer earn it. Codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
     rewards: { what: 'reward', text: 'Customers who earned it lose it: a picture or card design they chose goes back to the usual one, and they no longer see it under Rewards. Discount codes already made from it keep working until they run out. To stop offering it for now without losing it, switch on "Hide (not offered for now)" instead.' },
-    sales: { what: 'sale', text: 'Once you press Save it stops on the site and its prices go back to normal. To pause it without losing it, switch "On" off instead.' },
+    sales: { what: 'price cut', text: 'Once you press Save it stops on the site and its prices go back to normal. To pause it without losing it, switch "On" off instead.' },
     icons: { what: 'free picture', text: 'Customers using it as their profile picture go back to their initials.' },
     pages: { what: 'page', text: 'It comes out of the comic and the pages after it move up one. The picture stays in the Media library.' },
   }
@@ -983,7 +1090,7 @@
   }, true)
 
   /* ---------- a membership card design, as customers will see it, and where its picture sits ----------
-     Under each card design (Shop → Rewards): the card with its look and picture, redrawn as they
+     Under each card design (Members → Rewards): the card with its look and picture, redrawn as they
      change. With a picture, the card is the control: drag the picture on it, zoom with the slider
      (the sliders move it too, for the keyboard). Kept as "left,top,zoom" (percent), like a profile
      picture's crop; empty means the usual 50,25,100. The look and the picture are read from the same

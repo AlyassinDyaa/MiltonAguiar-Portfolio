@@ -243,7 +243,7 @@ export const tellAdmin = async (ref, site) => {
         ...(order.phone ? [`Phone: ${order.phone}`] : []),
       ],
       button: { label: 'Open orders', url: `${String(site || '').replace(/\/$/, '')}/admin/#/sales/orders` },
-      after: 'Mark it packed and shipped in Sales → Orders: the buyer sees each step, and the tracking number, in their account.',
+      after: 'Mark it packed and shipped in the admin (Orders): the buyer sees each step, and the tracking number, in their account.',
     })
   } catch (e) { console.error('order email not sent:', e.message) }
 }

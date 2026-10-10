@@ -2,10 +2,12 @@
 # Everything on the site that the artist can edit is described here.
 # Changes are saved as commits to the repository; the site rebuilds automatically.
 #
-# The panel has three kinds of section (public/admin/shell.js groups them in the navigation):
-#   1. things that are added to over time: Work, Comic samples, Gallery, Step by step, Conventions;
+# Three kinds of section here (public/admin/shell.js, NAV, sorts them into the navigation's
+# groups: Orders & customers, Your art, Shop, Members, Page text, Site):
+#   1. things that are added to over time: Work, Comic samples, Items for sale, Gallery, Conventions;
 #   2. the words on each page: one short form per page ("pages" below);
-#   3. things that apply to the whole site: name and colour, and what is shown or hidden ("site").
+#   3. single forms for the shop, members and the whole site ("site" below).
+# Only labels may change: a collection's or a file's name is where its content is kept.
 
 backend:
   name: git-gateway        # Netlify Identity + Git Gateway. On Vercel the admin page swaps this for a passcode login.
@@ -41,7 +43,7 @@ collections:
   - name: work
     label: Work
     label_singular: Piece
-    description: 'Your pieces: covers, pages, pin-ups, sketches. Add a new one here and it appears on the Work page, the home page and the gallery. Switch on "Sell it in the Shop" and give it a price to sell it.'
+    description: 'Your pieces: covers, pages, pin-ups, sketches. A new one shows on the Work page, the home page and the gallery. To sell one, switch on "Sell it in the Shop" and give it a price.'
     folder: content/work
     create: true
     extension: json
@@ -61,7 +63,7 @@ collections:
       - { name: rough, label: Pencils or work in progress, widget: boolean, default: false, required: false, hint: 'Tick this for sketches and pencilled pages. They stay on the Work page but are left out of the changing pictures beside the page titles, which show finished pieces only.' }
       - { name: homeOrder, label: Place on the home page, widget: number, value_type: int, required: false, hint: 'Only for ticked pieces. 1 is the tall panel beside your name, 2 and 3 the two small ones, 4 the wide one under them; 5 to 9 are the panels of "Latest". Empty: newest first, after the numbered ones.' }
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
-      - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop → Items for sale in this panel, and once it has a price it is on the Shop page with a Buy button.' }
+      - { name: inShop, label: Sell it in the Shop, widget: boolean, default: false, required: false, hint: 'On: it is listed under Shop → Items for sale here too, and once it has a price it is on the Shop page with a Buy button.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments. Only needed for a piece you sell.' }
       - name: look
         label: Shown in the shop as
@@ -89,7 +91,7 @@ collections:
           - { label: 'On sale (shows the old and the new price)', value: sale }
           - { label: 'Sold out (no Buy button)', value: soldout }
         hint: 'Sale and Sold out show while online purchases are switched on; New always shows.'
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. Not used when it is sold in sizes (below).' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'In the currency set under Shop → Settings & payments. Not used when it is sold in sizes (below).' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: universe, label: Sub category, widget: relation, collection: site, file: categories, value_field: 'subcategories.*.name', search_fields: ['subcategories.*.name'], display_fields: ['subcategories.*.name'], required: false, hint: 'DC, Marvel, Image... Optional. The list is kept under Shop → Categories & sizes; the Shop page can be filtered by it.' }
       - { name: shopOnly, label: Only in the Shop, widget: boolean, default: false, required: false, hint: 'For something you sell that is not a piece of your portfolio (a book, a shirt): it stays off the Work page and the home page.' }
@@ -109,7 +111,7 @@ collections:
   - name: comics
     label: Comic samples
     label_singular: Comic
-    description: 'A few pages of a comic for visitors to read: a cover and its pages, in reading order. Each one is a small comic book on the Work page; a click opens it to read.'
+    description: 'A few pages of a comic for visitors to read: a cover and its pages, in order. Each is a small book on the Work page that opens to read.'
     folder: content/comics
     create: true
     extension: json
@@ -140,7 +142,7 @@ collections:
   - name: shop
     label: Items for sale
     label_singular: Item for sale
-    description: 'Everything you sell: prints, original art, comics. A piece added here is for sale straight away once it has a price. A piece already under Work goes on sale by switching on "Sell it in the Shop" on it, and then shows here too.'
+    description: 'Everything you sell: prints, original art, comics. A new item can be bought once it has a price. A piece under Your art → Work shows here too once "Sell it in the Shop" is on.'
     folder: content/work
     filter: { field: inShop, value: true }
     create: true
@@ -156,7 +158,7 @@ collections:
       - { name: src, label: Picture, widget: image, choose_url: false, required: false, hint: 'Portrait, about 3:4. Shown whole when the piece is opened.' }
       - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: the print in a frame, on a wall, a close-up, the back of the book... In the Shop it fades in over the first when someone points at the piece; an opened piece starts on the first picture, with this one a tap away. Same shape as the first works best.' }
       - { name: face, label: As a profile picture, widget: facecrop, required: false, hint: 'A customer who buys this piece can use it as their profile picture (only they can). Drag the picture inside the circle to put the face in place, and zoom in.' }
-      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'A number, in the currency set under Shop → Settings & payments. For a piece sold in several sizes, leave it empty and add the sizes at the bottom.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'In the currency set under Shop → Settings & payments. Sold in several sizes? Leave it empty and add the sizes at the bottom.' }
       - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
       - { name: type, label: What it is, widget: relation, collection: site, file: shop, value_field: 'types.*.name', search_fields: ['types.*.name'], display_fields: ['types.*.name'], required: false, hint: 'Prints, Original art, Comics... The list is kept under Shop → Settings & payments.' }
       - name: look
@@ -204,7 +206,7 @@ collections:
   - name: gallery_sections
     label: Gallery
     label_singular: Gallery section
-    description: 'The Gallery page, in sections you name yourself (Pencils, Covers, Convention photos...). The page is switched off to start with, because it shows the same pieces as Work: switch it on under Show or hide.'
+    description: 'The Gallery page, in sections you name (Pencils, Covers, Convention photos...). It is off to start with, as it shows the same pieces as Work: switch it on under Site → Show / hide.'
     folder: content/gallery-sections
     create: true
     extension: json
@@ -362,7 +364,7 @@ collections:
           - { name: eventsTitle, label: Heading, widget: string }
 
       - name: lists
-        label: Work and Gallery pages
+        label: Work & Gallery pages
         file: content/pages/lists.json
         fields:
           - { name: workLabel, label: Small label, widget: string, required: false }
@@ -400,7 +402,7 @@ collections:
             label_singular: Step
             widget: list
             summary: '{{fields.title}}'
-            hint: 'Shown as numbered panels beside the pencils-to-colours set (pick which set under Page text → Home → The sets: "Show on the Commissions page"). A step that mentions pencils, inks or colours shows that stage when picked; the last step shows the finished piece.'
+            hint: 'Shown as numbered panels beside the pencils-to-colours set (pick which set under Page text → Home → Pencils to colours: "Show on the Commissions page"). A step that mentions pencils, inks or colours shows that stage when picked; the last step shows the finished piece.'
             fields:
               - { name: title, label: Step, widget: string }
               - { name: text, label: Description, widget: text }
@@ -420,7 +422,7 @@ collections:
             widget: select
             required: false
             default: site
-            hint: 'On the site: the visitor sends their idea from the request card and you talk it through in Sales → Orders → Commissions.'
+            hint: 'On the site: the visitor sends their idea from the request card and you talk it through in Orders → Commissions.'
             options:
               - { label: 'On the site (default)', value: site }
               - { label: 'Instagram', value: instagram }
@@ -481,7 +483,7 @@ collections:
     label: Site
     files:
       - name: brand
-        label: Name, colour and contact
+        label: Brand & contact
         file: content/site/brand.json
         fields:
           - { name: name, label: Site name, widget: string, hint: 'The second word takes the brand colour.' }
@@ -507,7 +509,7 @@ collections:
           - { name: footerFine, label: Small print after the © line, widget: string, required: false }
 
       - name: shop
-        label: Shop settings and payments
+        label: Shop settings & payments
         file: content/site/shop.json
         fields:
           - { name: enabled, label: Online purchases, widget: boolean, default: false, hint: 'On: the Shop page and the cart button are on the site, and every piece with a price shows it with its buttons to buy. Off: no shop, no prices and no buttons anywhere.' }
@@ -600,14 +602,14 @@ collections:
             widget: object
             required: false
             collapsed: false
-            hint: 'Which emails come to you (the contact email under Name, colour and contact). Emails to your customers always go.'
+            hint: 'Which emails come to you (at the contact email under Site → Brand & contact). Emails to your customers always go.'
             fields:
               - { name: orders, label: New shop orders, widget: boolean, default: true, required: false, hint: 'An email for each order paid in the Shop.' }
               - { name: commissions, label: New commission requests and payments, widget: boolean, default: true, required: false, hint: 'An email when someone asks for a commission, and when they pay its quote.' }
-              - { name: replies, label: Customer replies on commissions, widget: boolean, default: true, required: false, hint: 'An email when a customer writes in a commission conversation, or cancels one. Off: you see them in Sales → Orders → Commissions.' }
+              - { name: replies, label: Customer replies on commissions, widget: boolean, default: true, required: false, hint: 'An email when a customer writes in a commission conversation, or cancels one. Off: you see them in Orders → Commissions.' }
 
       - name: categories
-        label: Shop categories and sizes
+        label: Categories & sizes
         file: content/site/categories.json
         fields:
           - name: categories
@@ -648,7 +650,7 @@ collections:
         file: content/pages/account.json
         fields:
           - name: accounts
-            label: Customer accounts
+            label: Member accounts
             widget: select
             default: 'off'
             options:
@@ -745,7 +747,7 @@ collections:
             minimize_collapsed: true
             required: false
             summary: '{{fields.name}}'
-            hint: 'A personal code for one order, made the moment a customer earns it, that only their email can use. Codes are made in Stripe and show in Sales → Discounts too.'
+            hint: 'A personal code for one order, made the moment a customer earns it, that only their email can use. Codes are made in Stripe and show under Shop → Discount codes too.'
             fields:
               - { name: name, label: Name, widget: string, hint: 'Shown to customers, e.g. "3 orders: 10% off".' }
               - { name: percent, label: Discount (%), widget: number, value_type: float, min: 1, max: 100, default: 10 }
@@ -762,20 +764,20 @@ collections:
               - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders, pieces or commissions it takes: 1 for their first, 3, 6, 10... A commission counts once it is paid. Refunded, cancelled and deleted ones do not count, and commissions never count as shop orders or pieces.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
       - name: sales
-        label: Shop sales
+        label: Price cuts
         file: content/site/sales.json
         fields:
           - name: sales
-            label: Sales
-            label_singular: sale
+            label: Price cuts
+            label_singular: price cut
             widget: list
             collapsed: true
             minimize_collapsed: true
             required: false
             summary: '{{fields.name}} — {{fields.percent}}% off'
-            hint: 'Price cuts that switch themselves on and off: no code needed. A sale runs while it is On and between its start and its end. A piece in more than one sale gets the biggest cut, never two. A piece with its own sale price gets whichever is cheaper. Discount codes still come off on top at the checkout. Sold-out pieces are left alone.'
+            hint: 'Price cuts switch themselves on and off: no code needed. One runs while it is On, between its start and its end. A piece in more than one gets the biggest cut, never two; a piece with its own sale price gets whichever is cheaper. Discount codes still come off on top at the checkout. Sold-out pieces are left alone.'
             fields:
-              - { name: name, label: Name, widget: string, hint: 'Shown to visitors, on the Shop page and beside the price: Black Friday, Summer sale...' }
+              - { name: name, label: Name, widget: string, hint: 'Shown to visitors on the Shop page and beside the price: Black Friday, Summer sale...' }
               - { name: percent, label: Price cut (%), widget: number, value_type: int, min: 1, max: 90, default: 10, hint: 'Usual cuts: 5, 10, 15, 20, 25, 30 or 50. Up to 90.' }
               - name: appliesTo
                 label: On what
@@ -792,9 +794,9 @@ collections:
               - { name: starts, label: Starts, widget: datetime, required: false, hint: 'Empty: straight away.' }
               - { name: ends, label: Ends, widget: datetime, required: false, hint: 'Empty: until you switch it off.' }
               - { name: 'on', label: 'On', widget: boolean, default: true, required: false }
-              - { name: banner, label: Line on the Shop page, widget: string, required: false, hint: 'Shown after the name, in a red band above the pieces while the sale runs. Empty: made for you, e.g. "10% off everything until 31 Oct" or "15% off Fan art".' }
+              - { name: banner, label: Line on the Shop page, widget: string, required: false, hint: 'Shown after the name, in a red band above the pieces while it runs. Empty: made for you, e.g. "10% off everything until 31 Oct" or "15% off Fan art".' }
       - name: visibility
-        label: Show or hide
+        label: Show / hide
         file: content/site/visibility.json
         fields:
           - name: pages
@@ -809,6 +811,17 @@ collections:
               - { name: commissions, label: Commissions, widget: boolean, default: true }
               - { name: about, label: About, widget: boolean, default: true }
               - { name: contact, label: Contact, widget: boolean, default: true }
+          - name: home
+            label: Parts of the home page
+            widget: object
+            collapsed: false
+            fields:
+              - { name: ticker, label: Moving band of words, widget: boolean, default: true }
+              - { name: project, label: Current project, widget: boolean, default: true }
+              - { name: latest, label: Latest pieces, widget: boolean, default: true }
+              - { name: redraws, label: Pencils to colours, widget: boolean, default: true }
+              - { name: commissions, label: Commissions, widget: boolean, default: true }
+              - { name: events, label: Conventions, widget: boolean, default: true }
           - name: themes
             label: Dark and light
             widget: object
@@ -824,7 +837,7 @@ collections:
             hint: 'The Milton Aguiar logo inside the pictures of the Work, Shop and Gallery pages and the pencils-to-colours sets: clear in a corner, faint and large in the middle, so nobody can pass the art off as theirs. It is put on when the site is rebuilt, a minute or two after you save. Pictures stay web-sized either way. Your uploads are never changed.'
             fields:
               - { name: watermark, label: Logo on the artwork (watermark), widget: boolean, default: true, required: false }
-              - { name: comicsWatermark, label: Logo on the comic samples too, widget: boolean, default: true, required: false, hint: 'Off: the comic books under Work → Samples are shown without the logo, while the rest of the artwork keeps it.' }
+              - { name: comicsWatermark, label: Logo on the comic samples too, widget: boolean, default: true, required: false, hint: 'Off: the comic books (Your art → Comic samples) are shown without the logo, while the rest of the artwork keeps it.' }
           - name: shop
             label: Parts of the Shop page
             widget: object
@@ -835,22 +848,11 @@ collections:
               - { name: subcategory, label: Sub category drop-down, widget: boolean, default: true, required: false }
               - { name: type, label: Type drop-down, widget: boolean, default: true, required: false }
           - name: sales
-            label: Sales screens
+            label: Test data
             widget: object
             collapsed: false
-            hint: 'Test data is what Stripe and PayPal make in their test modes (and the samples shown on your own computer). Each switch hides it from its own screen, or shows it again: nothing is ever deleted, and real orders, customers and codes always show.'
+            hint: 'For Orders, Customers and Discount codes. Test data is what Stripe and PayPal make in their test modes (and the samples shown on your own computer). Each switch hides it from its own screen, or shows it again: nothing is ever deleted, and real orders, customers and codes always show.'
             fields:
               - { name: testOrders, label: Test orders, widget: boolean, default: true, required: false }
               - { name: testCustomers, label: Test customers, widget: boolean, default: true, required: false }
               - { name: testCodes, label: Test discount codes, widget: boolean, default: true, required: false }
-          - name: home
-            label: Parts of the home page
-            widget: object
-            collapsed: false
-            fields:
-              - { name: ticker, label: Moving band of words, widget: boolean, default: true }
-              - { name: project, label: Current project, widget: boolean, default: true }
-              - { name: latest, label: Latest pieces, widget: boolean, default: true }
-              - { name: redraws, label: Step by step, widget: boolean, default: true }
-              - { name: commissions, label: Commissions, widget: boolean, default: true }
-              - { name: events, label: Conventions, widget: boolean, default: true }

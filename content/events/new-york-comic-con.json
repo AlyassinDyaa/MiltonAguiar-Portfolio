@@ -1,0 +1,13 @@
+{
+  "place": "Bruh",
+  "hidden": false,
+  "name": "New York Comic Con",
+  "order": 10,
+  "url": "https://www.newyorkcomiccon.com/",
+  "pictures": [
+    "/uploads/featuredevents_nycc_jul2026-bu4ub0yfyc.jpg"
+  ],
+  "role": "Table 69",
+  "linkLabel": "NYCC Website",
+  "when": "Today"
+}

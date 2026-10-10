@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/batman-v-superman.webp",
+  "universe": "DC",
+  "hidden": false,
+  "date": "2022-07-30",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Bat vs Alien",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/batman-v-superman-frame.png",
+  "face": "47,23,314",
+  "category": "Fan art",
+  "look": "default"
+}

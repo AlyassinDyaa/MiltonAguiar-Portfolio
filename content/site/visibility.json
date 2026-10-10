@@ -32,5 +32,8 @@
   "art": {
     "comicsWatermark": false,
     "watermark": true
+  },
+  "commissions": {
+    "request": true
   }
 }

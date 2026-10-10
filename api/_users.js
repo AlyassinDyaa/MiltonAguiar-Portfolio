@@ -317,6 +317,7 @@ export const publicUser = (u) => (u ? {
   phone: u.phone || '',
   verified: Boolean(u.verified),
   marketing: Boolean(u.marketing),
+  newsAsked: Boolean(u.newsAskedAt || u.unsubscribedAt), // said no thanks to news (or unsubscribed): the account stops asking
   createdAt: u.createdAt,
   lastVisit: u.prevLogin || u.createdAt, // for "new since your last visit"
   avatar: typeof u.avatar === 'string' ? u.avatar : '',

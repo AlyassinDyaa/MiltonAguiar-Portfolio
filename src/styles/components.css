@@ -2295,3 +2295,20 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 .acc-closed p { margin: 0; }
 .acc-closed b { color: var(--fg); }
 .acc-modal-icon.is-ok { background: var(--open); color: #06140c; font-weight: 900; }
+
+/* The question about news emails on the account overview (for anyone who has not said yes) */
+.acc-news { display: flex; align-items: center; gap: 18px; margin: 0 0 clamp(20px, 3vw, 30px); padding: 18px 20px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.acc-news-icon { flex: 0 0 auto; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; font-size: 1.25rem; background: var(--accent); color: var(--on-accent, #fff); }
+.acc-news > div:not(.acc-news-do) { flex: 1; min-width: 0; }
+.acc-news h2 { margin: 0 0 4px; font-family: var(--display); font-size: 1.2rem; font-weight: 800; font-style: italic; letter-spacing: 0.03em; text-transform: uppercase; }
+.acc-news p { margin: 0; color: var(--fg-dim); line-height: 1.5; }
+.acc-news .acc-link { font: inherit; }
+.acc-news-problem { margin-top: 8px !important; color: var(--accent) !important; }
+.acc-news-do { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; }
+.acc-news-do .btn { white-space: nowrap; }
+.acc-news.is-done { border-color: var(--line-strong); background: transparent; }
+@media (max-width: 640px) {
+  .acc-news { flex-wrap: wrap; align-items: flex-start; }
+  .acc-news > div:not(.acc-news-do) { flex-basis: calc(100% - 62px); }
+  .acc-news-do { width: 100%; justify-content: space-between; }
+}

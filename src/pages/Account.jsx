@@ -839,7 +839,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
       </div>
       <label className="acc-check">
         <input type="checkbox" checked={f.values.marketing} onChange={(e) => f.set('marketing')(e.target.checked)} />
-        <span>Email me about new pieces, prints and conventions.</span>
+        <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.</span>
       </label>
       <fieldset className="acct-pick">
         <legend>Your picture</legend>
@@ -986,8 +986,45 @@ function Security() {
 }
 
 /* the first thing a customer sees: hello, how things stand, their pieces, what is new */
+/* Asked on the overview of anyone who has not said yes to news: yes turns news emails on, no thanks
+   stops the question (the switch stays under Details). It thanks them until they leave the page. */
+function NewsAsk({ go }) {
+  const { call } = useAccount()
+  const [state, setState] = useState('ask') // ask | busy | yes | no
+  const [problem, setProblem] = useState('')
+  const answer = (on) => async () => {
+    setState('busy'); setProblem('')
+    try { await call('news', { on }); setState(on ? 'yes' : 'no') } catch (err) { setProblem(err.message); setState('ask') }
+  }
+  if (state === 'no') return null
+  return (
+    <section className={`acc-news ${state === 'yes' ? 'is-done' : ''}`} aria-live="polite">
+      <span className="acc-news-icon" aria-hidden="true">{state === 'yes' ? '✓' : '✉'}</span>
+      {state === 'yes' ? (
+        <div>
+          <h2>You’re on the list</h2>
+          <p>You’ll hear about new pieces, prints, discounts and conventions. You can stop any time under <button type="button" className="acc-link" onClick={() => go('details')}>Details</button>, or from the link in any news email.</p>
+        </div>
+      ) : (
+        <>
+          <div>
+            <h2>Hear about new work first</h2>
+            <p>An email now and then when there are new pieces, prints, discounts or conventions. Never shared, and you can stop any time.</p>
+            {problem && <p className="acc-news-problem" role="alert">{problem}</p>}
+          </div>
+          <div className="acc-news-do">
+            <button type="button" className="btn" disabled={state === 'busy'} onClick={answer(true)}>Yes, email me</button>
+            <button type="button" className="acc-link" disabled={state === 'busy'} onClick={answer(false)}>No thanks</button>
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
 function Overview({ orders, go, commissions = null, openCommissions = () => {} }) {
   const { user } = useAccount()
+  const [askNews] = useState(() => !user.marketing && !user.newsAsked) // decided once, so the thanks can show
   const shopOrders = keptOrders(orders)
   const collected = piecesIn(orders)
   // the pieces they own, once each, newest first
@@ -1018,6 +1055,8 @@ function Overview({ orders, go, commissions = null, openCommissions = () => {} }
           <i aria-hidden="true">→</i>
         </button>
       )}
+
+      {askNews && <NewsAsk go={go} />}
 
       {latest ? (
         <section className="acct-block">

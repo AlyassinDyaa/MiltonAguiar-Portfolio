@@ -24,6 +24,7 @@ import {
         { action: 'unsubscribe', u, t }                   no more news emails (the link in a mailing: api/_mailings.js)
         { action: 'resend' }                              a new confirmation email
         { action: 'password', current, password }         change it (other devices are logged out)
+        { action: 'news', on }                            yes or no to news emails, from the question on the overview
         { action: 'profile', name, phone, marketing, avatar, card }
              card: '' (the site's own design) or the id of a membership card design they have earned
              avatar: '' (initials), 'icon:<picture>' (one of the free pictures set in the admin),
@@ -533,6 +534,13 @@ export default async function handler(req, res) {
       await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password) } })
       await d.collection('sessions').deleteMany({ userId: user._id, hash: { $ne: user.session } })
       return say(res, 200, { user: publicUser(user), changed: true })
+    }
+
+    // yes to news emails, or no thanks (then the overview stops asking; Details keeps the switch)
+    if (action === 'news') {
+      const set = body.on ? { marketing: true, newsAt: new Date() } : { marketing: false, newsAskedAt: new Date() }
+      await users.updateOne({ _id: user._id }, { $set: set })
+      return say(res, 200, { user: publicUser({ ...user, ...set }) })
     }
 
     if (action === 'profile') {

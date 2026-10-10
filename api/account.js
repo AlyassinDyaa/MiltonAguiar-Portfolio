@@ -22,6 +22,7 @@ import {
         { action: 'reset', token, password }
         { action: 'verify', token }                       confirms the email address
         { action: 'unsubscribe', u, t }                   no more news emails (the link in a mailing: api/_mailings.js)
+        { action: 'acceptGift', u, t }                    a gift accepted from the button in its email (no login needed)
         { action: 'resend' }                              a new confirmation email
         { action: 'password', current, password }         change it (other devices are logged out)
         { action: 'news', on }                            yes or no to news emails, from the question on the overview
@@ -116,7 +117,10 @@ const progressOf = async (d, user) => {
   return { verified: Boolean(user.verified), orders: orders.length, pieces: orders.reduce((n, o) => n + (o.items || []).reduce((m, i) => m + (Number(i.qty) || 1), 0), 0), commissions, gifts: giftsOf(user) }
 }
 // rewards the admin has given this customer (Sales → Customers → Gift a reward): theirs whatever their progress
-const giftsOf = (user) => (Array.isArray(user && user.gifts) ? user.gifts.map((g) => g && g.id).filter(Boolean) : [])
+// theirs: accepted (a gift sent by email waits, as pending, until they accept it from the email)
+const giftsOf = (user) => (Array.isArray(user && user.gifts) ? user.gifts.filter((g) => g && g.id && !g.pending).map((g) => g.id) : [])
+// a card design's picture as the site shows it on a card: the same upload without the logo (vite.config.js)
+const cardPic = (p) => (typeof p === 'string' && p.startsWith('/uploads/') ? `/uploads/card/${p.slice(9)}` : p)
 const earnedOnItsOwn = (r, p) => (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : r.earnedBy === 'commissions' ? (p.commissions || 0) >= r.count : p.pieces >= r.count)
 const earns = (r, p) => (p.gifts || []).includes(r.id) || earnedOnItsOwn(r, p)
 // Stripe, at the version promotion codes are read with everywhere on the site (api/_orders.js)
@@ -231,7 +235,9 @@ const sendVerify = async (req, user) => {
 
 /* ---------- the admin's side: members and gifted rewards
    { action: 'adminMembers' }                           every account: { members, rewards }
-   { action: 'adminGift', email, reward, note, tell }   gives a reward; tell (on unless false) emails them.
+   { action: 'adminGift', email, reward, note, tell }   gives a reward; tell (on unless false) emails them, and then
+                                                         it waits (pending) until they accept it from the email;
+                                                         not emailed, it is theirs at once
         A discount's code is made when they next look at Rewards in their account.
    { action: 'adminUngift', email, reward }             takes a gift back (a discount code already made keeps working)
    Only with the admin's pass (on this computer, the admin has no login, so none is asked). */
@@ -253,7 +259,7 @@ const memberOf = (u) => ({
   email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
   news: u.marketing === true, // said yes to news emails
   card: typeof u.card === 'string' ? u.card : '', // the card design on their collector card ('' is the site's own)
-  gifts: (Array.isArray(u.gifts) ? u.gifts : []).filter((g) => g && g.id).map((g) => ({ id: g.id, at: g.at, note: g.note || '' })),
+  gifts: (Array.isArray(u.gifts) ? u.gifts : []).filter((g) => g && g.id).map((g) => ({ id: g.id, at: g.at, note: g.note || '', pending: Boolean(g.pending) })), // pending: emailed, not accepted yet
   newGifts: Array.isArray(u.newGifts) ? u.newGifts : [], // given and not seen by them yet
   picture: pictureOf(typeof u.avatar === 'string' ? u.avatar : ''),
 })
@@ -293,36 +299,43 @@ const adminAction = async (req, d, users, action, body) => {
   if (p.gifts.includes(r.id)) return [409, { message: `${user.name || user.email} already has "${r.name}" as a gift.` }]
   if (earnedOnItsOwn(r, p)) return [409, { message: `${user.name || user.email} has already earned "${r.name}".` }]
   const note = clean(body.note, 300)
-  const gift = { id: r.id, at: Date.now(), note }
-  // new to them: their account page says so until they have seen it
-  await users.updateOne({ _id: user._id }, { $push: { gifts: gift }, $addToSet: { newGifts: r.id } })
-  const member = memberOf({ ...user, gifts: [...(Array.isArray(user.gifts) ? user.gifts : []), gift], newGifts: [...new Set([...(Array.isArray(user.newGifts) ? user.newGifts : []), r.id])] })
+  if ((Array.isArray(user.gifts) ? user.gifts : []).some((g) => g && g.id === r.id)) return [409, { message: `${user.name || user.email} already has "${r.name}" as a gift${user.gifts.some((g) => g && g.id === r.id && g.pending) ? ' (waiting for them to accept it from the email)' : ''}.` }]
+  const tell = body.tell !== false
+  // emailed: it waits for them to accept it from the email (a link carrying the gift's own token);
+  // not emailed: theirs at once, and new to them until they have seen it
+  const gift = { id: r.id, at: Date.now(), note, ...(tell ? { pending: true, token: newId('g') } : {}) }
+  await users.updateOne({ _id: user._id }, { $push: { gifts: gift }, ...(tell ? {} : { $addToSet: { newGifts: r.id } }) })
   let mailed = false
-  if (body.tell !== false) {
+  if (tell) {
     const first = (user.name || '').split(' ')[0]
     const what = r.kind === 'discount' ? `${r.percent}% off one order` : r.kind === 'card' ? `the ${r.name} membership card design` : `the ${r.name} profile picture`
-    const pic = r.kind === 'picture' && r.picture ? { src: r.picture === '/avatars/confirmed.svg' ? '/email/confirmed.png' : r.picture, title: r.name, text: ' Now one of your profile pictures.' }
-      : r.kind === 'card' && r.cardArt ? { src: r.cardArt, title: r.name, text: ' A new look for your membership card.' } : null
+    const pic = r.kind === 'picture' && r.picture ? { src: r.picture === '/avatars/confirmed.svg' ? '/email/confirmed.png' : r.picture, title: r.name, text: ' Yours to use as your profile picture.' }
+      : r.kind === 'card' && r.cardArt ? { src: cardPic(r.cardArt), title: r.name, text: ' A new look for your membership card.' } : null
     // worded as the account notice it is (a subject like "A gift for you" is what spam filters look for)
     try {
       mailed = await sendMail({
         to: user.email,
         subject: `New in your Milton Aguiar account: ${r.name}`,
         kicker: 'Your account',
-        title: 'A new reward',
+        title: 'A reward is waiting for you',
         lines: [
           `Hi${first ? ` ${first}` : ''},`,
-          `Milton has added a reward to your account: ${what}.`,
+          `Milton has set aside a reward for you: ${what}.`,
           ...(note ? [note] : []),
-          r.kind === 'discount' ? 'Your code is under Rewards in your account, ready for your next order.' : 'You can use it from Details in your account.',
+          'Press the button to accept it, and it goes straight into your account.',
+          r.kind === 'discount' ? 'A discount gets its own code under Rewards in your account, ready for your next order.' : 'Then you can use it from Details in your account.',
         ],
         picture: pic,
-        button: { label: 'See your gift', url: `${siteUrl(req)}/account?tab=rewards` },
+        button: { label: 'Accept the gift', url: `${siteUrl(req)}/account/gift?u=${encodeURIComponent(user._id)}&t=${encodeURIComponent(gift.token)}` },
         after: 'You are getting this because you have an account on the Milton Aguiar site.',
       })
     } catch (e) { console.error('gift email not sent:', e.message) }
+    // the email could not go, so there is nothing for them to accept it from: theirs at once
+    if (!mailed) await users.updateOne({ _id: user._id, 'gifts.token': gift.token }, { $unset: { 'gifts.$.pending': '', 'gifts.$.token': '' }, $addToSet: { newGifts: r.id } })
   }
-  return [200, { ok: true, mailed: Boolean(mailed), member }]
+  const pending = tell && Boolean(mailed)
+  const now = { ...user, gifts: [...(Array.isArray(user.gifts) ? user.gifts : []), { ...gift, pending }], newGifts: pending ? (user.newGifts || []) : [...new Set([...(Array.isArray(user.newGifts) ? user.newGifts : []), r.id])] }
+  return [200, { ok: true, mailed: Boolean(mailed), pending, member: memberOf(now) }]
 }
 
 export default async function handler(req, res) {
@@ -449,6 +462,21 @@ export default async function handler(req, res) {
       const { rewards } = await giveReward(users, await users.findOne({ _id: token.userId }))
       const user = await currentUser(req)
       return say(res, 200, { verified: true, rewards, user: publicUser(user) })
+    }
+
+    if (action === 'acceptGift') {
+      // from the button in a gift email, no login needed: the link carries the gift's own token
+      if (await tooMany(`gift-ip:${ip}`, 30, 15)) return say(res, 429, { message: 'Too many tries. Wait a few minutes.' })
+      const u = clean(body.u, 80), t = clean(body.t, 80)
+      const owner = u && t ? await d.collection('users').findOne({ _id: u, gifts: { $elemMatch: { token: t } } }) : null
+      const g = owner && (owner.gifts || []).find((x) => x && x.token === t)
+      if (!g) { await noteTry(`gift-ip:${ip}`); return say(res, 400, { message: 'This link has been used already, or the gift was taken back. Your account shows what is yours.' }) }
+      const r = rewardsList().find((x) => x.id === g.id)
+      if (g.pending) await d.collection('users').updateOne({ _id: owner._id, 'gifts.token': t }, { $unset: { 'gifts.$.pending': '' }, $addToSet: { newGifts: g.id } })
+      // the same person logged in on this browser: their page shows it at once
+      const me = await currentUser(req)
+      const fresh = me && me._id === owner._id ? await d.collection('users').findOne({ _id: owner._id }) : null
+      return say(res, 200, { ok: true, name: r ? r.name : g.id, kind: r ? r.kind : '', ...(fresh ? { user: publicUser(fresh) } : {}) })
     }
 
     if (action === 'unsubscribe') {

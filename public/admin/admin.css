@@ -1838,3 +1838,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .ia-find-group.is-waiting .ia-find-note { animation: ia-find-wait 1.2s ease-in-out infinite alternate; }
 @keyframes ia-find-wait { to { opacity: 0.45; } }
 @media (max-width: 599px) { .ia-find { padding: 18px 16px; } .ia-find-head h2 { font-size: 1.5rem; } }
+
+/* a gift emailed and not accepted yet: a dashed chip */
+.sl-gift-chip.is-pending { border-style: dashed; opacity: 0.75; }
+.sl-gift-chip.is-pending::after { content: ' · waiting'; font-size: 0.7rem; color: var(--dim); }

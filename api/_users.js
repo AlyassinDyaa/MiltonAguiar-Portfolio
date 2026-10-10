@@ -322,7 +322,7 @@ export const publicUser = (u) => (u ? {
   lastVisit: u.prevLogin || u.createdAt, // for "new since your last visit"
   avatar: typeof u.avatar === 'string' ? u.avatar : '',
   card: typeof u.card === 'string' ? u.card : '', // the membership card design they chose (a reward)
-  gifts: Array.isArray(u.gifts) ? u.gifts.map((g) => g && g.id).filter(Boolean) : [], // rewards the admin gave them
+  gifts: Array.isArray(u.gifts) ? u.gifts.filter((g) => g && g.id && !g.pending).map((g) => g.id) : [], // rewards the admin gave them (one sent by email waits until they accept it)
   newGifts: Array.isArray(u.newGifts) ? u.newGifts.filter((g) => typeof g === 'string') : [], // given and not seen yet: reward ids, and 'code:<id>' for a code
   // discount codes the admin gave them (Sales → Discounts)
   giftCodes: Array.isArray(u.giftCodes) ? u.giftCodes.filter((g) => g && g.id).map((g) => ({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })) : [],

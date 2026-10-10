@@ -674,19 +674,30 @@ window.IASales = (() => {
     },
   })
   // what the gift did, in a line
-  const giftSaid = (rw, mem, tell, json) => `"${rw ? rw.name : 'The reward'}" gifted to ${mem.name || mem.email}${tell ? (json.mailed ? ' · they have been emailed' : ' · the email could not be sent, so tell them yourself') : ''}${rw && rw.kind === 'discount' ? ' · its code is made when they open Rewards' : ''}`
-  const giveGift = async (m, mem, rw) => {
+  /* Gives a member one or more rewards, one request each (emailed, a gift waits until they accept it
+     from the email; not emailed, it is theirs at once), and says in a line how it went. */
+  const giveGifts = async (m, mem, rws) => {
     m.busy = true; m.said = ''; draw()
-    const r = await mApi({ action: 'adminGift', email: mem.email, reward: rw.id, note: (m.note || '').trim(), tell: m.tell !== false })
+    const done = [], bad = []
+    let mailedAll = true, pending = false
+    for (const rw of rws) {
+      const r = await mApi({ action: 'adminGift', email: mem.email, reward: rw.id, note: (m.note || '').trim(), tell: m.tell !== false })
+      if (!r.ok) { bad.push(`"${rw.name}": ${r.json.message || 'not given'}`); continue }
+      done.push(rw)
+      if (r.json.member) keepMember(mem, r.json.member)
+      else mem.gifts = [...mem.gifts, { id: rw.id, at: Date.now(), note: m.note || '', pending: Boolean(r.json.pending) }]
+      if (m.tell !== false && !r.json.mailed) mailedAll = false
+      if (r.json.pending) pending = true
+    }
     m.busy = false
-    if (!r.ok) { m.said = r.json.message || 'The gift was not given. Try again.'; m.bad = true; return draw() }
-    if (r.json.member) keepMember(mem, r.json.member)
-    else mem.gifts = [...mem.gifts, { id: rw.id, at: Date.now(), note: m.note || '' }]
-    m.said = giftSaid(rw, mem, m.tell !== false, r.json)
-    m.bad = m.tell !== false && !r.json.mailed
-    m.reward = ''; m.chosen = ''; m.note = ''; m.picking = false
+    const names = done.map((x) => `"${x.name}"`).join(', ')
+    const how = m.tell === false ? ' · theirs at once' : !mailedAll ? ' · the email could not be sent, so it is theirs at once: tell them yourself' : pending ? ' · emailed: theirs once they accept it from the email' : ' · they have been emailed'
+    m.said = [done.length ? `${names} gifted to ${mem.name || mem.email}${how}${done.some((x) => x.kind === 'discount') ? ' · a discount gets its code when they next open Rewards' : ''}` : '', ...bad].filter(Boolean).join(' — ')
+    m.bad = bad.length > 0 || (m.tell !== false && !mailedAll)
+    m.rewards = []; m.chosen = []; m.note = ''; m.picking = false
     draw()
   }
+  const giveGift = (m, mem, rw) => giveGifts(m, mem, [rw])
 
   /* The rewards in a customer's window: what they have been gifted (× takes one back), and
      "+ Gift a reward", which opens the rewards not yet theirs as tiles, a note and Gift it. */
@@ -705,31 +716,32 @@ window.IASales = (() => {
         const rw = r || { id: g.id, name: g.id, kind: 'discount' }
         const x = el('button', { type: 'button', className: 'sl-gift-x', ariaLabel: `Take back ${rw.name}`, title: 'Take back', disabled: Boolean(m.busy), textContent: '×' })
         x.addEventListener('click', () => askUngift(mem, rw, m))
-        return el('span', { className: `sl-gift-chip ${unseen.has(g.id) ? 'is-unseen' : ''}`, title: `${KIND_NAME[rw.kind] || 'Reward'} · gifted ${g.at ? date(g.at) : ''}${g.note ? ` · "${g.note}"` : ''}${unseen.has(g.id) ? ' · not seen by them yet' : ''}` }, [rewardThumb(rw), el('span', { textContent: rw.name }), x])
+        return el('span', { className: `sl-gift-chip ${unseen.has(g.id) ? 'is-unseen' : ''} ${g.pending ? 'is-pending' : ''}`, title: `${KIND_NAME[rw.kind] || 'Reward'} · gifted ${g.at ? date(g.at) : ''}${g.note ? ` · "${g.note}"` : ''}${g.pending ? ' · emailed, waiting for them to accept it' : unseen.has(g.id) ? ' · not seen by them yet' : ''}` }, [rewardThumb(rw), el('span', { textContent: rw.name }), x])
       }))
       : el('p', { className: 'sl-dim', textContent: 'Nothing gifted yet.' })
     const kids = [chips]
     if (m.picking) {
-      const tiles = open.length ? el('div', { className: 'sl-rpick', role: 'radiogroup', ariaLabel: 'Reward to gift' }, open.map((r) => {
-        const t = el('button', { type: 'button', role: 'radio', ariaChecked: String(m.chosen === r.id), className: `sl-rtile ${m.chosen === r.id ? 'on' : ''}` }, [rewardThumb(r), el('strong', { textContent: r.name }), el('small', { textContent: r.kind === 'discount' ? `${r.percent}% off${r.days ? ` · ${r.days} days` : ''}` : KIND_NAME[r.kind] })])
-        t.addEventListener('click', () => { m.chosen = r.id; m.said = ''; draw() })
+      const chosen = new Set(Array.isArray(m.chosen) ? m.chosen : [])
+      const tiles = open.length ? el('div', { className: 'sl-rpick', role: 'group', ariaLabel: 'Rewards to gift (pick one or more)' }, open.map((r) => {
+        const t = el('button', { type: 'button', role: 'checkbox', ariaChecked: String(chosen.has(r.id)), className: `sl-rtile ${chosen.has(r.id) ? 'on' : ''}` }, [rewardThumb(r), el('strong', { textContent: r.name }), el('small', { textContent: r.kind === 'discount' ? `${r.percent}% off${r.days ? ` · ${r.days} days` : ''}` : KIND_NAME[r.kind] })])
+        t.addEventListener('click', () => { if (chosen.has(r.id)) chosen.delete(r.id); else chosen.add(r.id); m.chosen = [...chosen]; m.said = ''; draw() })
         return t
       })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Members → Rewards.' })
       const note = el('textarea', { className: 'sl-input', rows: 2, maxLength: 300, placeholder: 'A line from you, in the email (optional)', value: m.note || '' })
       note.addEventListener('input', () => { m.note = note.value })
       const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
       tell.addEventListener('change', () => { m.tell = tell.checked })
-      const cancel = button('Cancel', () => { m.picking = false; m.chosen = ''; draw() }, 'ia-btn ghost')
+      const cancel = button('Cancel', () => { m.picking = false; m.chosen = []; draw() }, 'ia-btn ghost')
       cancel.disabled = Boolean(m.busy)
-      const give = button(m.busy ? 'Gifting…' : 'Gift it', () => { const rw = rewardOf(m.chosen); if (rw) giveGift(m, mem, rw) }, 'ia-btn')
-      give.disabled = Boolean(m.busy) || !m.chosen
+      const give = button(m.busy ? 'Gifting…' : chosen.size > 1 ? `Gift ${chosen.size} rewards` : 'Gift it', () => { const rws = [...chosen].map(rewardOf).filter(Boolean); if (rws.length) giveGifts(m, mem, rws) }, 'ia-btn')
+      give.disabled = Boolean(m.busy) || !chosen.size
       kids.push(el('div', { className: 'sl-gift-picker' }, [
         tiles,
         el('label', { className: 'sl-field sl-gift-notefield' }, [el('span', { textContent: 'Your note' }), note]),
         el('div', { className: 'sl-gift-foot' }, [el('label', { className: 'sl-gift-tell' }, [tell, el('span', { textContent: 'Email them about it' })]), el('span', { className: 'sl-gift-grow' }), cancel, give]),
       ]))
     } else {
-      const add = button(open.length ? '+ Gift a reward' : 'Every reward gifted', () => { m.picking = true; m.chosen = ''; m.said = ''; draw() }, 'ia-btn ghost sl-gift-add')
+      const add = button(open.length ? '+ Gift a reward' : 'Every reward gifted', () => { m.picking = true; m.chosen = []; m.said = ''; draw() }, 'ia-btn ghost sl-gift-add')
       add.disabled = Boolean(m.busy) || !open.length
       kids.push(add)
     }
@@ -750,28 +762,30 @@ window.IASales = (() => {
     const member = memberOf(m.email)
     const has = new Set(member ? member.gifts.map((g) => g.id) : [])
     const pick = el('select', { className: 'sl-select', ariaLabel: 'Member' }, [el('option', { value: '', textContent: mState.list.length ? 'Choose a member…' : 'No members yet' }), ...[...mState.list].sort((a, b) => (a.memberNo || 0) - (b.memberNo || 0)).map((x) => el('option', { value: x.email, selected: x.email === m.email, textContent: `${memberNo(x.memberNo)}  ${x.name || '(no name)'} · ${x.email}` }))])
-    pick.addEventListener('change', () => { m.email = pick.value; m.reward = ''; m.said = ''; draw() })
+    pick.addEventListener('change', () => { m.email = pick.value; m.rewards = []; m.said = ''; draw() })
     const who = el('label', { className: 'sl-field' }, [el('span', { textContent: 'Member' }), pick])
     const whoCard = member ? el('div', { className: 'sl-gift-who' }, [avatar({ name: member.name, email: member.email, member }), el('span', {}, [el('strong', { textContent: member.name || member.email }), el('small', { textContent: `${memberNo(member.memberNo)} · ${member.email}` })])]) : null
-    // which reward: a tile for each, its thumbnail, kind and name
-    const tiles = mState.rewards.length ? el('div', { className: 'sl-gift-grid', role: 'radiogroup', ariaLabel: 'Reward' }, mState.rewards.map((r) => {
+    // which rewards (one or more): a tile for each, its thumbnail, kind and name
+    const picked = new Set(Array.isArray(m.rewards) ? m.rewards : [])
+    const waiting = new Set(member ? member.gifts.filter((g) => g.pending).map((g) => g.id) : [])
+    const tiles = mState.rewards.length ? el('div', { className: 'sl-gift-grid', role: 'group', ariaLabel: 'Rewards (pick one or more)' }, mState.rewards.map((r) => {
       const given = has.has(r.id)
-      const b = el('button', { type: 'button', className: `sl-gift is-${r.kind === 'card' ? 'design' : r.kind} ${m.reward === r.id ? 'on' : ''}`, role: 'radio', ariaChecked: String(m.reward === r.id), disabled: given || !member }, [
+      const b = el('button', { type: 'button', className: `sl-gift is-${r.kind === 'card' ? 'design' : r.kind} ${picked.has(r.id) ? 'on' : ''}`, role: 'checkbox', ariaChecked: String(picked.has(r.id)), disabled: given || !member }, [
         rewardThumb(r),
-        el('span', {}, [el('small', { textContent: given ? 'Already given' : KIND_NAME[r.kind] }), el('strong', { textContent: r.name })]),
+        el('span', {}, [el('small', { textContent: waiting.has(r.id) ? 'Waiting to be accepted' : given ? 'Already given' : KIND_NAME[r.kind] }), el('strong', { textContent: r.name })]),
       ])
-      b.addEventListener('click', () => { m.reward = r.id; m.said = ''; draw() })
+      b.addEventListener('click', () => { if (picked.has(r.id)) picked.delete(r.id); else picked.add(r.id); m.rewards = [...picked]; m.said = ''; draw() })
       return b
     })) : el('p', { className: 'sl-dim', textContent: 'There are no rewards to give yet. Add them under Members → Rewards.' })
     const note = el('textarea', { className: 'sl-input', rows: 3, maxLength: 300, placeholder: 'A line from you, in the email (optional). E.g. "Thank you for the kind words at the convention."', value: m.note || '' })
     note.addEventListener('input', () => { m.note = note.value })
     const tell = el('input', { type: 'checkbox', checked: m.tell !== false })
     tell.addEventListener('change', () => { m.tell = tell.checked })
-    const send = button(m.busy ? 'Sending…' : 'Gift it', async () => {
+    const send = button(m.busy ? 'Sending…' : picked.size > 1 ? `Gift ${picked.size} rewards` : 'Gift it', async () => {
       if (!member) { m.said = 'Choose a member first.'; m.bad = true; return draw() }
-      const rw = rewardOf(m.reward)
-      if (!rw) { m.said = 'Choose a reward to give.'; m.bad = true; return draw() }
-      giveGift(m, member, rw)
+      const rws = [...picked].map(rewardOf).filter(Boolean)
+      if (!rws.length) { m.said = 'Choose one or more rewards to give.'; m.bad = true; return draw() }
+      giveGifts(m, member, rws)
     }, 'ia-btn')
     send.disabled = Boolean(m.busy)
     return [
@@ -779,10 +793,10 @@ window.IASales = (() => {
       el('div', { className: 'sl-modal-body sl-gift-body' }, [
         who,
         whoCard,
-        el('div', { className: 'sl-field' }, [el('span', { textContent: 'Reward' }), tiles]),
+        el('div', { className: 'sl-field' }, [el('span', { textContent: 'Rewards (pick one or more)' }), tiles]),
         el('label', { className: 'sl-field' }, [el('span', { textContent: 'Your note' }), note]),
         el('label', { className: 'sl-gift-tell' }, [tell, el('span', { textContent: 'Email them about it' })]),
-        el('p', { className: 'sl-hint', textContent: 'It is theirs at once, whatever they have bought. A discount gets its own code, for their email only, when they next open Rewards.' }),
+        el('p', { className: 'sl-hint', textContent: 'Emailed: it is theirs once they accept it from the email. Not emailed: theirs at once. Whatever they have bought. A discount gets its own code, for their email only, when they next open Rewards.' }),
         said,
       ]),
       el('div', { className: 'sl-modal-foot' }, [button('Close', closeModal, 'ia-btn ghost'), send]),

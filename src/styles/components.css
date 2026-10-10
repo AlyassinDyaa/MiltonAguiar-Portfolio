@@ -2383,3 +2383,10 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 /* the small 'Soon' beside Points on the overview's numbers */
 .acct-soon.is-mini { margin-left: 6px; padding: 2px 5px 1px; font-size: 0.5rem; letter-spacing: 0.1em; }
 .acct-stats.is-stacked button span { display: flex; align-items: center; flex-wrap: wrap; }
+
+/* the card under Details, live: the design pointed at, else the one chosen (as on DarkBeats) */
+.acct-card-preview { display: grid; justify-items: start; gap: 10px; margin: 4px 0 18px; }
+.acct-card-preview .acc-card3d-wrap { width: min(100%, 380px); }
+.acct-card-preview .acc-card3d-lean { --rx: 0deg; --ry: 0deg; }
+.acct-card-preview > span { font-family: var(--display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); transition: color 0.2s; }
+.acct-card-preview.is-trying > span, .acct-card-preview.is-peek > span { color: var(--accent); }

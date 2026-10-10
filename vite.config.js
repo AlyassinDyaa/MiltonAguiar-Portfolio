@@ -237,6 +237,14 @@ const artPictures = () => {
   } catch { /* no Home page file: nothing to add */ }
   return art
 }
+// the pictures on the membership card designs (Members → Rewards): shown on cards without the logo, at /uploads/card/<name>
+const cardPictures = () => {
+  const set = new Set()
+  try {
+    for (const m of readFileSync(resolve('content/pages/rewards.json'), 'utf8').matchAll(/"card(?:Art|Back)":\s*"(\/uploads\/[^"]+)"/g)) set.add(m[1])
+  } catch { /* no rewards file: nothing */ }
+  return set
+}
 /* One picture as visitors get it: at most ART_MAX pixels on its long side, and for the artwork the
    logo inside the picture, clearly in a corner and faintly and large in the middle (cropping the
    corner off does not remove it). Answers null when the picture needs nothing. */
@@ -293,6 +301,20 @@ const protectArt = () => ({
     const made = new Map() // url -> { at, buffer }: made once per change of the file
     server.middlewares.use(async (req, res, next) => {
       const url = decodeURIComponent((req.url || '').split('?')[0])
+      // a card's picture: the same upload brought down to size but without the logo (a card is not artwork to protect)
+      const card = url.match(/^\/uploads\/card\/([^/]+\.(webp|png|jpe?g))$/i)
+      if (card) {
+        if (!cardPictures().has(`/uploads/${card[1]}`)) return next()
+        const file = resolve(`public/uploads/${card[1]}`)
+        if (!existsSync(file)) return next()
+        try {
+          const { default: sharp } = await import('sharp')
+          const copy = await artCopy(sharp, readFileSync(file), `/uploads/${card[1]}`, new Set(), readBrand())
+          res.setHeader('Content-Type', `image/${/\.jpe?g$/i.test(url) ? 'jpeg' : url.split('.').pop().toLowerCase()}`)
+          res.setHeader('Cache-Control', 'no-cache')
+          return res.end(copy ? copy.buffer : readFileSync(file))
+        } catch { return next() }
+      }
       if (!/^\/uploads\/[^/]+\.(webp|png|jpe?g)$/i.test(url)) return next()
       const file = resolve(`public${url}`)
       if (!existsSync(file)) return next()
@@ -332,6 +354,17 @@ const protectArt = () => ({
       if (copy.marked) marked++
     }
     console.log(`  artwork: ${shrunk} pictures brought down to ${ART_MAX}px, ${marked} marked with the logo`)
+    // the card pictures again, without the logo, under uploads/card
+    let cards = 0
+    for (const url of cardPictures()) {
+      const source = resolve(`public${url}`)
+      if (!existsSync(source)) continue
+      const copy = await artCopy(sharp, readFileSync(source), url, new Set(), brand)
+      mkdirSync(resolve(dir, 'card'), { recursive: true })
+      writeFileSync(resolve(dir, 'card', url.slice('/uploads/'.length)), copy ? copy.buffer : readFileSync(source))
+      cards++
+    }
+    if (cards) console.log(`  cards: ${cards} pictures without the logo under uploads/card`)
   },
 })
 

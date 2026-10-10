@@ -77,6 +77,8 @@ const earnText = (r) => (r.earnedBy === 'verify' ? 'Confirm your email' : r.earn
 const hasEarned = (r, p) => Boolean(p) && ((p.gifts || []).includes(r.id) || (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : r.earnedBy === 'commissions' ? (p.commissions || 0) >= r.count : p.pieces >= r.count))
 const cardDesigns = () => accountPage.rewards.filter((r) => r.kind === 'card')
 const designOf = (id) => cardDesigns().find((r) => r.id === id) || null
+// a card's picture is the upload without the logo (/uploads/card/…, see vite.config.js): a card is not artwork to protect
+const cardPic = (p) => (typeof p === 'string' && p.startsWith('/uploads/') ? `/uploads/card/${p.slice(9)}` : p)
 // a design's picture, placed and zoomed as set in the admin (the card's ::before draws it); the back
 // has its own picture when the design gives it one, else the front's
 const designStyle = (d, side = 'front') => {
@@ -85,7 +87,7 @@ const designStyle = (d, side = 'front') => {
   const art = own ? d.cardBack : d.cardArt
   if (!art) return undefined
   const c = (own ? d.cardBackCrop : d.cardCrop) || {}
-  return { '--card-art': `url("${asset(art)}")`, '--art-x': `${c.x ?? 50}%`, '--art-y': `${c.y ?? 25}%`, '--art-zoom': (c.zoom || 100) / 100 }
+  return { '--card-art': `url("${asset(cardPic(art))}")`, '--art-x': `${c.x ?? 50}%`, '--art-y': `${c.y ?? 25}%`, '--art-zoom': (c.zoom || 100) / 100 }
 }
 
 /* The barcode on the back of the card, made from the member number: bars of one to three widths,
@@ -422,6 +424,35 @@ function Verify() {
           </div>
         )}
         <Link className="btn ghost sm" to={user ? (state === 'done' && unlocked.length ? '/account?tab=details' : '/account') : '/account/login'}>{user ? (state === 'done' && unlocked.length ? 'See your picture' : 'Go to your account') : 'Log in'} <span className="arrow">→</span></Link>
+      </div>
+    </Shell>
+  )
+}
+
+/* ---------- a gift accepted, from the button in its email (no login needed) ---------- */
+function AcceptGift() {
+  const { call, user } = useAccount()
+  const [state, setState] = useState('working') // working | done | failed | missing
+  const [text, setText] = useState('')
+  const [name, setName] = useState('')
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const u = p.get('u') || '', t = p.get('t') || ''
+    if (!u || !t) { setState('missing'); return undefined }
+    let stale = false
+    call('acceptGift', { u, t }).then((r) => { if (!stale) { setName(r.name || ''); setState('done') } }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
+    return () => { stale = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { document.title = `Your gift — ${brand.name}` }, [])
+  const to = user ? '/account?tab=rewards' : '/account/login?next=%2Faccount%3Ftab%3Drewards'
+  return (
+    <Shell title={state === 'done' ? 'It’s yours' : 'Your gift'} label="A reward from Milton">
+      <div className="acc-card acc-done" role="status">
+        <i aria-hidden="true">{state === 'done' ? '✓' : state === 'working' ? '…' : '!'}</i>
+        <p>{state === 'working' ? 'One moment…'
+          : state === 'done' ? <>{name ? <b>{name}</b> : 'The reward'} is in your account now{user ? '' : ': log in to see it'}. A picture or a card design is used from Details; a discount shows its code under Rewards.</>
+            : state === 'missing' ? 'This page needs the link from the email. Open it again from there.' : text}</p>
+        {state !== 'working' && <Link className="btn sm" to={to}>{user ? 'See your rewards' : 'Log in to see it'} <span className="arrow">→</span></Link>}
       </div>
     </Shell>
   )
@@ -916,6 +947,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const designs = cardDesigns()
   const [saved, setSaved] = useState(false)
   const [resent, setResent] = useState('')
+  const [peek, setPeek] = useState(null) // a card design pointed at (its id, '' for the site's own): shown on the card before it is chosen
   const mine = owned.filter((p) => p.src) // a piece taken off the site since stays theirs, with the picture its order kept
   // a picture or card design chosen but not saved: shown live at the top of the page (a preview),
   // with a bar asking to keep it or go back; leaving without saving keeps the old one
@@ -1012,13 +1044,25 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
       {designs.length > 0 && (
         <fieldset className="acct-pick acct-cards">
           <legend>Your membership card</legend>
-          <p>The design of your card. More designs unlock as rewards.</p>
+          <p>The design of your card. More designs unlock as rewards. Point at one to see it on your card; click to choose it.</p>
+          {/* the card as it will look, live: the design pointed at, else the one chosen */}
+          {(() => {
+            const look = peek !== null ? peek : f.values.card
+            const d = designOf(look)
+            const changed = f.values.card !== (user.card || '')
+            return (
+              <div className={`acct-card-preview ${peek !== null && peek !== f.values.card ? 'is-peek' : changed ? 'is-trying' : ''}`} aria-live="polite">
+                <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints={prog.pieces ? `${prog.pieces} ${prog.pieces === 1 ? 'piece' : 'pieces'}` : 'Your collection'} design={d} />
+                <span>{peek !== null && peek !== f.values.card ? `${d ? d.name : 'Comic red'}: click it below to choose it` : changed ? 'Preview: save to keep this design.' : 'Your card now.'}</span>
+              </div>
+            )
+          })()}
           <div className="acct-cards-grid" role="radiogroup" aria-label="Card designs">
             {[null, ...designs].map((d) => {
               const id = d ? d.id : ''
               const open = !d || hasEarned(d, prog)
               return (
-                <button key={id || 'site'} type="button" role="radio" disabled={!open} aria-checked={f.values.card === id} className={`acct-card-pick ${f.values.card === id ? 'on' : ''}`} onClick={() => f.set('card')(id)} title={open ? '' : `${earnText(d)} to unlock it`}>
+                <button key={id || 'site'} type="button" role="radio" disabled={!open} aria-checked={f.values.card === id} className={`acct-card-pick ${f.values.card === id ? 'on' : ''}`} onClick={() => f.set('card')(id)} onMouseEnter={() => { if (open) setPeek(id) }} onMouseLeave={() => setPeek(null)} onFocus={() => { if (open) setPeek(id) }} onBlur={() => setPeek(null)} title={open ? '' : `${earnText(d)} to unlock it`}>
                   <span className={`acct-card-mini ${d ? `is-${d.cardLook}` : ''} ${d && d.cardArt ? 'has-art' : ''}`} style={designStyle(d)} aria-hidden="true"><b>{monogram()}</b><i /></span>
                   <span className="acct-card-name">{d ? d.name : 'Comic red'}</span>
                   <small>{open ? (f.values.card === id ? 'Your card' : 'Unlocked') : <>🔒 {earnText(d)}</>}</small>
@@ -1749,6 +1793,7 @@ export default function Account() {
       <Route path="reset" element={<Reset />} />
       <Route path="verify" element={<Verify />} />
       <Route path="unsubscribe" element={<Unsubscribe />} />
+      <Route path="gift" element={<AcceptGift />} />
       <Route path="*" element={<Navigate to="/account" replace />} />
     </Routes>
   )

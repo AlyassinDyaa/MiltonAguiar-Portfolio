@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/dp-and-wolverine-print.png",
+  "universe": "Marvel",
+  "hidden": false,
+  "date": "2023-07-12",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Merc with the Claws",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/dp-and-wolverine-frame.png",
+  "face": "47,0,266",
+  "category": "Fan art",
+  "look": "default"
+}

@@ -1349,7 +1349,7 @@ a.buy-btn { text-decoration: none; }
   .acc-art::before { display: none; }
   .acc-art::after { content: 'Why make an account'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 0 12px; background: var(--page); font-family: var(--display); font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-mute); white-space: nowrap; }
   .acc-art .acc-card3d-wrap { width: calc(100% - 22px); justify-self: start; }
-  .acc-art .acc-card3d { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 10px 10px 0 -2px var(--loud); padding: 16px 18px; }
+  .acc-art .acc-card3d { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55); padding: 16px 18px; }
   .acc-art .acc-card3d-chip { width: 38px; height: 28px; margin-top: 10px; }
   .acc-art .acc-card3d-name { font-size: 1.45rem; }
   .acc-art .acc-card3d-foot { margin-top: 10px; }
@@ -1454,7 +1454,7 @@ a.buy-btn { text-decoration: none; }
   .acct2-main { padding-top: 20px; }
   .acct-top { gap: 18px; }
   .acct-top .acc-card3d-wrap { padding: 0 10px 10px 0; }
-  .acct-top .acc-card3d { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), 10px 10px 0 -2px var(--loud); padding: 16px 18px; }
+  .acct-top .acc-card3d { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55); padding: 16px 18px; }
   .acct-top .acc-card3d-chip { width: 38px; height: 28px; margin-top: 10px; }
   .acct-top .acc-card3d-name { font-size: 1.5rem; }
 }
@@ -1491,7 +1491,7 @@ a.buy-btn { text-decoration: none; }
 .acc-card3d-wrap { width: min(100%, 460px); perspective: 1100px; }
 .acc-card3d { --rx: 4deg; --ry: -12deg; --mx: 30%; position: relative; aspect-ratio: 1.586; overflow: hidden; display: grid; grid-template-rows: auto auto 1fr auto; padding: clamp(18px, 2.6vw, 28px); border: 3px solid #0b0b0c; border-radius: 14px; color: #fff;
   background: linear-gradient(135deg, var(--accent) 35%, var(--accent-deep));
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 16px 16px 0 -3px var(--loud);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
   transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; transition: transform 0.5s var(--ease-out); }
 .acc-card3d-wrap:hover .acc-card3d { transition-duration: 0.15s; }
 .acc-card3d-dots { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(11, 11, 12, 0.38) 0 2.2px, transparent 2.8px) 0 0 / 10px 10px; -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 95%); mask-image: linear-gradient(100deg, transparent 35%, #000 95%); }
@@ -2321,7 +2321,7 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 .acc-card3d-flip { --turn: 0deg; display: grid; transform: rotateY(var(--turn)); transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .acc-card3d-flip.is-dragging { transition: none; cursor: grabbing; }
 .acc-card3d-flip > .acc-card3d { grid-area: 1 / 1; transform: translateZ(2.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: none; }
-.acc-card3d-flip > .acc-card3d-back { transform: rotateY(180deg) translateZ(2.5px); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), -16px 16px 0 -3px var(--loud); }
+.acc-card3d-flip > .acc-card3d-back { transform: rotateY(180deg) translateZ(2.5px); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5); }
 /* the body of the card between the faces: dark plastic, the same rounded shape, each slice a little further forward */
 .acc-card3d-edge { grid-area: 1 / 1; border-radius: 14px; background: linear-gradient(90deg, #5a5a62, #3a3a41 50%, #5a5a62); transform: translateZ(calc(var(--z) * 0.8px)); pointer-events: none; }
 .acc-card3d-flip img { pointer-events: none; }
@@ -2353,7 +2353,7 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 .acc-card3d-turn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 @media (max-width: 599px) {
-  .acc-card3d-flip > .acc-card3d-back { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), -10px 10px 0 -2px var(--loud); padding: 14px 16px; gap: 6px; }
+  .acc-card3d-flip > .acc-card3d-back { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55); padding: 14px 16px; gap: 6px; }
   .acc-card3d-base p { display: none; }
   .acc-card3d-facts { font-size: 0.8rem; }
 }

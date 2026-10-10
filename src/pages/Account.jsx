@@ -104,6 +104,7 @@ const barsOf = (number) => {
    number, what they have collected) and the back (a magnetic stripe, their signature, a hologram, the
    number again as a barcode, the small print). It leans toward the pointer; a tap or click turns it
    over, and a drag spins it round by hand, settling on whichever side is nearer when let go. */
+const EDGE = [-3, -2, -1, 0, 1, 2, 3] // the slices of the card's body, from its back face to its front
 function CollectorCard({ name, since, number, prints, design = null }) {
   const lean = useRef(null)
   const flip = useRef(null)
@@ -154,6 +155,8 @@ function CollectorCard({ name, since, number, prints, design = null }) {
     <div className="acc-card3d-wrap" onPointerLeave={rest} role="group" aria-label={`${brand.name} collector card${shown ? ` for ${shown}` : ''}, ${back ? 'the back' : 'the front'}`}>
       <div ref={lean} className="acc-card3d-lean">
         <div ref={flip} className="acc-card3d-flip" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+          {/* the card's thickness: slices between the faces, seen edge-on while it turns or leans */}
+          {EDGE.map((z) => <span key={z} className="acc-card3d-edge" style={{ '--z': z }} aria-hidden="true" />)}
           <div className={`acc-card3d is-front ${looks}`} style={designStyle(design)} aria-hidden={back}>
             <span className="acc-card3d-shine" />
             <span className="acc-card3d-dots" aria-hidden="true" />

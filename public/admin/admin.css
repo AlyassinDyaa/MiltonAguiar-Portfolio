@@ -1044,22 +1044,27 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
   .is-orders .sl-row > :nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
   .is-orders .sl-row > :nth-child(5) { grid-column: 1; grid-row: 4; }
   .is-orders .sl-row > :nth-child(6) { grid-column: 2 / -1; grid-row: 4; justify-items: end; }
-  /* a customer: who, and what they spent (nothing yet: nothing shown); under it one quiet line of
-     orders, where and when with a dot between, and the buttons at its end */
-  .is-customers .sl-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 16px 10px; }
-  .is-customers .sl-row > .sl-c-who { grid-column: 1; grid-row: 1; }
+  /* a customer, as a card: a bigger picture, the name, the email and the pills; what they spent at the
+     right (nothing yet: nothing); under it one quiet line of orders, where and when, with a dot
+     between each two, and the two buttons at its end */
+  .is-customers .sl-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px 14px; padding: 16px 16px 14px; }
+  .is-customers .sl-row > .sl-c-who { grid-column: 1; grid-row: 1; gap: 14px; }
+  .is-customers .sl-c-who .sl-initials { width: 46px; height: 46px; font-size: 1.05rem; }
+  .is-customers .sl-c-who strong { font-size: 1.02rem; }
   .is-customers .sl-row > .sl-c-total { grid-column: 2; grid-row: 1; justify-items: end; align-self: start; }
+  .is-customers .sl-row > .sl-c-total strong { font-size: 1.4rem; }
   .is-customers .sl-row > .sl-c-total.is-zero { display: none; }
-  .is-customers .sl-row > .sl-c-line { grid-column: 1; grid-row: 2; display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
+  .is-customers .sl-row > .sl-c-line { grid-column: 1; grid-row: 2; display: flex !important; flex-wrap: wrap; align-items: center; gap: 4px 0; min-height: 34px; }
   .is-customers .sl-row > .sl-acts { grid-column: 2; grid-row: 2; margin: 0; justify-self: end; align-self: center; }
   .is-customers .sl-c-line > span { display: flex !important; align-items: baseline; gap: 4px; }
   .is-customers .sl-c-line > .sl-c-where { order: 2; }
   .is-customers .sl-c-line > .sl-c-when { order: 3; }
   .is-customers .sl-c-line > .sl-c-where.is-empty { display: none !important; }
-  .is-customers .sl-c-line > span + span::before { content: '·'; margin: 0 7px; font-size: 0.8rem; color: var(--line-strong); }
+  .is-customers .sl-c-line > .sl-c-where:not(.is-empty)::before, .is-customers .sl-c-line > .sl-c-when::before { content: '·'; margin: 0 8px; color: var(--line-strong); }
   .is-customers .sl-c-orders strong { font-size: 0.8rem; font-weight: 600; color: var(--fg); }
   .is-customers .sl-c-unit { display: inline !important; }
   .is-customers .sl-c-orders .sl-hot { margin-left: 6px; }
+  .is-customers .sl-row .sl-acts .sl-icon { opacity: 1; border-color: var(--line-strong); }
 }
 .sl-row:hover, .sl-row.on { background: rgba(243, 243, 241, 0.04); }
 .sl-row.on { box-shadow: inset 3px 0 0 var(--accent); }

@@ -2316,11 +2316,14 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 /* The collector card as a real card: a layer that leans toward the pointer, and inside it the card
    itself, which turns over (a tap, a click, or a drag round), the front and back two faces of it */
 .acc-card3d-lean { --rx: 4deg; --ry: -12deg; --mx: 30%; transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; transition: transform 0.5s var(--ease-out); }
+.acc-card3d-wrap { perspective: 900px; }
 .acc-card3d-wrap:hover .acc-card3d-lean { transition-duration: 0.15s; }
 .acc-card3d-flip { --turn: 0deg; display: grid; transform: rotateY(var(--turn)); transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .acc-card3d-flip.is-dragging { transition: none; cursor: grabbing; }
-.acc-card3d-flip > .acc-card3d { grid-area: 1 / 1; transform: translateZ(1px); backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: none; }
-.acc-card3d-flip > .acc-card3d-back { transform: rotateY(180deg) translateZ(1px); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), -16px 16px 0 -3px var(--loud); }
+.acc-card3d-flip > .acc-card3d { grid-area: 1 / 1; transform: translateZ(2.5px); backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: none; }
+.acc-card3d-flip > .acc-card3d-back { transform: rotateY(180deg) translateZ(2.5px); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), -16px 16px 0 -3px var(--loud); }
+/* the body of the card between the faces: dark plastic, the same rounded shape, each slice a little further forward */
+.acc-card3d-edge { grid-area: 1 / 1; border-radius: 14px; background: linear-gradient(90deg, #5a5a62, #3a3a41 50%, #5a5a62); transform: translateZ(calc(var(--z) * 0.8px)); pointer-events: none; }
 .acc-card3d-flip img { pointer-events: none; }
 
 /* the back: a stripe across it, the signature panel with a hologram, the numbers, a barcode and the small print */

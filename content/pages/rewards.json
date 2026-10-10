@@ -47,7 +47,8 @@
       "hidden": false,
       "cardArt": "/uploads/batman-and-robin.webp",
       "name": "Batman and Robin",
-      "cardCrop": "100,19,112"
+      "cardCrop": "100,19,112",
+      "cardBackCrop": "66,29,240"
     },
     {
       "cardLook": "ink",

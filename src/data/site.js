@@ -247,19 +247,21 @@ function assemble(content) {
   const rest = (list) => list.filter((p) => !heroPanels.includes(p))
   fresh = [...rest(latest), ...rest(work).filter((p) => !latest.includes(p))].slice(0, 5)
 
-  // a section's "also show pieces from Work" choice: none, every piece, or one category
-  const fromWork = (from) => (!from || from === 'none' ? [] : work)
-    .filter((p) => p.src && (from === 'all' || p.category === from))
-    .map((p) => ({ title: p.title, src: p.src, note: p.note, category: p.category, date: p.date, link: p.link, piece: p.slug }))
+  // a piece from Work as a gallery picture
+  const asPicture = (p) => ({ title: p.title, src: p.src, note: p.note, category: p.category, date: p.date, link: p.link, piece: p.slug })
+  // a section's "fill it from Work" choice: none, every piece, or one category
+  const fromWork = (from) => (!from || from === 'none' ? [] : work).filter((p) => p.src && (from === 'all' || p.category === from)).map(asPicture)
+  // the pieces the admin picked for the section one by one, in that order
+  const fromPicks = (slugs) => (Array.isArray(slugs) ? slugs : []).map((slug) => work.find((p) => p.slug === slug)).filter((p) => p && p.src).map(asPicture)
+  // a picture once, however many ways it was brought in
+  const once = (list) => { const seen = new Set(); return list.filter((g) => !seen.has(g.src) && seen.add(g.src)) }
   gallerySections = live(folder('gallery-sections'))
-    .map((s) => ({ ...s, items: [...fromWork(s.from), ...(s.items || []).filter((g) => g && g.src)] }))
+    .map((s) => ({ ...s, items: once([...fromWork(s.from), ...fromPicks(s.pieces), ...(s.items || []).filter((g) => g && g.src)]) }))
     .filter((s) => s.items.length > 0)
     .sort(byOrder)
   gallery = gallerySections.flatMap((s) => s.items)
   const listed = new Set(shows('home', 'latest') ? latest.map((p) => p.slug) : [])
-  const once = new Set()
-  galleryHome = [...gallery.filter((g) => g.home), ...gallery.filter((g) => !g.home && !listed.has(g.piece))]
-    .filter((g) => !once.has(g.src) && once.add(g.src))
+  galleryHome = once([...gallery.filter((g) => g.home), ...gallery.filter((g) => !g.home && !listed.has(g.piece))])
     .slice(0, 6)
 
   // the sets made on the Home page (Pencils, Inks, Colours), then any made the older way, one file each

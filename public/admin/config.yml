@@ -206,7 +206,7 @@ collections:
   - name: gallery_sections
     label: Gallery
     label_singular: Gallery section
-    description: 'The Gallery page, in sections you name (Pencils, Covers, Convention photos...). It is off to start with, as it shows the same pieces as Work: switch it on under Site → Show / hide.'
+    description: 'The Gallery page, in sections you name (Pencils, Covers, Convention photos...). Each section shows the pieces from Work you pick for it, a whole category, or pictures of its own. It is off to start with: switch it on under Site → Show / hide.'
     folder: content/gallery-sections
     create: true
     extension: json
@@ -224,7 +224,7 @@ collections:
         widget: select
         default: none
         options:
-          - { label: 'No, only the pictures added below', value: none }
+          - { label: 'No: only the pieces picked and the pictures added below', value: none }
           - { label: 'Every piece on the Work page', value: all }
           - { label: 'Originals', value: 'Originals' }
           - { label: 'Fan art', value: 'Fan art' }
@@ -233,7 +233,8 @@ collections:
           - { label: 'Sketches', value: 'Sketches' }
           - { label: 'Collaborations', value: 'Collaborations' }
           - { label: 'Commissions', value: 'Commissions' }
-        hint: 'Saves uploading a finished piece twice: the section shows those pieces first, then the pictures below.'
+        hint: 'Saves uploading a finished piece twice: the section shows those pieces first, then the ones picked below, then the pictures added below.'
+      - { name: pieces, label: 'Pieces from Work (your pick)', widget: relation, collection: work, multiple: true, value_field: '{{slug}}', search_fields: [title], display_fields: [title], required: false, hint: 'Type a title to find a piece; pick as many as you like, in the order they should show. Different sections can show different pieces this way, and a piece shows once even if it is also brought in above.' }
       - name: items
         label: Pictures
         label_singular: picture

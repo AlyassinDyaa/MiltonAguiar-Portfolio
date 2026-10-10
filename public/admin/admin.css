@@ -1385,6 +1385,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .sl-wait { justify-self: start; margin-top: 2px; padding: 1px 7px; font-style: normal; font-size: 0.7rem; font-weight: 700; background: rgba(216, 35, 47, 0.18); color: #ff7a82; }
 .sl-c-who { display: flex !important; align-items: center; gap: 18px; }
 .sl-c-who > span { display: grid; gap: 3px; min-width: 0; }
+.sl-row > .sl-c-who { gap: 18px; } /* the row's cells keep 3px between their lines; the picture and the words stand apart */
 .sl-initials { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-style: normal; font-family: var(--display); font-size: 0.9rem; font-weight: 900; color: #fff; background: linear-gradient(135deg, #d8232f 35%, #6d0d14); box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px rgba(216, 35, 47, 0.5); }
 .sl-c-items { display: flex !important; align-items: center; gap: 12px; }
 .sl-c-items > span:last-child { display: grid; gap: 3px; min-width: 0; }
@@ -1619,6 +1620,9 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .is-commissions .sl-row > :nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
   .is-commissions .sl-row > :nth-child(4) { grid-column: 1; grid-row: 4; }
   .is-commissions .sl-row > :nth-child(6) { grid-column: 2 / -1; grid-row: 4; justify-items: end; }
+  /* the last message keeps to its cell (cut short with … rather than running over the status beside it), and a note under the status wraps */
+  .is-commissions .sl-row > :nth-child(6) > * { max-width: 100%; }
+  .is-commissions .sl-row > :nth-child(4) small { white-space: normal; }
 }
 .sl-c-last strong { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .sl-unread { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; font-family: var(--display); font-size: 0.78rem; font-weight: 900; background: #ffc446; color: #0b0b0c; }

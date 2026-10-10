@@ -198,6 +198,66 @@
       const q = search.value.trim()
       if (q) location.hash = `#/search/${encodeURIComponent(q)}`
     })
+    /* "Search everything": Decap's own search finds the content (pieces, items for sale, comics,
+       gallery sections, events). Above its results this panel adds the screens of the admin whose
+       name, description or a few likely words match, and what the Sales screens find: orders,
+       commissions, customers and discount codes. */
+    const WORDS = {
+      'site/visibility': 'show hide switch on off watermark logo test data dark light mode pages parts', 'site/brand': 'logo name colour color email instagram youtube discord social links address phone',
+      'site/shop': 'stripe paypal payments pay currency shipping delivery buy button online purchases tax', shop: 'items prints originals price sold out stock new tag sizes pictures', 'site/sales': 'price cut discount percent off sale everything category automatic',
+      'sales:discounts': 'code codes promo coupon voucher percent off', 'sales:customers': 'members accounts buyers people email gift reward card', 'sales:orders': 'shipped packed delivered tracking paid refund commissions quote messages',
+      'sales:emails': 'news newsletter mailing send unsubscribe notice', 'site/rewards': 'profile pictures card designs points gifts earn unlock', 'site/account': 'members accounts login sign up avatar free pictures',
+      'pages/home': 'hero welcome ticker band steps pencils inks colours latest events', 'pages/commissions': 'open closed quote request offers prices how it works', 'pages/about': 'story bio facts', 'pages/contact': 'email form questions', 'pages/lists': 'work gallery page text intro',
+      work: 'pieces art pencils inks colours drawings pages covers', comics: 'samples comic book pages spread reader', gallery: 'sections pin-ups', events: 'conventions signings markets dates', 'site/categories': 'categories sub category type sizes', media: 'pictures uploads images files library',
+    }
+    const screens = () => groups.flatMap((g) => g.parts.map((p) => ({ ...p, group: g.label })))
+    const findScreens = (q) => {
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+      return screens().map((p) => {
+        const text = `${p.label} ${p.title} ${p.about || ''} ${WORDS[p.id] || ''} ${p.group}`.toLowerCase()
+        const score = words.reduce((n, w) => n + (p.label.toLowerCase().includes(w) ? 3 : text.includes(w) ? 1 : 0), 0)
+        return [score, p]
+      }).filter(([n]) => n > 0).sort((a, b) => b[0] - a[0]).slice(0, 6).map(([, p]) => p)
+    }
+    let findFor = ''
+    const findPanel = (q) => {
+      const panel = el('section', { className: 'ia-find', ariaLabel: 'Search everything' })
+      const head = el('div', { className: 'ia-find-head' }, [el('div', { className: 'ia-kicker', textContent: 'Search everything' }), el('h2', {}, ['“', q, '”'])])
+      const hits = findScreens(q)
+      const screenList = hits.length ? el('div', { className: 'ia-find-group' }, [
+        el('h3', { textContent: 'Go to' }),
+        el('div', { className: 'ia-find-screens' }, hits.map((p) => {
+          if (p.kind === 'media') { const b = el('button', { type: 'button', className: 'ia-find-screen' }, [icon(p.id), el('span', {}, [el('strong', { textContent: p.title }), el('small', { textContent: p.about || p.group })])]); b.addEventListener('click', () => openMedia()); return b }
+          return el('a', { className: 'ia-find-screen', href: p.href }, [icon(p.id), el('span', {}, [el('strong', { textContent: p.title }), el('small', { textContent: p.about || p.group })])])
+        })),
+      ]) : null
+      const sales = Sales && Sales.search ? el('div', { className: 'ia-find-group is-waiting' }, [el('h3', { textContent: 'Orders, commissions, customers and codes' }), el('p', { className: 'ia-find-note', textContent: 'Looking…' })]) : null
+      const foot = el('p', { className: 'ia-find-note is-content', textContent: 'Below: the pieces, items for sale, comics, gallery sections and conventions that match.' })
+      panel.append(head, ...[screenList, sales].filter(Boolean), foot)
+      if (sales) {
+        Sales.search(q).then((found) => {
+          sales.classList.remove('is-waiting')
+          sales.replaceChildren(el('h3', { textContent: 'Orders, commissions, customers and codes' }), ...(found.length ? found.map((g) => el('div', { className: 'ia-find-list' }, [
+            el('a', { className: 'ia-find-list-head', href: g.href, textContent: g.label }),
+            ...g.items.map((it) => { const b = el('button', { type: 'button', className: 'ia-find-item' }, [el('strong', { textContent: it.title }), el('small', { textContent: it.sub })]); b.addEventListener('click', it.open); return b }),
+          ])) : [el('p', { className: 'ia-find-note', textContent: 'Nothing with those words among the orders, commissions, customers or discount codes.' })]))
+        }, () => { sales.classList.remove('is-waiting'); sales.replaceChildren(el('h3', { textContent: 'Orders, commissions, customers and codes' }), el('p', { className: 'ia-find-note', textContent: 'Could not be looked through just now.' })) })
+      }
+      return panel
+    }
+    // the panel sits above Decap's results while the address is a search; put back if Decap draws the page again
+    const findSync = () => {
+      const m = location.hash.match(/^#\/search\/(.+)$/)
+      const q = m ? decodeURIComponent(m[1]) : ''
+      document.querySelectorAll('.ia-find').forEach((n) => { if (!q || n.dataset.q !== q) n.remove() })
+      if (!q) { findFor = ''; return }
+      if (search.value !== q) search.value = q
+      const anchor = document.querySelector('[class*="SearchResultContainer"]')
+      if (!anchor || document.querySelector('.ia-find')) return
+      const panel = findPanel(q); panel.dataset.q = q; findFor = q
+      anchor.before(panel)
+    }
+    setInterval(findSync, 300)
     const home = el('a', { href: HOME, className: 'ia-home-link' }, [icon('adminhome'), el('span', { textContent: 'Overview' })])
     const links = [] // [link, part]
     const badges = {} // part id -> its count in the navigation
@@ -327,6 +387,7 @@
       document.documentElement.toggleAttribute('data-ia-home', onHome)
       document.documentElement.toggleAttribute('data-ia-sales', Boolean(salesView && Sales))
       if (salesView && Sales) Sales.show(salesView, new URLSearchParams(salesQuery))
+      findSync()
       home.classList.toggle('on', onHome)
       let here = onHome ? 'Overview' : ''
       for (const [a, p] of links) {

@@ -2032,6 +2032,8 @@ window.IASales = (() => {
     // the commissions are asked for once on Orders too, for the count on their tab
     if (state.view === 'orders' && !cState.loaded && !cState.loading) loadCommissions(true)
     if (before !== state.view) { state.open = null; state.modal = null }
+    // something to open on arrival (a result of Search everything): an order, or a customer's window
+    if (state.after) { Object.assign(state, state.after); state.after = null }
     // Customers shows each one's codes; Discounts offers every customer, account holders too
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()
     if (state.view !== 'orders' && !mState.loaded && !mState.loading) loadMembers()
@@ -2066,11 +2068,33 @@ window.IASales = (() => {
     await Promise.all(jobs)
   }
 
+  /* Everything these screens know that matches a few words (orders, commissions, customers and
+     discount codes), for the shell's "Search everything": groups of { title, sub, open }, open
+     taking the admin to the thing. Loads what has not been loaded yet. */
+  const findAll = async (q) => {
+    const words = String(q || '').toLowerCase().trim()
+    if (!words) return []
+    await prefetch({ members: true })
+    if (!dState.loaded && !dState.loading) await loadDiscounts()
+    const hit = (...parts) => parts.filter(Boolean).join(' \u0001 ').toLowerCase().includes(words)
+    const groups = []
+    const orders = visible(state.orders, 'orders').filter((o) => hit(`#${o.number}`, o.name, o.email, o.tracking, o.discountCode, ...(o.items || []).map((i) => i.title || i.name))).slice(0, 8)
+    if (orders.length) groups.push({ label: 'Orders', href: '#/sales/orders', items: orders.map((o) => ({ title: `#${o.number} · ${o.name || o.email || '—'}`, sub: [date(o.created), money(o.total, o.currency), done(o) ? stageName[o.fulfilment] : PAYMENT[o.payment]].filter(Boolean).join(' · '), open: () => { if (location.hash === '#/sales/orders') { state.modal = null; state.open = o.id; draw() } else { state.after = { modal: null, open: o.id }; location.hash = '#/sales/orders' } } })) })
+    const coms = visible(cState.list, 'orders').filter((c) => hit(c.number, c.title, c.name, c.email, c.kind)).slice(0, 8)
+    if (coms.length) groups.push({ label: 'Commissions', href: '#/sales/orders?tab=commissions', items: coms.map((c) => ({ title: `${c.number} · ${c.title || c.kind || 'Commission'}`, sub: [c.name || c.email, cStatusName[c.status] || c.status, c.price != null ? money(c.price, c.currency) : ''].filter(Boolean).join(' · '), open: () => { location.hash = `#/sales/orders?tab=commissions&c=${encodeURIComponent(c.id)}` } })) })
+    const people = (state.loaded ? customers() : []).filter((c) => hit(c.name, c.email, c.member ? memberNo(c.member.memberNo) : '', country(c.country))).slice(0, 8)
+    if (people.length) groups.push({ label: 'Customers', href: '#/sales/customers', items: people.map((c) => ({ title: c.name || c.email, sub: [c.name ? c.email : '', c.member ? `Member ${memberNo(c.member.memberNo)}` : 'No account', c.orders ? `${c.orders} ${c.orders === 1 ? 'order' : 'orders'}` : ''].filter(Boolean).join(' · '), open: () => { if (location.hash === '#/sales/customers') { state.modal = { kind: 'customer', key: c.key }; draw() } else { state.after = { modal: { kind: 'customer', key: c.key } }; location.hash = '#/sales/customers' } } })) })
+    const codes = visible(dState.list, 'codes').filter((d) => hit(d.code, d.label, d.email, `${d.percent}%`)).slice(0, 8)
+    if (codes.length) groups.push({ label: 'Discount codes', href: '#/sales/discounts', items: codes.map((d) => ({ title: d.code, sub: [`${d.percent}% off`, d.email || 'anyone', d.label, statusOf(d)[1]].filter(Boolean).join(' · '), open: () => { dState.q = d.code; dState.view = 'all'; dState.page = 1; if (location.hash === '#/sales/discounts') draw(); else location.hash = '#/sales/discounts' } })) })
+    return groups
+  }
+
   return {
     mount,
     show,
     glance,
     prefetch,
+    search: findAll,
     links: [
       { view: 'orders', href: '#/sales/orders', label: 'Orders', icon: 'M6 3h12l1 4H5z M5 7h14v13H5z M9 11h6 M9 15h4' },
       { view: 'discounts', href: '#/sales/discounts', label: 'Discount codes', icon: 'M20 12l-8 8-8.5-8.5V4h7.5z M8 8.01h.01 M15 9l-6 6 M10 9.5h.01 M14 14.5h.01' },

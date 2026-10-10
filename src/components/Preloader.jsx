@@ -3,8 +3,10 @@ import { asset, brand, nameParts } from '../data/site'
 import { useReducedMotion } from '../hooks/useMedia'
 
 /* The opening sheet: the name goes through the three stages a comic page does. It is sketched in
-   blue pencil, inked in black, then coloured, while "Pencils, Inks, Colours" are ticked off under
-   it. Then the sheet is lifted away, with a sheet of ink following it.
+   pencil (the outline drawn in from the left), inked (the outline darkens), then coloured (the fill
+   painted across the letters with one slanted stroke, the first word then the red one), while
+   "Pencils, Inks, Colours" are ticked off under it. Then the sheet is lifted away, with a sheet of
+   ink following it. Each letter carries its own text again (data-text) for the painted layer.
    The whole sequence is plain CSS (see .preloader in components.css) and ends with the sheet
    hidden, so it cannot get stuck on screen; the timers here only tell the site when the lift
    starts and take the sheet out of the page once it is over. */
@@ -29,8 +31,8 @@ export default function Preloader({ onDone }) {
       <div className="preloader" role="status" aria-label={`${brand.name} is loading`}>
         {brand.logo && <img className="preloader-logo" src={asset(brand.logo)} alt="" width="84" height="84" />}
         <div className="preloader-name" aria-hidden="true">
-          <b>{a}</b>
-          {b && <b className="is-accent">{b}</b>}
+          <b data-text={a}>{a}</b>
+          {b && <b className="is-accent" data-text={b}>{b}</b>}
         </div>
         <ol className="preloader-stages" aria-hidden="true">
           <li>Pencils</li><li>Inks</li><li>Colours</li>

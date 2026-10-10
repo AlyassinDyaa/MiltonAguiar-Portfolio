@@ -19,19 +19,15 @@
 .preloader-logo { position: relative; width: 84px; height: 84px; border-radius: 50%; animation: preloader-stamp 0.5s var(--ease-out) both; }
 @keyframes preloader-stamp { from { opacity: 0; transform: scale(1.7) rotate(-16deg); } }
 .preloader-name { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 0.2em; padding-inline: 0.12em; font-family: var(--display); font-size: clamp(3rem, 11.5vw, 7.6rem); font-weight: 900; font-style: italic; line-height: 0.92; text-transform: uppercase; }
-.preloader-name b { padding-right: 0.07em; font-weight: 900; color: transparent; -webkit-text-stroke: 2px var(--line-strong); animation: preloader-sketch 0.45s cubic-bezier(0.65, 0, 0.35, 1) both, preloader-ink 1.3s steps(1, end) both; }
-.preloader-name b + b { animation-name: preloader-sketch, preloader-colour; animation-delay: 0.08s, 0s; }
+/* each word: the outline, sketched in from the left and then inked darker; over it the same word
+   painted in, the colour swept across the letters with a slanted edge, the way a brush would go */
+.preloader-name b { position: relative; padding-right: 0.07em; font-weight: 900; color: transparent; -webkit-text-stroke: 2px var(--line-strong); animation: preloader-sketch 0.45s cubic-bezier(0.65, 0, 0.35, 1) both, preloader-ink 0.45s ease-in-out 0.4s both; }
+.preloader-name b + b { animation-delay: 0.08s, 0.48s; }
+.preloader-name b::after { content: attr(data-text); position: absolute; inset: 0; padding-right: inherit; color: var(--fg); -webkit-text-stroke: 2px var(--fg); clip-path: polygon(-14% 0, -14% 0, -28% 100%, -28% 100%); animation: preloader-paint 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.62s both; }
+.preloader-name b.is-accent::after { color: var(--accent); -webkit-text-stroke-color: var(--accent); animation-delay: 0.74s; }
 @keyframes preloader-sketch { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes preloader-ink {
-  0% { color: transparent; -webkit-text-stroke-color: var(--line-strong); }
-  40% { color: transparent; -webkit-text-stroke-color: var(--fg); }
-  70%, 100% { color: var(--fg); -webkit-text-stroke-color: var(--fg); }
-}
-@keyframes preloader-colour {
-  0% { color: transparent; -webkit-text-stroke-color: var(--line-strong); }
-  40% { color: transparent; -webkit-text-stroke-color: var(--fg); }
-  70%, 100% { color: var(--accent); -webkit-text-stroke-color: var(--accent); }
-}
+@keyframes preloader-ink { from { -webkit-text-stroke-color: var(--line-strong); } to { -webkit-text-stroke-color: var(--fg); } }
+@keyframes preloader-paint { to { clip-path: polygon(-14% 0, 114% 0, 100% 100%, 0 100%); } }
 .preloader-stages { position: relative; display: flex; gap: 6px; font-family: var(--display); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
 .preloader-stages li { padding: 5px 11px 4px; background: var(--panel-2); color: var(--fg-mute); }
 .preloader-stages li:nth-child(1) { color: var(--fg); }

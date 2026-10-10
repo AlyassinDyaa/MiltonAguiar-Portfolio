@@ -8,8 +8,12 @@
       "src": "/uploads/robin-page-1_01.webp"
     },
     {
-      "spread": true,
-      "src": "/uploads/robin-page-2-and-3_01.webp"
+      "spread": false,
+      "src": "/uploads/robin-page-2.webp"
+    },
+    {
+      "spread": false,
+      "src": "/uploads/robin-page-3.webp"
     },
     {
       "spread": false,

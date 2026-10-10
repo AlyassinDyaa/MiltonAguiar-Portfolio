@@ -264,11 +264,21 @@ collections:
     fields:
       - { name: name, label: Event, widget: string }
       - { name: when, label: When, widget: string, hint: 'Written the way it should read: "14–15 Nov 2026", or "Dates to be announced".' }
+      - { name: place, label: City or venue, widget: string, required: false, hint: 'For example "Javits Center, New York".' }
       - { name: role, label: Where to find you there, widget: string, required: false, hint: 'For example "Artist Alley, table 42".' }
-      - { name: place, label: City or venue, widget: string, required: false }
-      - { name: url, label: Link, widget: string, required: false }
-      - { name: order, label: Order on site, widget: number, value_type: int, default: 10, required: false, hint: 'Lower numbers come first.' }
+      - { name: url, label: Link, widget: string, required: false, hint: 'The event’s site or the tickets page. The whole line becomes a link to it, with an arrow.' }
+      - { name: linkLabel, label: Words on the link, widget: string, required: false, hint: 'Shown at the end of the line, for example "Tickets" or "Event page". Without them, only the arrow.' }
+      - name: pictures
+        label: Pictures
+        label_singular: picture
+        widget: list
+        required: false
+        collapsed: false
+        max: 3
+        field: { name: picture, label: Picture, widget: image, choose_url: false }
+        hint: 'Up to three: the poster, your table, a photo from last time. Shown small beside the event on the home page.'
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false }
+      - { name: order, label: Order on site, widget: number, value_type: int, default: 10, required: false, hint: 'Lower numbers come first.' }
 
   # ------------------------------------------------------------------ 2. the words on each page
   - name: pages

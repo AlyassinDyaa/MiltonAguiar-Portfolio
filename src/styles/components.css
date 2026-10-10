@@ -459,7 +459,17 @@ a.offer:hover em i, a.offer:focus-visible em i { transform: translate(3px, -3px)
 }
 
 /* ---------- conventions ---------- */
-.event { display: grid; grid-template-columns: minmax(10rem, 18%) 1fr auto 2rem; align-items: baseline; gap: 12px 28px; padding: 18px 0; border-top: 1px solid var(--line-strong); transition: padding 0.4s var(--ease-out), border-color 0.3s; }
+.event { display: grid; grid-template-columns: minmax(10rem, 18%) 1fr auto auto; align-items: baseline; gap: 12px 28px; padding: 18px 0; border-top: 1px solid var(--line-strong); transition: padding 0.4s var(--ease-out), border-color 0.3s; }
+.event.has-pics { grid-template-columns: minmax(10rem, 18%) 1fr auto auto auto; align-items: center; }
+/* the event's pictures, small and a little fanned, and the words on its link before the arrow */
+.event-pics { display: flex; align-self: center; }
+.event-pics img { width: 54px; height: 54px; object-fit: cover; border: 2px solid var(--page); border-radius: 4px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); background: var(--panel); transition: transform 0.3s var(--ease-out); }
+.event-pics img + img { margin-left: -14px; }
+.event-pics img:nth-child(1) { transform: rotate(-4deg); }
+.event-pics img:nth-child(3) { transform: rotate(4deg); }
+a.event[href]:hover .event-pics img { transform: rotate(0) translateY(-2px); }
+.event-go { display: inline-flex; align-items: baseline; gap: 8px; justify-self: end; font-family: var(--display); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-dim); white-space: nowrap; }
+.event-go .arrow { font-style: normal; }
 .events li:last-child .event { border-bottom: 1px solid var(--line-strong); }
 .event-when { font-family: var(--display); font-size: 0.94rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
 .event-name { font-family: var(--display); font-size: clamp(1.6rem, 3vw, 2.5rem); font-weight: 800; font-style: italic; line-height: 1.02; text-transform: uppercase; }
@@ -467,6 +477,7 @@ a.offer:hover em i, a.offer:focus-visible em i { transform: translate(3px, -3px)
 .event .arrow { justify-self: end; color: var(--fg-mute); transition: color 0.3s, transform 0.3s var(--ease-out); }
 a.event[href]:hover { padding-left: 14px; border-top-color: var(--accent); }
 a.event[href]:hover .arrow { color: var(--accent); transform: translate(3px, -3px); }
+a.event[href]:hover .event-go { color: var(--fg); }
 .ev .words { justify-content: flex-start; }
 .ev .events { width: 100%; margin-top: 22px; }
 @media (max-width: 699px) {
@@ -2390,3 +2401,14 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 .acct-card-preview .acc-card3d-lean { --rx: 0deg; --ry: 0deg; }
 .acct-card-preview > span { font-family: var(--display); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); transition: color 0.2s; }
 .acct-card-preview.is-trying > span, .acct-card-preview.is-peek > span { color: var(--accent); }
+
+/* events on a phone: the pictures and the link words under the name */
+@media (max-width: 699px) {
+  .event, .event.has-pics { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; }
+  .event-when { grid-column: 1 / -1; }
+  .event-name, .event-where { grid-column: 1 / -1; }
+  .event-pics { grid-column: 1; }
+  .event-pics img { width: 44px; height: 44px; }
+  .event-go { grid-column: 2; justify-self: end; }
+  .event:not(.has-pics) .event-go { grid-column: 1 / -1; }
+}

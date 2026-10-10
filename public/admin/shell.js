@@ -53,7 +53,7 @@
     shop: { groups: { title: 'The item', price: 'Price', category: 'Where it shows', sizes: 'Sizes and prices' }, half: ['price', 'salePrice', 'type', 'look', 'category', 'universe', 'shopOnly', 'hidden'] },
     comics: { groups: { title: 'The comic', cover: 'Cover and pages', order: 'Rarely needed' }, half: ['title', 'text', 'order', 'hidden'] },
     gallery_sections: { groups: { title: 'Section', from: 'Pictures' }, half: ['title', 'order'] },
-    events: { groups: { name: 'The event', order: 'Rarely needed' }, half: ['name', 'when', 'role', 'place', 'order', 'hidden'] },
+    events: { groups: { name: 'The event', url: 'Link', pictures: 'Pictures', hidden: 'Rarely needed' }, half: ['name', 'when', 'place', 'role', 'url', 'linkLabel', 'order'] },
     'pages/home': {
       groups: { kicker: 'Top of the page', buttons: 'Buttons', figure: 'Drawing in the title panel', marquee: 'Moving band of words', project: 'Current project', latestLabel: 'Latest pieces', redrawLabel: 'Pencils to colours', commissionsTitle: 'Commissions', eventsLabel: 'Conventions' },
       half: ['latestLabel', 'latestTitle', 'redrawLabel', 'redrawTitle', 'commissionsTitle', 'commissionsButton', 'eventsLabel', 'eventsTitle'],

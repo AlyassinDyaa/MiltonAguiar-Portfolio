@@ -68,7 +68,10 @@ export default function Shop() {
   // the shop sales running now, each a red band above the pieces (read as the page is drawn, so a
   // sale shows from its start and goes at its end without the site being rebuilt)
   const running = forSale.length ? salesNow() : []
-  const steps = ['Pick a piece', 'Pay securely with Stripe', shop.shipping !== false ? 'Posted to your door' : 'Sent to your inbox']
+  // the three steps under the introduction: the admin's own (Page text → Shop), else the usual ones worded for how buyers pay and whether pieces are posted
+  const payStep = shop.payments === 'paypal' ? 'Pay with PayPal' : shop.payments === 'both' ? 'Pay by card or PayPal' : 'Pay securely by card'
+  const own = (Array.isArray(shop.steps) ? shop.steps : []).map((s) => String(s || '').trim()).filter(Boolean)
+  const steps = (own.length ? own : ['Pick a piece', payStep, shop.shipping !== false ? 'Posted to your door' : 'Sent to your inbox']).slice(0, 4)
 
   return (
     <Page title="Shop">

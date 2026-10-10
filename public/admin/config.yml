@@ -381,6 +381,7 @@ collections:
           - { name: label, label: Small label, widget: string, required: false, hint: 'Above the heading, for example "The shop".' }
           - { name: title, label: Heading, widget: string }
           - { name: intro, label: Introduction, widget: text, required: false }
+          - { name: steps, label: The steps under the introduction, widget: list, required: false, max: 4, field: { name: step, label: Step, widget: string }, hint: 'Shown as 01, 02, 03: for example "Pick a piece", "Pay by card or PayPal", "Posted to your door". Left empty, the usual three are used, worded for how buyers pay and whether you post.' }
           - { name: listLabel, label: Small label on the list, widget: string, required: false, hint: 'Beside the page number above the pieces, for example "For sale".' }
           - { name: nothingText, label: When a filter finds nothing, widget: string, required: false, hint: 'Before the "Show everything" link.' }
           - { name: emptyTitle, label: Heading while nothing has a price, widget: string, required: false }

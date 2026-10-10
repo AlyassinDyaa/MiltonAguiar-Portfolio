@@ -119,40 +119,55 @@ function CollectorCard({ name, since, number, prints, design = null }) {
   }
   const settle = () => Math.round(turn.current / 180) * 180
   const turnOver = () => setTurn(settle() + 180)
-  // the card leans toward the pointer, a little (not while it is being spun, nor for a finger)
+  // the card leans toward the pointer, or the finger resting on it, and the band of light follows it; not while it is being spun
   const leanTo = (e) => {
     const el = lean.current
-    if (!el || e.pointerType === 'touch' || drag.current) return
+    if (!el || (drag.current && drag.current.moved)) return
     const r = el.getBoundingClientRect()
-    el.style.setProperty('--rx', `${((e.clientY - r.top) / r.height - 0.5) * -10}deg`)
-    el.style.setProperty('--ry', `${((e.clientX - r.left) / r.width - 0.5) * 14}deg`)
-    el.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`)
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height
+    el.style.setProperty('--rx', `${(y - 0.5) * -10}deg`)
+    el.style.setProperty('--ry', `${(x - 0.5) * 14}deg`)
+    el.style.setProperty('--mx', `${x * 100}%`)
+    el.style.setProperty('--my', `${y * 100}%`)
   }
-  const rest = () => { const el = lean.current; if (el && !drag.current) { el.style.removeProperty('--rx'); el.style.removeProperty('--ry'); el.style.removeProperty('--mx') } }
+  const rest = (force = false) => {
+    const el = lean.current
+    if (!el || (drag.current && !force)) return
+    for (const k of ['--rx', '--ry', '--mx', '--my']) el.style.removeProperty(k)
+    el.classList.remove('is-touched')
+  }
   const down = (e) => {
     if (e.button !== undefined && e.button !== 0) return
     drag.current = { x: e.clientX, from: turn.current, moved: false, id: e.pointerId }
+    // a finger on the card: it leans to the finger and shines, as it does under a pointer
+    if (e.pointerType === 'touch' && lean.current) { lean.current.classList.add('is-touched'); leanTo(e) }
   }
   const move = (e) => {
     const d = drag.current
     if (!d) { leanTo(e); return }
     const dx = e.clientX - d.x
-    if (!d.moved && Math.abs(dx) < 6) return
-    if (!d.moved) { d.moved = true; try { flip.current.setPointerCapture(d.id) } catch { /* fine */ } }
+    if (!d.moved) {
+      leanTo(e)
+      if (Math.abs(dx) < 6) return
+      d.moved = true // from here it is a spin: the lean lets go and the card turns with the hand
+      rest(true)
+      try { flip.current.setPointerCapture(d.id) } catch { /* fine */ }
+    }
     setTurn(d.from + dx * 0.55, true)
   }
-  const up = () => {
+  const up = (e) => {
     const d = drag.current
     drag.current = null
     if (!d) return
     if (d.moved) setTurn(settle())
     else turnOver()
+    if (e.pointerType === 'touch') rest()
   }
   const shown = (name || '').trim()
   const looks = `${design ? `is-${design.cardLook}` : ''} ${design && design.cardArt ? 'has-art' : ''}`
   const host = typeof window !== 'undefined' ? window.location.host : ''
   return (
-    <div className="acc-card3d-wrap" onPointerLeave={rest} role="group" aria-label={`${brand.name} collector card${shown ? ` for ${shown}` : ''}, ${back ? 'the back' : 'the front'}`}>
+    <div className="acc-card3d-wrap" onPointerLeave={() => rest()} role="group" aria-label={`${brand.name} collector card${shown ? ` for ${shown}` : ''}, ${back ? 'the back' : 'the front'}`}>
       <div ref={lean} className="acc-card3d-lean">
         <div ref={flip} className="acc-card3d-flip" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
           {/* the card's thickness: slices between the faces, seen edge-on while it turns or leans */}

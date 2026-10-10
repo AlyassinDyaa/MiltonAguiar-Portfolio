@@ -1495,7 +1495,8 @@ a.buy-btn { text-decoration: none; }
   transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; transition: transform 0.5s var(--ease-out); }
 .acc-card3d-wrap:hover .acc-card3d { transition-duration: 0.15s; }
 .acc-card3d-dots { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle, rgba(11, 11, 12, 0.38) 0 2.2px, transparent 2.8px) 0 0 / 10px 10px; -webkit-mask-image: linear-gradient(100deg, transparent 35%, #000 95%); mask-image: linear-gradient(100deg, transparent 35%, #000 95%); }
-.acc-card3d-shine { position: absolute; inset: -40%; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.2) 47%, rgba(255, 255, 255, 0.32) 50%, rgba(255, 255, 255, 0.1) 53%, transparent 60%); transform: translateX(calc(var(--mx) - 60%)); pointer-events: none; animation: card-sweep 7s ease-in-out infinite; mix-blend-mode: soft-light; }
+/* a band of light that sweeps across now and then, and follows the pointer (as on DarkBeats, in this site's red) */
+.acc-card3d-shine { position: absolute; inset: -40%; z-index: 1; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.16) 47%, oklch(0.85 0.12 calc(var(--h) + 60) / 0.2) 50%, rgba(255, 255, 255, 0.08) 53%, transparent 60%); transform: translateX(calc(var(--mx) - 60%)); pointer-events: none; animation: card-sweep 7s ease-in-out infinite; mix-blend-mode: screen; }
 .acc-card3d-wrap:hover .acc-card3d-shine { animation: none; }
 @keyframes card-sweep { 0%, 60% { transform: translateX(-70%); } 100% { transform: translateX(70%); } }
 .acc-card3d-mark { position: absolute; right: -3%; bottom: -26%; font-family: var(--display); font-size: clamp(11rem, 22vw, 15rem); font-weight: 900; font-style: italic; line-height: 1; letter-spacing: -0.04em; color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, 0.16); pointer-events: none; }
@@ -2358,3 +2359,8 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
   .acc-card3d-facts { font-size: 0.8rem; }
 }
 @media (prefers-reduced-motion: reduce) { .acc-card3d-lean, .acc-card3d-flip { transition: none; } }
+
+/* As on DarkBeats: the band of light stops sweeping and follows the pointer while it is over the card,
+   or a finger resting on it (the lean follows the finger too, until a drag spins the card instead) */
+.acc-card3d-lean.is-touched .acc-card3d-shine { animation: none; }
+.acc-card3d-lean.is-touched { transition-duration: 0.15s; }

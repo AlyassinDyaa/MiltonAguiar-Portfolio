@@ -1,0 +1,24 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/absolute-batman-inks.webp",
+  "universe": "DC",
+  "hidden": false,
+  "date": "2024-10-26",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Absolute Posing",
+  "inShop": true,
+  "hover": "/uploads/absolute-batman-frame.png",
+  "face": "49,15,315",
+  "category": "Fan art",
+  "look": "default"
+}

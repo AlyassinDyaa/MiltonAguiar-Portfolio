@@ -6,6 +6,14 @@
       "on": true,
       "name": "All",
       "ends": "2026-10-10T23:24:00.000-04:00"
+    },
+    {
+      "percent": 10,
+      "appliesTo": "subcategory",
+      "on": true,
+      "category": "Covers",
+      "subcategory": "DC",
+      "name": "DC"
     }
   ]
 }

@@ -728,6 +728,8 @@ collections:
                   - { label: 'A picture of your choosing', value: art }
               - { name: cardArt, label: Picture across the card, widget: image, choose_url: false, required: false, hint: 'Needed for "A picture of your choosing", optional with the others. A picture with a quiet bottom half works best: the name sits there.' }
               - { name: cardCrop, label: Picture on the card, widget: cardcrop, required: false, hint: 'The card as customers see it. Drag the picture on it to put it in place, and zoom in with the slider.' }
+              - { name: cardBack, label: Picture on the back (optional), widget: image, choose_url: false, required: false, hint: 'The card turns over on the site. Without a picture here, the back carries the same picture and look as the front.' }
+              - { name: cardBackCrop, label: The back, widget: cardcrop, side: back, required: false, hint: 'The back as customers see it: the stripe, their signature and the small print sit over the picture.' }
               - name: earnedBy
                 label: How it is earned
                 widget: select

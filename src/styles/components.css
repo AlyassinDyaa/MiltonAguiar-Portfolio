@@ -2330,6 +2330,8 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
 /* the back: a stripe across it, the signature panel with a hologram, the numbers, a barcode and the small print */
 .acc-card3d-back { display: flex !important; flex-direction: column; justify-content: flex-end; gap: clamp(6px, 1.2vw, 10px); }
 .acc-card3d-back.has-art::after { background: linear-gradient(180deg, rgba(11, 11, 12, 0.6), rgba(11, 11, 12, 0.88)); }
+/* a back with a picture of its own is shown as clearly as the front; the stripe, strip and small print carry their own backgrounds */
+.acc-card3d-back.has-back::after { background: linear-gradient(180deg, rgba(11, 11, 12, 0.2), rgba(11, 11, 12, 0.7)); }
 .acc-card3d-stripe { position: absolute; left: 0; right: 0; top: 9%; height: 19%; background: linear-gradient(180deg, #19191c, #0b0b0c 40%, #222226); }
 .acc-card3d-sign { position: relative; display: flex; align-items: center; gap: clamp(10px, 1.8vw, 16px); }
 .acc-card3d-sign-strip { flex: 1; min-width: 0; display: flex; align-items: center; height: clamp(30px, 4.2vw, 40px); padding: 0 12px; border: 2px solid #0b0b0c; background: repeating-linear-gradient(-45deg, #f6f3ea 0 6px, #ebe6d8 6px 12px); color: #1a2a6c; overflow: hidden; }

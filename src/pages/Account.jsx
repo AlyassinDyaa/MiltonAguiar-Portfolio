@@ -77,11 +77,15 @@ const earnText = (r) => (r.earnedBy === 'verify' ? 'Confirm your email' : r.earn
 const hasEarned = (r, p) => Boolean(p) && ((p.gifts || []).includes(r.id) || (r.earnedBy === 'verify' ? p.verified : r.earnedBy === 'orders' ? p.orders >= r.count : r.earnedBy === 'commissions' ? (p.commissions || 0) >= r.count : p.pieces >= r.count))
 const cardDesigns = () => accountPage.rewards.filter((r) => r.kind === 'card')
 const designOf = (id) => cardDesigns().find((r) => r.id === id) || null
-// a design's picture, placed and zoomed as set in the admin (the card's ::before draws it)
-const designStyle = (d) => {
-  if (!d || !d.cardArt) return undefined
-  const c = d.cardCrop || {}
-  return { '--card-art': `url("${asset(d.cardArt)}")`, '--art-x': `${c.x ?? 50}%`, '--art-y': `${c.y ?? 25}%`, '--art-zoom': (c.zoom || 100) / 100 }
+// a design's picture, placed and zoomed as set in the admin (the card's ::before draws it); the back
+// has its own picture when the design gives it one, else the front's
+const designStyle = (d, side = 'front') => {
+  if (!d) return undefined
+  const own = side === 'back' && d.cardBack
+  const art = own ? d.cardBack : d.cardArt
+  if (!art) return undefined
+  const c = (own ? d.cardBackCrop : d.cardCrop) || {}
+  return { '--card-art': `url("${asset(art)}")`, '--art-x': `${c.x ?? 50}%`, '--art-y': `${c.y ?? 25}%`, '--art-zoom': (c.zoom || 100) / 100 }
 }
 
 /* The barcode on the back of the card, made from the member number: bars of one to three widths,
@@ -159,8 +163,14 @@ function CollectorCard({ name, since, number, prints, design = null }) {
     const d = drag.current
     drag.current = null
     if (!d) return
-    if (d.moved) setTurn(settle())
-    else turnOver()
+    if (!d.moved) turnOver()
+    else {
+      // a swipe, even a short one, turns the card over the way it went; a longer drag settles on the nearer side
+      const dx = e.clientX - d.x
+      const base = Math.round(d.from / 180) * 180
+      const went = turn.current - base
+      setTurn(Math.abs(dx) > 40 && Math.abs(went) < 180 ? base + Math.sign(dx) * 180 : settle())
+    }
     if (e.pointerType === 'touch') rest()
   }
   const shown = (name || '').trim()
@@ -188,7 +198,7 @@ function CollectorCard({ name, since, number, prints, design = null }) {
               <span><small>Collected</small>{prints}</span>
             </div>
           </div>
-          <div className={`acc-card3d acc-card3d-back ${looks}`} style={designStyle(design)} aria-hidden={!back}>
+          <div className={`acc-card3d acc-card3d-back ${looks} ${design && design.cardBack ? 'has-back' : ''}`} style={designStyle(design, 'back')} aria-hidden={!back}>
             <span className="acc-card3d-shine" />
             <span className="acc-card3d-stripe" aria-hidden="true" />
             <div className="acc-card3d-sign">

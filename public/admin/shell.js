@@ -1101,6 +1101,8 @@
     const LOOKS = [['ink', /^ink/i], ['gold', /^gold/i], ['chrome', /^chrome/i], ['art', /picture/i]]
     window.CMS.registerWidget('cardcrop', window.createClass({
       getInitialState() { return { look: 'ink', art: '', name: '', size: null } },
+      // this widget places the picture on the back of the card (side: back in the config), or on the front
+      side() { const f = this.props.field; return f && f.get && f.get('side') === 'back' ? 'back' : 'front' },
       componentDidMount() { this.read(); this.timer = setInterval(() => this.read(), 400) },
       componentWillUnmount() { clearInterval(this.timer) },
       read() {
@@ -1108,9 +1110,18 @@
         if (!item) return
         const said = [...item.querySelectorAll('[class*="singleValue"]')].map((n) => n.textContent)
         const found = LOOKS.find(([, re]) => said.some((t) => re.test(t)))
-        const img = item.querySelector('[class*="ImageWrapper"] img')
+        // the pictures of the design: the front's, and the back's (each image field sits under its own label)
+        const picOf = (re) => {
+          const label = [...item.querySelectorAll('label')].find((l) => re.test(l.textContent || ''))
+          const top = label && label.parentElement // the field's top bar; the picture sits beside it, in the field's box
+          const box = top && (/ControlTopbar/.test(top.className) ? top.parentElement : top)
+          const img = box && box.querySelector('[class*="ImageWrapper"] img')
+          return img ? img.getAttribute('src') || '' : ''
+        }
+        const front = picOf(/^Picture across the card/i)
+        const back = picOf(/^Picture on the back/i)
         const name = (item.querySelector('input[id^="name-field"]') || {}).value || ''
-        const next = { look: found ? found[0] : 'ink', art: img ? img.getAttribute('src') || '' : '', name }
+        const next = { look: found ? found[0] : 'ink', art: this.side() === 'back' ? back || front : front, name }
         if (next.art !== this.state.art) this.measure(next.art)
         if (next.look !== this.state.look || next.art !== this.state.art || next.name !== this.state.name) this.setState(next)
       },
@@ -1154,15 +1165,21 @@
           h('span', {}, label),
           h('input', { type: 'range', min, max, step: 1, value: now[key], disabled: !art, onChange: (e) => this.put({ ...now, [key]: Number(e.target.value) }) }),
           h('b', {}, now[key] + '%'))
-        const note = art ? `“${name || 'This design'}”, as customers will see it. Drag the picture to place it.`
-          : look === 'art' ? 'Add a picture above first, to see the card.'
-            : `“${name || 'This design'}”, as customers will see it. To put a picture on it, add one above first.`
-        return h('div', { className: 'ia-cardcrop', ref: (el) => { this.root = el } },
-          h('div', { className: `ia-cardprev is-${look} ${art ? 'has-art is-movable' : ''}`, style, onPointerDown: (e) => this.drag(e), title: art ? 'Drag to move the picture' : '' },
-            h('span', { className: 'ia-cardprev-top' }, h('b', {}, 'MILTON ', h('i', {}, 'AGUIAR')), h('em', {}, 'Collector')),
+        const back = this.side() === 'back'
+        const note = art ? `${back ? 'The back' : `“${name || 'This design'}”`}, as customers will see it. Drag the picture to place it.`
+          : back ? 'The back carries the front\'s picture and look. Add a picture above to give it one of its own.'
+            : look === 'art' ? 'Add a picture above first, to see the card.'
+              : `“${name || 'This design'}”, as customers will see it. To put a picture on it, add one above first.`
+        const face = back
+          ? [h('span', { className: 'ia-cardprev-stripe' }),
+            h('span', { className: 'ia-cardprev-sign' }, h('i', {}, 'Your name'), h('b', {}, 'MA')),
+            h('span', { className: 'ia-cardprev-foot' }, h('small', {}, 'Member no.'), ' #0001')]
+          : [h('span', { className: 'ia-cardprev-top' }, h('b', {}, 'MILTON ', h('i', {}, 'AGUIAR')), h('em', {}, 'Collector')),
             h('span', { className: 'ia-cardprev-chip' }),
             h('strong', { className: 'ia-cardprev-name' }, 'Your name here'),
-            h('span', { className: 'ia-cardprev-foot' }, h('small', {}, 'Member no.'), ' #0001')),
+            h('span', { className: 'ia-cardprev-foot' }, h('small', {}, 'Member no.'), ' #0001')]
+        return h('div', { className: 'ia-cardcrop', ref: (el) => { this.root = el } },
+          h('div', { className: `ia-cardprev is-${look} ${back ? 'is-back' : ''} ${art ? 'has-art is-movable' : ''}`, style, onPointerDown: (e) => this.drag(e), title: art ? 'Drag to move the picture' : '' }, ...face),
           h('div', { className: 'ia-cardcrop-side' },
             h('p', { className: 'ia-cardprev-note' }, note),
             slider('Zoom', 'z', 100, 400),

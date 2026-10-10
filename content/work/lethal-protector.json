@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/masters-of-anatomy-spider-man.webp",
+  "universe": "Marvel",
+  "hidden": false,
+  "date": "2023-10-16",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Lethal Protector",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/spider-man-and-venom-frame.png",
+  "face": "50,23,286",
+  "category": "Fan art",
+  "look": "default"
+}

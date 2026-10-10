@@ -1048,7 +1048,7 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
      right (nothing yet: nothing); under it one quiet line of orders, where and when, with a dot
      between each two, and the two buttons at its end */
   .is-customers .sl-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px 14px; padding: 16px 16px 14px; }
-  .is-customers .sl-row > .sl-c-who { grid-column: 1; grid-row: 1; gap: 14px; }
+  .is-customers .sl-row > .sl-c-who { grid-column: 1; grid-row: 1; gap: 20px; }
   .is-customers .sl-c-who .sl-initials { width: 46px; height: 46px; font-size: 1.05rem; }
   .is-customers .sl-c-who strong { font-size: 1.02rem; }
   .is-customers .sl-row > .sl-c-total { grid-column: 2; grid-row: 1; justify-items: end; align-self: start; }
@@ -1383,7 +1383,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 @container (max-width: 820px) { .is-orders .sl-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px; padding: 14px 16px; } }
 .sl-c-order strong { color: var(--fg); }
 .sl-wait { justify-self: start; margin-top: 2px; padding: 1px 7px; font-style: normal; font-size: 0.7rem; font-weight: 700; background: rgba(216, 35, 47, 0.18); color: #ff7a82; }
-.sl-c-who { display: flex !important; align-items: center; gap: 12px; }
+.sl-c-who { display: flex !important; align-items: center; gap: 18px; }
 .sl-c-who > span { display: grid; gap: 3px; min-width: 0; }
 .sl-initials { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-style: normal; font-family: var(--display); font-size: 0.9rem; font-weight: 900; color: #fff; background: linear-gradient(135deg, #d8232f 35%, #6d0d14); box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px rgba(216, 35, 47, 0.5); }
 .sl-c-items { display: flex !important; align-items: center; gap: 12px; }

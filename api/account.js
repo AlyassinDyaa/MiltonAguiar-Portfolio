@@ -9,7 +9,7 @@ import { mailingAction, unsubscribe } from './_mailings.js'
 import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
-  makeToken, mergeCarts, newId, noteTry, passwordProblem, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken,
+  makeToken, mergeCarts, newId, noteTry, passwordProblem, peekToken, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken,
 } from './_users.js'
 
 /* Customer accounts. One function for all of it, chosen by `action`:
@@ -338,6 +338,28 @@ const adminAction = async (req, d, users, action, body) => {
   return [200, { ok: true, mailed: Boolean(mailed), pending, member: memberOf(now) }]
 }
 
+/* Told by email whenever their password changes (chosen anew from a reset link, or changed under
+   Security), so a change they did not make is noticed: what to do if it was not them. */
+const tellPasswordChanged = async (req, user, how) => {
+  const first = (user.name || '').split(' ')[0]
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Your password was changed',
+      kicker: 'Your account',
+      title: 'Password changed',
+      lines: [
+        `Hi${first ? ` ${first}` : ''},`,
+        how === 'reset' ? 'The password of your Milton Aguiar account was just set anew from a reset link.' : 'The password of your Milton Aguiar account was just changed under Security.',
+        'Every other device has been logged out; the new password works from now on.',
+        'If this was not you, choose a new password straight away from the login page (Forgot your password?), and write to Milton.',
+      ],
+      button: { label: 'Your account', url: `${siteUrl(req)}/account?tab=security` },
+      after: 'You are getting this because you have an account on the Milton Aguiar site.',
+    })
+  } catch (e) { console.error('password-changed email not sent:', e.message) }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   if (!dbReady()) return say(res, req.method === 'GET' ? 200 : 503, req.method === 'GET' ? { enabled: false, user: null } : { message: 'Accounts are not set up yet.' })
@@ -439,6 +461,11 @@ export default async function handler(req, res) {
     if (action === 'reset') {
       const weak = passwordProblem(body.password)
       if (weak) return say(res, 400, { message: weak, field: 'password' })
+      // the same as the old one is refused before the link is used up, so they can try again
+      const seen = await peekToken(body.token, 'reset')
+      if (!seen) return say(res, 400, { message: 'This link has run out or has been used. Ask for a new one.' })
+      const was = await users.findOne({ _id: seen.userId })
+      if (was && (await checkPassword(body.password, was.password))) return say(res, 400, { message: 'That is the same as your old password. Choose a new one.', field: 'password' })
       const token = await spendToken(body.token, 'reset')
       if (!token) return say(res, 400, { message: 'This link has run out or has been used. Ask for a new one.' })
       const user = await users.findOne({ _id: token.userId })
@@ -451,6 +478,7 @@ export default async function handler(req, res) {
       await d.collection('sessions').deleteMany({ userId: user._id })
       await forgetTries(`login:${user.email}`)
       await startSession(req, res, user._id)
+      await tellPasswordChanged(req, user, 'reset')
       return say(res, 200, { user: publicUser({ ...user, verified: true }) })
     }
 
@@ -561,8 +589,10 @@ export default async function handler(req, res) {
       if (!(await checkPassword(body.current, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The current password is not right.', field: 'current' }) }
       const weak = passwordProblem(body.password)
       if (weak) return say(res, 400, { message: weak, field: 'password' })
+      if (await checkPassword(body.password, user.password)) return say(res, 400, { message: 'That is the same as your current password. Choose a new one.', field: 'password' })
       await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password) } })
       await d.collection('sessions').deleteMany({ userId: user._id, hash: { $ne: user.session } })
+      await tellPasswordChanged(req, user, 'change')
       return say(res, 200, { user: publicUser(user), changed: true })
     }
 

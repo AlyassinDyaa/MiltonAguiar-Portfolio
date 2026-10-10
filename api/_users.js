@@ -99,6 +99,13 @@ export const makeToken = async (userId, kind, minutes) => {
   await d.collection('tokens').insertOne({ hash: sha(raw), userId, kind, expiresAt: new Date(Date.now() + minutes * 60000) })
   return raw
 }
+// a look at a token without using it up (to refuse a new password before the link is spent)
+export const peekToken = async (raw, kind) => {
+  if (!raw || String(raw).length > 100) return null
+  const d = await db()
+  const token = await d.collection('tokens').findOne({ hash: sha(raw), kind })
+  return token && new Date(token.expiresAt) >= new Date() ? token : null
+}
 export const spendToken = async (raw, kind) => {
   if (!raw || String(raw).length > 100) return null
   const d = await db()

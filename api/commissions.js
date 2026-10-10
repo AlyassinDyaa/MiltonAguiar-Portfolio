@@ -6,7 +6,7 @@ import { checkPassword, clean, currentUser, fromThisSite, newId, noteTry, sendMa
 import {
   SETTINGS, STAGE_SETS, STATUS_WORDS, WORK_STAGES, stagesOf, cents, cleanLinks, cleanText, closePending, col, dbReady, dueWords, forAdmin, forCustomer, isOpen, isPaid, kinds,
   addMessage, mailArtistMessage, mailArtistRequest, mailCustomer, message, nextNumber, noteMailed, paidByPaypal, paypal, paypalSandbox, price, quoteBox,
-  commissionsOpen, copyBox, isClosed, mailArtistReceived, shopSettings, stripe, titleFrom,
+  commissionsOpen, copyBox, currencyFor, currencyOk, isClosed, mailArtistReceived, shopSettings, stripe, titleFrom,
 } from './_commissions.js'
 
 /* Commissions, for the customer and for the admin. One function for all of it (Vercel's plan
@@ -30,7 +30,7 @@ import {
      'pay' also takes `code`: a discount code, checked again here (a reward code only for its owner)
    The admin (Sales → Orders → Commissions; their pass, or localhost on this computer):
      { action: 'adminList' }  { action: 'adminGet', id }  { action: 'adminMessage', id, text, links }
-     { action: 'adminQuote', id, price, includes, due, ship }
+     { action: 'adminQuote', id, price, currency, includes, due, ship }   currency: one of CURRENCIES (api/_commissions.js)
      { action: 'adminStage', id, status: sketch | inks | colours | delivered | cancelled, note }
      { action: 'adminDelete', id }
      { action: 'adminReopen', id }                               a completed one back to delivered (they are told)
@@ -58,6 +58,13 @@ const adminAction = async (req, action, body) => {
 
   if (action === 'adminGet') {
     if (found.unread && found.unread.artist) await c.updateOne({ _id: id }, { $set: { 'unread.artist': 0 } })
+    // where they are, for the quote's currency: asked from (kept with the request), else where their last order went
+    if (!found.country) {
+      try {
+        const last = await (await db()).collection('orders').find({ $or: [{ userId: found.userId }, { email: found.email }], 'address.country': { $exists: true, $ne: '' } }, { projection: { address: 1 } }).sort({ createdAt: -1 }).limit(1).toArray()
+        if (last[0]) found.country = String(last[0].address.country || '').toUpperCase().slice(0, 2)
+      } catch (e) { console.error('commission country:', e.message) }
+    }
     return [200, { commission: forAdmin({ ...found, unread: { ...(found.unread || {}), artist: 0 } }, true) }]
   }
 
@@ -91,11 +98,13 @@ const adminAction = async (req, action, body) => {
     const due = /^\d{4}-\d{2}-\d{2}$/.test(String(body.due || '')) ? String(body.due) : ''
     const stages = String(body.stages || '')
     if (!STAGE_SETS[stages]) return [400, { message: 'Pick what the piece goes through.', field: 'stages' }]
-    const quote = { price: amount, currency: SETTINGS.currency, includes, due, ship: Boolean(body.ship), stages, at: new Date() }
+    const currency = String(body.currency || '').toUpperCase()
+    if (body.currency && !currencyOk(currency)) return [400, { message: 'Pick a currency from the list.', field: 'currency' }]
+    const quote = { price: amount, currency: currency || currencyFor(found.country), includes, due, ship: Boolean(body.ship), stages, at: new Date() }
     // a checkout already opened at the old price is closed first
     await closePending(found)
     // the note in the thread carries the quote itself, so both sides show it as a quote card
-    const note = { ...message('system', `Quote: ${price(amount)} · ${includes}${due ? ` · ready by ${dueWords(due)}` : ''} · ${quote.ship ? 'posted to you' : 'digital'}`), kind: 'quote', quote }
+    const note = { ...message('system', `Quote: ${price(amount, quote.currency)} · ${includes}${due ? ` · ready by ${dueWords(due)}` : ''} · ${quote.ship ? 'posted to you' : 'digital'}`), kind: 'quote', quote }
     const { after } = await addMessage(id, note, { forSide: 'customer', set: { quote, status: 'quoted', pending: null } })
     await mailCustomer(after, site, {
       subject: `Your commission quote is ready: ${after.number}`,
@@ -242,6 +251,7 @@ const customerAction = async (req, user, action, body) => {
       title: clean(body.title, 80) || titleFrom(kind, idea), details, status: 'requested', quote: null,
       messages: [{ from: 'customer', text: idea, links: refs, at: now }], unread: { customer: 0, artist: 1 },
       pending: null, payment: null, createdAt: now, updatedAt: now, mailed: { artist: now },
+      country: /^[A-Z]{2}$/.test(String(req.headers['x-vercel-ip-country'] || '')) ? req.headers['x-vercel-ip-country'] : '', // where they asked from: the quote's currency
     }
     await c.insertOne(doc)
     await mailArtistRequest(doc, site)

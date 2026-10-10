@@ -96,6 +96,22 @@ const pad = (n, w) => String(n).padStart(w, '0')
 const after = (got) => (got && got.value !== undefined && got.ok !== undefined ? got.value : got) // older drivers wrap the document
 
 /* ---------- money ---------- */
+/* The currencies a quote can be in: ones both Stripe and PayPal take, with cents. A quote starts in
+   the customer's own (where they asked from, or where their last order went), and the artist can pick another. */
+export const CURRENCIES = [
+  ['EUR', 'Euro'], ['USD', 'US dollar'], ['GBP', 'British pound'], ['CAD', 'Canadian dollar'], ['AUD', 'Australian dollar'],
+  ['NZD', 'New Zealand dollar'], ['CHF', 'Swiss franc'], ['SEK', 'Swedish krona'], ['NOK', 'Norwegian krone'], ['DKK', 'Danish krone'],
+  ['PLN', 'Polish zloty'], ['CZK', 'Czech koruna'], ['MXN', 'Mexican peso'], ['SGD', 'Singapore dollar'], ['HKD', 'Hong Kong dollar'],
+]
+const EURO = new Set('AT BE CY DE EE ES FI FR GR HR IE IT LT LU LV MT NL PT SI SK AD MC SM VA ME XK GP MQ GF RE YT PM BL MF'.split(' '))
+const LOCAL = { US: 'USD', PR: 'USD', GU: 'USD', VI: 'USD', GB: 'GBP', IM: 'GBP', JE: 'GBP', GG: 'GBP', GI: 'GBP', CA: 'CAD', AU: 'AUD', NZ: 'NZD', CH: 'CHF', LI: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK', GL: 'DKK', FO: 'DKK', PL: 'PLN', CZ: 'CZK', MX: 'MXN', SG: 'SGD', HK: 'HKD' }
+// a country (two letters) to its currency; elsewhere in the world US dollars, and the site's own when it is not known
+export const currencyFor = (country) => {
+  const k = String(country || '').toUpperCase()
+  if (!/^[A-Z]{2}$/.test(k)) return SETTINGS.currency
+  return EURO.has(k) ? 'EUR' : LOCAL[k] || 'USD'
+}
+export const currencyOk = (code) => CURRENCIES.some(([k]) => k === code)
 export const price = (n, cur = SETTINGS.currency) => { try { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: cur, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2 }).format(Number(n) || 0) } catch { return `${n} ${cur}` } }
 export const cents = (n) => Math.round((Number(n) || 0) * 100)
 // a date as 2026-12-01 is that day wherever the server is (read and written in UTC)
@@ -141,7 +157,7 @@ export const forAdmin = (c, full = false) => ({
   ...summary(c),
   unread: (c.unread && c.unread.artist) || 0,
   userId: c.userId || null, email: c.email || '', name: c.name || '', test: Boolean(c.payment && c.payment.test),
-  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: c.payment || null, pending: c.pending || null, address: c.address || null, suggestedStages: guessStages(c.details && c.details.kind) } : {}),
+  ...(full ? { details: c.details || {}, quote: c.quote || null, messages: c.messages || [], payment: c.payment || null, pending: c.pending || null, address: c.address || null, suggestedStages: guessStages(c.details && c.details.kind), country: c.country || '', suggestedCurrency: currencyFor(c.country), currencies: CURRENCIES } : {}),
 })
 
 /* ---------- adding to the thread ----------

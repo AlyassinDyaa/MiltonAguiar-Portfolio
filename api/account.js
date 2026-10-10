@@ -251,6 +251,7 @@ const pictureOf = (avatar) => {
 }
 const memberOf = (u) => ({
   email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
+  news: u.marketing === true, // said yes to news emails
   gifts: (Array.isArray(u.gifts) ? u.gifts : []).filter((g) => g && g.id).map((g) => ({ id: g.id, at: g.at, note: g.note || '' })),
   newGifts: Array.isArray(u.newGifts) ? u.newGifts : [], // given and not seen by them yet
   picture: pictureOf(typeof u.avatar === 'string' ? u.avatar : ''),
@@ -258,7 +259,7 @@ const memberOf = (u) => ({
 const adminAction = async (req, d, users, action, body) => {
   const rewards = rewardsList()
   if (action === 'adminMembers') {
-    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, marketing: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
     const members = all.map(memberOf)
     // a piece taken off the site since: the picture its order kept
     const lost = all.filter((u, n) => !members[n].picture && /^[a-z0-9-]{1,80}$/.test(String(u.avatar || '')))

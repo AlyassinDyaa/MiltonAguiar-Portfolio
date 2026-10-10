@@ -1044,13 +1044,20 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
   .is-orders .sl-row > :nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
   .is-orders .sl-row > :nth-child(5) { grid-column: 1; grid-row: 4; }
   .is-orders .sl-row > :nth-child(6) { grid-column: 2 / -1; grid-row: 4; justify-items: end; }
-  /* a customer: who and what they spent, then where, how many orders and when */
-  .is-customers .sl-row > :nth-child(1) { grid-column: 1 / 3; grid-row: 1; }
-  .is-customers .sl-row > :nth-child(4) { grid-column: 3; grid-row: 1; justify-items: end; }
-  .is-customers .sl-row > :nth-child(2) { grid-column: 1; grid-row: 2; }
-  .is-customers .sl-row > :nth-child(3) { grid-column: 2; grid-row: 2; display: flex; gap: 6px; align-items: baseline; }
-  .is-customers .sl-row > :nth-child(3) > strong::after { content: ' orders'; font-weight: 400; color: var(--dim); font-size: 0.8rem; }
-  .is-customers .sl-row > :nth-child(5) { grid-column: 3; grid-row: 2; justify-items: end; }
+  /* a customer: who and what they spent; under it one line of where, how many orders and when, and the buttons */
+  .is-customers .sl-row { grid-template-columns: auto auto auto minmax(0, 1fr) auto; gap: 10px 14px; }
+  .is-customers .sl-row > .sl-c-who { grid-column: 1 / 5; grid-row: 1; }
+  .is-customers .sl-row > .sl-c-total { grid-column: 5; grid-row: 1; justify-items: end; align-self: start; }
+  .is-customers .sl-row > .sl-c-where { grid-column: 1; grid-row: 2; }
+  .is-customers .sl-row > .sl-c-orders { grid-column: 2; grid-row: 2; }
+  .is-customers .sl-row > .sl-c-when { grid-column: 3; grid-row: 2; }
+  .is-customers .sl-row > .sl-acts { grid-column: 5; grid-row: 2; margin: 0; justify-self: end; }
+  .is-customers .sl-row > .sl-c-where.is-empty { display: none; }
+  .is-customers .sl-row > .sl-c-where.is-empty ~ .sl-c-orders { grid-column: 1; }
+  .is-customers .sl-row > .sl-c-where.is-empty ~ .sl-c-when { grid-column: 2; }
+  .is-customers .sl-c-where, .is-customers .sl-c-orders, .is-customers .sl-c-when { display: flex !important; align-items: baseline; gap: 5px; padding: 3px 9px; border: 1px solid var(--line); background: rgba(243, 243, 241, 0.03); }
+  .is-customers .sl-c-orders strong { font-size: 0.85rem; }
+  .is-customers .sl-c-unit { display: inline !important; }
 }
 .sl-row:hover, .sl-row.on { background: rgba(243, 243, 241, 0.04); }
 .sl-row.on { box-shadow: inset 3px 0 0 var(--accent); }
@@ -1752,3 +1759,12 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 @media (max-width: 599px) {
   .sl-mail-form .sl-pair { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Customers: the Member and News pills side by side; the word after the number of orders shows only on
+   the narrow card (the column says it on a wide screen); nothing spent is a quiet dash */
+.sl-c-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
+.sl-c-tags .sl-badge { margin: 0 !important; }
+.sl-c-unit { display: none !important; }
+.sl-c-total.is-zero strong { color: var(--dim); font-size: 1rem; }
+.sl-badge.is-news { background: rgba(255, 211, 77, 0.14); color: #ffd34d; }
+.sl-badge.is-nonews { background: rgba(243, 243, 241, 0.06); color: var(--dim); }

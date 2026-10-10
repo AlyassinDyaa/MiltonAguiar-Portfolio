@@ -297,6 +297,7 @@ window.IASales = (() => {
           el('span', { className: 'sl-profile-tags' }, [
             mState.loaded && !mState.problem ? (mem ? badge('member', `Member ${memberNo(mem.memberNo)}`) : badge('noacc', 'No account')) : null,
             mem ? badge(mem.verified ? 'verified' : 'unverified', mem.verified ? 'Email confirmed' : 'Email not confirmed') : null,
+            mem ? badge(mem.news ? 'news' : 'nonews', mem.news ? 'Agreed to news' : 'No news emails') : null,
           ]),
         ]),
       ]),
@@ -720,6 +721,7 @@ window.IASales = (() => {
       ['buyers', 'Buyers', (c) => c.orders > 0],
       ['repeat', 'Bought more than once', (c) => c.orders > 1],
       ['waiting', 'Waiting for an order', (c) => c.waiting > 0],
+      ['news', 'Agreed to news', (c) => Boolean(c.member && c.member.news)],
     ]
     const kind = kinds.find((k) => k[0] === f.kind) || kinds[0]
     const q = f.q.trim().toLowerCase()
@@ -734,13 +736,13 @@ window.IASales = (() => {
       head('Customers', 'Everyone who has bought from the shop, and everyone with an account on the site. Open one to see their orders and codes, give them a discount, or gift them a reward.', [
         button('Gift a reward', () => { state.modal = { kind: 'gift', email: '' }; draw() }, 'ia-btn'),
         button(state.loading || mState.loading ? 'Loading…' : 'Refresh', () => { load(); loadMembers(); loadDiscounts() }),
-        button('Export CSV', () => csv([['Name', 'Email', 'Member', 'Email confirmed', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, c.member ? memberNo(c.member.memberNo) : '', c.member ? (c.member.verified ? 'Yes' : 'No') : '', country(c.country), c.orders, c.spent, c.currency, c.orders ? date(c.first) : '', c.orders ? date(c.last) : ''])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
+        button('Export CSV', () => csv([['Name', 'Email', 'Member', 'Email confirmed', 'News emails', 'Country', 'Orders', 'Spent', 'Currency', 'First order', 'Last order'], ...list.map((c) => [c.name, c.email, c.member ? memberNo(c.member.memberNo) : '', c.member ? (c.member.verified ? 'Yes' : 'No') : '', c.member ? (c.member.news ? 'Yes' : 'No') : '', country(c.country), c.orders, c.spent, c.currency, c.orders ? date(c.first) : '', c.orders ? date(c.last) : ''])], `customers-${new Date().toISOString().slice(0, 10)}.csv`)),
       ]),
       notices(),
       hiddenNote(state.orders, 'customers\' orders', 'customers'),
       mState.problem && mState.loaded ? el('div', { className: 'sl-notice' }, [el('strong', { textContent: 'Accounts not shown' }), el('p', { textContent: mState.problem })]) : null,
       el('div', { className: 'sl-stats' }, [
-        stat('Customers', String(all.length), mState.loaded && !mState.problem ? many(all.filter((c) => c.member).length, 'member') : ''),
+        stat('Customers', String(all.length), mState.loaded && !mState.problem ? `${many(all.filter((c) => c.member).length, 'member')} · ${all.filter((c) => c.member && c.member.news).length} agreed to news` : ''),
         stat('Came back', String(all.filter((c) => c.orders > 1).length), 'bought more than once'),
         stat('Spent on average', money(buyers.length ? total / buyers.length : 0, cur), many(buyers.length, 'buyer')),
         stat('Waiting for an order', String(all.filter((c) => c.waiting).length)),
@@ -759,16 +761,24 @@ window.IASales = (() => {
         headRow(['Customer', 'Country', 'Orders', 'Spent', 'Last order']),
         ...pageOf(list, f).map((c) => {
           const theirs = c.orders || codesOf(c.email).length
+          // on a narrow screen the row is a card: who and what they spent, then one line of where, orders and when
           return rowEl(false, [
             el('span', { className: 'sl-c-who' }, [avatar(c), el('span', {}, [
               el('strong', { textContent: c.name || c.email || '—' }),
               el('small', { textContent: c.name ? c.email : '' }),
-              c.member ? badge('member', `Member ${memberNo(c.member.memberNo)}`) : null,
+              c.member ? el('span', { className: 'sl-c-tags' }, [
+                badge('member', `Member ${memberNo(c.member.memberNo)}`),
+                c.member.news ? el('span', { className: 'sl-badge is-news', title: 'Agreed to news emails', textContent: 'News' }) : null,
+              ]) : null,
             ])]),
-            el('span', {}, [el('small', { textContent: country(c.country) || '—' })]),
-            el('span', {}, [el('strong', { textContent: String(c.orders) }), c.waiting ? el('small', { className: 'sl-hot', textContent: `${c.waiting} to ship` }) : null]),
-            el('span', { className: 'sl-c-total' }, [el('strong', { textContent: money(c.spent, c.currency) })]),
-            el('span', {}, [el('small', { textContent: c.orders ? date(c.last) : c.joined ? `Joined ${date(c.joined)}` : '—' })]),
+            el('span', { className: `sl-c-where ${c.country ? '' : 'is-empty'}` }, [el('small', { textContent: country(c.country) || '—' })]),
+            el('span', { className: 'sl-c-orders' }, [
+              el('strong', { textContent: String(c.orders) }),
+              el('small', { className: 'sl-c-unit', textContent: c.orders ? (c.orders === 1 ? 'order' : 'orders') : 'orders yet' }),
+              c.waiting ? el('small', { className: 'sl-hot', textContent: `${c.waiting} to ship` }) : null,
+            ]),
+            el('span', { className: `sl-c-total ${c.orders ? '' : 'is-zero'}` }, [el('strong', { textContent: c.orders ? money(c.spent, c.currency) : '—' })]),
+            el('span', { className: 'sl-c-when' }, [el('small', { textContent: c.orders ? date(c.last) : c.joined ? `Joined ${date(c.joined)}` : '—' })]),
           ], () => open(c), [
             iconBtn('info', 'Customer details', () => open(c)),
             theirs ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
@@ -1416,19 +1426,28 @@ window.IASales = (() => {
     const stageSel = el('select', { className: 'sl-select', required: true, ariaRequired: 'true' }, C_SETS.map(([k, t]) => el('option', { value: k, textContent: t, selected: k === stageWant })))
     stageSel.addEventListener('change', () => { draft.stages = stageSel.value })
     const due = input('due', { type: 'date', value: q ? ymd(q.due) : '' })
+    // the currency: the quote's, else the customer's own (where they asked from, or where their last order went)
+    const curWant = draft.currency ?? ((q && q.currency) || c.suggestedCurrency || 'EUR')
+    const curList = Array.isArray(c.currencies) && c.currencies.length ? c.currencies : [['EUR', 'Euro']]
+    const curSel = el('select', { className: 'sl-select', ariaLabel: 'Currency' }, curList.map(([k, t]) => el('option', { value: k, textContent: `${k} · ${t}${k === c.suggestedCurrency && c.country ? ' (theirs)' : ''}`, selected: k === curWant })))
+    curSel.addEventListener('change', () => { draft.currency = curSel.value; curLabel.textContent = `Price (${curSel.value})` })
+    const curLabel = el('span', { textContent: `Price (${curWant})` })
+    const where = c.country ? country(c.country) : ''
     const shipBox = input('ship', { type: 'checkbox', className: 'sl-switch-box', checked: q ? Boolean(q.ship) : false })
     const ship = el('label', { className: 'sl-switch' }, [shipBox, el('span', { className: 'sl-switch-track', ariaHidden: 'true' }), el('span', {}, [el('strong', { textContent: 'Post it to me' }), el('small', { textContent: 'On: the checkout asks for their address. Off: a digital piece.' })])])
     const sendQuote = button(q ? 'Send the new quote' : 'Send quote', () => {
       const p = Number(draft.price ?? price.value)
       if (!(p >= 1)) { said.classList.add('is-bad'); said.textContent = 'Put a price first.'; price.focus(); return }
       if (!String(draft.includes ?? includes.value).trim()) { said.classList.add('is-bad'); said.textContent = 'Say what the price includes.'; includes.focus(); return }
-      run(sendQuote, { action: 'adminQuote', price: p, includes: draft.includes ?? includes.value, due: draft.due ?? due.value, ship: draft.ship ?? shipBox.checked, stages: stageSel.value }, () => { ['price', 'includes', 'due', 'ship', 'stages'].forEach((k) => delete draft[k]); cState.said = 'Quote sent ✓ They have an email.' })
+      run(sendQuote, { action: 'adminQuote', price: p, currency: curSel.value, includes: draft.includes ?? includes.value, due: draft.due ?? due.value, ship: draft.ship ?? shipBox.checked, stages: stageSel.value }, () => { ['price', 'currency', 'includes', 'due', 'ship', 'stages'].forEach((k) => delete draft[k]); cState.said = 'Quote sent ✓ They have an email.' })
     }, 'ia-btn')
     const quoteForm = el('div', { className: 'sl-quote-form' }, [
       el('div', { className: 'sl-quote-row' }, [
-        el('label', { className: 'sl-label' }, [reqLabel('Price (€)'), price]),
-        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Ready by (optional)' }), due]),
+        el('label', { className: 'sl-label' }, [el('span', {}, [curLabel, el('b', { className: 'sl-req', ariaHidden: 'true', textContent: ' *' })]), price]),
+        el('label', { className: 'sl-label' }, [el('span', { textContent: 'Currency' }), curSel]),
       ]),
+      el('small', { className: 'sl-hint sl-quote-cur', textContent: where ? `They are in ${where}, so it starts in ${c.suggestedCurrency}. They pay in the currency you pick.` : `Where they are is not known yet, so it starts in ${c.suggestedCurrency || 'EUR'}. They pay in the currency you pick.` }),
+      el('label', { className: 'sl-label' }, [el('span', { textContent: 'Ready by (optional)' }), due]),
       el('label', { className: 'sl-label' }, [reqLabel('What is included'), includes]),
       el('label', { className: 'sl-label' }, [reqLabel('What the piece goes through'), stageSel, el('small', { className: 'sl-hint', textContent: `Their tracker shows only these stages. Picked from what they asked for (${(c.details && c.details.kind) || 'the kind of piece'}); change it if needed.` })]),
       ship,

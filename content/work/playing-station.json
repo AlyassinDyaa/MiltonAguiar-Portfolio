@@ -1,0 +1,26 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/playstation-5-party_milton-aguiar.webp",
+  "universe": "Other",
+  "hidden": false,
+  "date": "2023-05-13",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "note": "Winner piece for Playstation Portugal art contest!",
+  "status": "none",
+  "title": "Playing Station",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/playstation-frame.webp",
+  "face": "36,35,375",
+  "category": "Fan art",
+  "look": "default"
+}

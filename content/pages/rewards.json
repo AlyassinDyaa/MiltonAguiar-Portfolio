@@ -27,7 +27,8 @@
       "cardLook": "art",
       "cardArt": "/uploads/raptor-desktop.webp",
       "earnedBy": "verify",
-      "cardCrop": "90,8,121"
+      "cardCrop": "90,8,121",
+      "cardBackCrop": "72,23,400"
     },
     {
       "name": "Ink card",

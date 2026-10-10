@@ -13,7 +13,7 @@
   "functions": {
     "api/checkout.js": { "includeFiles": "content/**" },
     "api/paypal.js": { "includeFiles": "content/**" },
-    "api/account.js": { "includeFiles": "content/**" },
+    "api/account.js": { "includeFiles": "content/**", "maxDuration": 60 },
     "api/commissions.js": { "includeFiles": "content/**", "maxDuration": 60 },
     "api/stripe-webhook.js": { "includeFiles": "content/**" },
     "api/orders.js": { "includeFiles": "content/work/**" },

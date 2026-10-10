@@ -239,7 +239,7 @@
       const section = currentSection()
       if (section && !sections.some((s) => s.name === section)) { location.hash = HOME; return }
       const onHome = location.hash === HOME
-      const [, salesView, salesQuery = ''] = location.hash.match(/^#\/sales\/(orders|customers|discounts)\/?(?:\?(.*))?$/) || []
+      const [, salesView, salesQuery = ''] = location.hash.match(/^#\/sales\/(orders|customers|discounts|emails)\/?(?:\?(.*))?$/) || []
       document.documentElement.toggleAttribute('data-ia-home', onHome)
       document.documentElement.toggleAttribute('data-ia-sales', Boolean(salesView && Sales))
       if (salesView && Sales) Sales.show(salesView, new URLSearchParams(salesQuery))

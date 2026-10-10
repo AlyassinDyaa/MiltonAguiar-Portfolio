@@ -319,6 +319,32 @@ function Verify() {
   )
 }
 
+/* ---------- no more news emails, from the link at the foot of a mailing (no login needed) ---------- */
+function Unsubscribe() {
+  const { call, user } = useAccount()
+  const [params] = useSearchParams()
+  const u = params.get('u') || ''
+  const t = params.get('t') || ''
+  const [state, setState] = useState(u && t ? 'working' : 'missing')
+  const [text, setText] = useState('')
+  useEffect(() => {
+    if (!u || !t) return
+    let stale = false
+    call('unsubscribe', { u, t }).then(() => { if (!stale) setState('done') }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
+    return () => { stale = true }
+  }, [u, t, call])
+  const details = '/account?tab=details'
+  return (
+    <Shell title={state === 'done' ? 'You are unsubscribed' : 'Unsubscribe'} label="News emails">
+      <div className={`acc-card acc-done ${state === 'failed' || state === 'missing' ? 'is-bad' : ''}`} role="status">
+        <i aria-hidden="true">{state === 'done' ? '✓' : state === 'working' ? '…' : '!'}</i>
+        <p>{state === 'working' ? 'One moment…' : state === 'done' ? 'You won’t get news emails any more. Emails about your orders and your account still come as usual. Changed your mind? Turn news back on under Details in your account.' : state === 'missing' ? 'This page needs the link from the email. You can also turn news emails off under Details in your account.' : text}</p>
+        <Link className="btn ghost sm" to={user ? details : `/account/login?next=${encodeURIComponent(details)}`}>{state === 'done' ? 'Resubscribe in Details' : 'Go to Details'} <span className="arrow">→</span></Link>
+      </div>
+    </Shell>
+  )
+}
+
 /* ---------- "are you sure?": a small window over the page. Escape, the cross or a click outside
    says no; the answer button runs the action and shows that it is working. */
 function Confirm({ open, title, text, yes, onYes, onClose }) {
@@ -1547,6 +1573,7 @@ export default function Account() {
       <Route path="forgot" element={<Forgot />} />
       <Route path="reset" element={<Reset />} />
       <Route path="verify" element={<Verify />} />
+      <Route path="unsubscribe" element={<Unsubscribe />} />
       <Route path="*" element={<Navigate to="/account" replace />} />
     </Routes>
   )

@@ -145,7 +145,26 @@ const C = { page: '#6d0d14', ink: '#0b0b0c', panel: '#17171a', red: '#d8232f', b
 const paint = (c) => `background-color:${c};background-image:linear-gradient(${c},${c});`
 // light words that must stay light in Gmail's dark mode
 const keep = (html, tag = 'div') => `<${tag} class="gmail-screen"><${tag} class="gmail-dif">${html}</${tag}></${tag}>`
-export const emailHtml = ({ subject, kicker, title, lines = [], button, picture, after, code, orders }) => {
+/* Pieces in a grid of two (up to four): their picture, name and price, each a link. One piece
+   gets the whole width. Built from tables, painted for Gmail's dark mode like the rest. */
+const itemsHtml = (items) => {
+  const list = items.slice(0, 4)
+  const wide = list.length === 1 ? 300 : 220
+  const cell = (it) => `<td width="${list.length === 1 ? '100%' : '50%'}" valign="top" style="padding:6px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${paint(C.ink)}border:2px solid ${C.line};"><tr><td align="center" style="padding:10px;">
+          ${it.src ? `<a href="${esc(it.url || '#')}" style="text-decoration:none;"><img src="${esc(pictureUrl(it.src))}" width="${wide}" alt="${esc(it.title || '')}" style="display:block;width:100%;max-width:${wide}px;height:auto;border:0;"></a>` : ''}
+          <span style="display:block;margin-top:10px;font-family:${DISPLAY};font-size:15px;font-weight:900;font-style:italic;letter-spacing:0.5px;text-transform:uppercase;line-height:1.15;color:#ffffff;">${keep(esc(it.title || ''), 'span')}</span>
+          ${it.text ? `<span style="display:block;margin-top:4px;font-family:${DISPLAY};font-size:14px;font-weight:900;font-style:italic;color:${C.bright};">${esc(it.text)}</span>` : ''}
+        </td></tr></table>
+      </td>`
+  const rows = []
+  for (let i = 0; i < list.length; i += 2) rows.push(`<tr>${cell(list[i])}${list[i + 1] ? cell(list[i + 1]) : list.length > 1 ? '<td width="50%" style="padding:6px;">&nbsp;</td>' : ''}</tr>`)
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 18px;">${rows.join('')}</table>`
+}
+/* An email is laid out from: subject, kicker (the small tag), title, lines (paragraphs), orders,
+   code, picture, items (pieces in a grid), highlight ({ label, title, lines }: a box for an event),
+   button, after (the quiet line at the end) and unsubscribe (a link in the footer to stop news emails). */
+export const emailHtml = ({ subject, kicker, title, lines = [], button, picture, after, code, orders, items, highlight, unsubscribe }) => {
   const b = brandInfo()
   const name = String(b.name || 'Milton Aguiar').trim()
   const cut = name.lastIndexOf(' ')
@@ -188,6 +207,12 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
       <td style="vertical-align:middle;"><img src="${esc(pictureUrl(picture.src))}" width="64" height="64" alt="" style="display:block;width:64px;height:64px;border-radius:50%;border:3px solid ${C.gold};${paint(C.ink)}"></td>
       <td style="vertical-align:middle;padding-left:14px;font-family:${BODY};font-size:14px;line-height:1.5;color:${C.text};"><strong style="display:block;font-family:${DISPLAY};font-size:15px;font-style:italic;text-transform:uppercase;color:${C.gold};">${esc(picture.title)}</strong>${keep(esc(picture.text), 'span')}</td>
     </tr></table>` : ''}
+    ${Array.isArray(items) && items.length ? itemsHtml(items) : ''}
+    ${highlight ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px;"><tr><td style="${paint(C.ink)}border:2px solid ${C.line};border-left:5px solid ${C.red};padding:14px 18px;">
+      ${highlight.label ? `<span style="display:block;font-family:${DISPLAY};font-size:11px;font-weight:900;font-style:italic;letter-spacing:2px;text-transform:uppercase;color:${C.gold};">${esc(highlight.label)}</span>` : ''}
+      <span style="display:block;margin-top:6px;font-family:${DISPLAY};font-size:20px;font-weight:900;font-style:italic;text-transform:uppercase;line-height:1.1;color:#ffffff;">${keep(esc(highlight.title || ''), 'span')}</span>
+      ${(highlight.lines || []).map((l) => `<span style="display:block;margin-top:4px;font-family:${BODY};font-size:14px;line-height:1.5;color:${C.text};">${keep(esc(l), 'span')}</span>`).join('')}
+    </td></tr></table>` : ''}
     ${button ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 6px;"><tr><td style="${paint(C.red)}border:3px solid ${C.ink};border-right-width:7px;border-bottom-width:7px;">
       <a href="${esc(button.url)}" style="display:inline-block;padding:14px 24px;font-family:${DISPLAY};font-size:15px;font-weight:900;font-style:italic;letter-spacing:1px;text-transform:uppercase;color:#ffffff;text-decoration:none;">${keep(`${esc(button.label)} &rarr;`, 'span')}</a>
     </td></tr></table>
@@ -197,6 +222,7 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
   <tr><td style="height:14px;line-height:14px;font-size:0;">&nbsp;</td></tr>
   <tr><td align="center" style="${paint(C.ink)}border:3px solid ${C.ink};padding:18px 14px 16px;font-family:${BODY};font-size:13px;line-height:1.6;color:${C.foot};">
     ${b.tagline ? `<span style="display:block;margin-bottom:10px;">${keep(esc(b.tagline), 'span')}</span>` : ''}<a href="${esc(home)}" style="${footLink}">${keep(esc(home.replace(/^https?:\/\//, '')), 'span')}</a>${insta ? `<span style="color:${C.bright};font-weight:900;">&nbsp;&nbsp;/&nbsp;&nbsp;</span><a href="${esc(insta.url)}" style="${footLink}">${keep('Instagram', 'span')}</a>` : ''}
+    ${unsubscribe ? `<span style="display:block;margin-top:12px;font-family:${BODY};font-size:12px;line-height:1.5;color:${C.soft};">No more news emails? <a href="${esc(unsubscribe)}" style="color:#ff5a52;text-decoration:underline;">Unsubscribe</a></span>` : ''}
   </td></tr>
 </table>
 </td></tr></table>
@@ -212,7 +238,9 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
    is where replies go. With neither set, on this computer the email is printed instead.
    An email is { to, subject, kicker, title, lines, button: { label, url }, picture: { src, title, text },
    code: { label, text, note } (a discount code, in a dashed box), orders: [{ title, sub, rows: [[what, price]],
-   total, foot }] (orders written out, a box each), after, replyTo, attachments: [{ filename, content (a Buffer),
+   total, foot }] (orders written out, a box each), items: [{ src, title, text, url }] (pieces in a grid),
+   highlight: { label, title, lines } (a box for an event), unsubscribe (a link in the footer), list: { unsubscribe }
+   (the List-Unsubscribe header), after, replyTo, attachments: [{ filename, content (a Buffer),
    contentType }] (files sent with it: a finished commission) }. */
 export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
 // the artist's own inbox, as for the Contact form: CONTACT_TO, else the contact email in the admin
@@ -256,7 +284,7 @@ export const sendMail = async (mail) => {
   const files = Array.isArray(mail.attachments) ? mail.attachments.filter((a) => a && a.filename && a.content) : []
   if (testAddress(to)) { console.log(`[email skipped: test address] ${to} / ${subject}${files.length ? ` / ${files.length} file${files.length === 1 ? '' : 's'}: ${files.map((a) => a.filename).join(', ')}` : ''}`); return true }
   const brand = process.env.MAIL_BRAND || siteName()
-  const text = [mail.title || subject, '', ...lines, ...(Array.isArray(mail.orders) ? mail.orders.map((o) => ['', ...[`${o.title}${o.sub ? ` (${o.sub})` : ''}`, ...(o.rows || []).map(([l, v]) => `  ${l}  ${v || ''}`), o.total ? `  Total  ${o.total}` : '', o.foot ? `  ${o.foot}` : ''].filter(Boolean)].join('\n')) : []), mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`].join('\n')
+  const text = [mail.title || subject, '', ...lines, ...(Array.isArray(mail.orders) ? mail.orders.map((o) => ['', ...[`${o.title}${o.sub ? ` (${o.sub})` : ''}`, ...(o.rows || []).map(([l, v]) => `  ${l}  ${v || ''}`), o.total ? `  Total  ${o.total}` : '', o.foot ? `  ${o.foot}` : ''].filter(Boolean)].join('\n')) : []), mail.code ? `\n${mail.code.label || 'Your code'}: ${mail.code.text}${mail.code.note ? ` (${mail.code.note})` : ''}` : '', mail.picture ? `\n${mail.picture.title}: ${mail.picture.text}` : '', ...(Array.isArray(mail.items) && mail.items.length ? ['', ...mail.items.map((i) => `  ${i.title}${i.text ? `  ${i.text}` : ''}`)] : []), mail.highlight ? `\n${mail.highlight.title}\n${(mail.highlight.lines || []).join('\n')}` : '', button ? `\n${button.label}: ${button.url}` : '', after ? `\n${after}` : '', '', `— ${brand}`, ...(mail.unsubscribe ? ['', `No more news emails? Unsubscribe: ${mail.unsubscribe}`] : [])].join('\n')
   if (!mailReady()) {
     // on this computer the link is printed instead, so the whole journey can be tried without email
     if (!process.env.VERCEL) console.log(`\n[email to ${to}] ${subject}\n${text}\n${files.length ? `(with ${files.map((a) => `${a.filename}, ${a.content.length} bytes`).join('; ')})\n` : ''}`)
@@ -266,14 +294,16 @@ export const sendMail = async (mail) => {
   const html = emailHtml(mail)
   const from = process.env.MAIL_FROM || `${brand} <${process.env.SMTP_USER}>`
   const replyTo = mail.replyTo || process.env.MAIL_REPLY_TO || undefined // a contact message: replies go to the visitor
+  // a mailing to many: mail apps show their own Unsubscribe button from this header
+  const list = mail.list && mail.list.unsubscribe ? { unsubscribe: mail.list.unsubscribe } : null
   if (smtpReady()) {
     try {
-      await smtp().sendMail({ from, to, subject, text, html, replyTo, ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType || undefined })) } : {}) })
+      await smtp().sendMail({ from, to, subject, text, html, replyTo, ...(list ? { list } : {}), ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType || undefined })) } : {}) })
       return true
     } catch (e) { console.error('the email server refused the email:', e && (e.response || e.message)); return false }
   }
   try {
-    const answer = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}) }) })
+    const answer = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(list ? { headers: { 'List-Unsubscribe': `<${list.unsubscribe}>` } } : {}), ...(files.length ? { attachments: files.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })) } : {}) }) })
     if (!answer.ok) console.error('resend refused the email:', answer.status)
     return answer.ok
   } catch (e) { console.error('could not reach resend:', e.message); return false }

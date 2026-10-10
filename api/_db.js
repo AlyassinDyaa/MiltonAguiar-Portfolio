@@ -36,6 +36,9 @@ export const db = async () => {
         d.collection('orders').createIndex({ email: 1, createdAt: -1 }),
         d.collection('orders').createIndex({ pi: 1 }),
         d.collection('users').createIndex({ memberNo: 1 }, { unique: true, partialFilterExpression: { memberNo: { $type: 'number' } } }),
+        // the hourly counts of emails sent by mailings (api/_mailings.js) go after three days
+        d.collection('mailCounts').createIndex({ at: 1 }, { expireAfterSeconds: 3 * 86400 }),
+        d.collection('mailings').createIndex({ createdAt: -1 }),
       ])
       return d
     })().catch((e) => { globalThis.__maMongo = null; throw e })

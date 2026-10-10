@@ -7,11 +7,13 @@
    - Customers: everyone who has bought, and everyone with an account on the site, with what they
      have spent; one opens everything about them, and the rewards gifted to them;
    - Discounts: a percentage off, for a while, for chosen customers (a code each) or anyone with
-     a shared code.
+     a shared code;
+   - Emails: news and notices to many customers at once (those who agreed to news, or every
+     account for a notice about the service), from ready-made emails, sent a few at a time.
    The orders come from /api/orders, the codes from /api/discounts (both kept in Stripe), the
    accounts from /api/account, each with the admin's own pass.
    shell.js puts the links in the navigation and shows this screen at #/sales/orders,
-   #/sales/customers and #/sales/discounts. */
+   #/sales/customers, #/sales/discounts and #/sales/emails. */
 window.IASales = (() => {
   const el = (tag, props = {}, kids = []) => {
     const n = Object.assign(document.createElement(tag), props)
@@ -1570,6 +1572,270 @@ window.IASales = (() => {
     return [shade, panel]
   }
 
+  // ---------- Emails ----------
+  /* Sales → Emails (#/sales/emails): news and notices to many customers at once (api/_mailings.js,
+     through /api/account). Who it goes to (those who agreed to news, or every account for a notice
+     about the service), why (a ready-made email for each reason, every word editable), a live
+     preview drawn by the same code as the real email, a test to the artist's own inbox, then the
+     send: this page sends it a few at a time, with a bar, and can stop and carry on later without
+     sending anyone the same email twice. Past mailings are listed under it. */
+  const eState = { loaded: false, loading: false, problem: '', info: null, audience: 'news', fields: null, touched: false, html: '', run: null, note: null }
+  const SOCIAL = { instagram: 'Link to the post', youtube: 'Link to the video', discord: 'Link to the server or event', globalcomix: 'Link to the comic' }
+  const AUDIENCE_SHORT = { news: 'Agreed to news', all: 'All accounts' }
+  const reasonName = (k) => (eState.info && eState.info.templates[k] && eState.info.templates[k].label) || k
+  const loadMailInfo = async () => {
+    eState.loading = true; draw()
+    const r = await mApi({ action: 'adminMailInfo' })
+    eState.loading = false; eState.loaded = true
+    if (r.ok) { eState.info = r.json; eState.problem = '' }
+    else eState.problem = r.status === 503 || r.status === 403 ? 'Customer accounts are not set up on this site, so there is nobody to email.' : (r.json.message || 'The emails screen could not be loaded.')
+    draw()
+  }
+  const countFor = (a) => (eState.info ? eState.info.counts[a] || 0 : 0)
+  // the email as drawn by the server, a moment after the last change
+  let previewTimer = 0, previewGen = 0
+  const preview = () => {
+    clearTimeout(previewTimer)
+    previewTimer = setTimeout(async () => {
+      if (!eState.fields) return
+      const gen = ++previewGen
+      const r = await mApi({ action: 'adminMailPreview', fields: eState.fields, audience: eState.audience })
+      if (gen !== previewGen || !r.ok) return
+      eState.html = r.json.html || ''
+      const frame = root && root.querySelector('.sl-mail-frame')
+      if (frame && frame.srcdoc !== eState.html) frame.srcdoc = eState.html
+    }, 300)
+  }
+  const applyTemplate = (reason) => {
+    const t = eState.info.templates[reason]
+    if (!t) return
+    const { label: _label, ...fields } = t
+    eState.fields = { ...fields, pieces: [], discount: null, event: null }
+    eState.touched = false; eState.note = null
+    draw(); preview()
+  }
+  const pickReason = (reason) => {
+    if (!reason) return
+    if (eState.fields && eState.touched && reason !== eState.fields.reason) {
+      ask({ title: 'Start from the template?', text: `${reasonName(reason)}: a ready-made email.`, more: 'What you have written so far is replaced by its words.', yes: 'Use the template', plain: true, run: async () => { applyTemplate(reason); return '' } })
+      return
+    }
+    applyTemplate(reason)
+  }
+  // a field of the email: kept as it is typed, the preview follows; drawing again keeps the caret there
+  const mailInput = (key, props = {}, area = false) => {
+    const i = el(area ? 'textarea' : 'input', { className: 'sl-input', value: eState.fields[key] || '', ...(area ? { rows: 6 } : { type: 'text' }), ...props })
+    i.dataset.focus = `mail-${key}`
+    i.addEventListener('input', () => { eState.fields[key] = i.value; eState.touched = true; preview() })
+    return i
+  }
+  const field = (t, control, cls = '') => el('label', { className: `sl-field ${cls}` }, [el('span', { textContent: t }), control])
+
+  // the reason's own part: the code, the pieces, the link, the convention
+  const extras = () => {
+    const f = eState.fields
+    const r = f.reason
+    if (r === 'discount') {
+      const codes = dState.list.filter((d) => statusOf(d)[0] === 'active' && !d.email)
+      const s = el('select', { className: 'sl-select', ariaLabel: 'Discount code' }, [
+        el('option', { value: '', textContent: codes.length ? 'Pick a code…' : dState.loaded ? 'No shared codes running' : 'Loading the codes…' }),
+        ...codes.map((d) => el('option', { value: d.id, textContent: `${d.code} · ${d.percent}% off · ${d.until ? `until ${date(d.until * 1000)}` : 'no end date'}`, selected: Boolean(f.discount && f.discount.code === d.code) })),
+      ])
+      s.addEventListener('change', () => { const d = codes.find((x) => x.id === s.value); f.discount = d ? { code: d.code, percent: d.percent, until: d.until || null } : null; eState.touched = true; preview() })
+      return [field('The code', s), el('p', { className: 'sl-hint', textContent: 'Only codes for anyone (one shared code) that are still running. Make one under Discounts → Anyone with the code. In the words, {percent}, {code} and {until} stand for it.' })]
+    }
+    if (r === 'pieces') {
+      const all = eState.info.pieces
+      const count = el('span', { className: 'sl-chosen', textContent: `${f.pieces.length} of 4 chosen` })
+      const box = el('div', { className: 'sl-picklist sl-mail-pieces' }, all.length ? all.map((p) => {
+        const input = el('input', { type: 'checkbox', checked: f.pieces.includes(p.slug) })
+        const row = el('label', { className: `sl-pick-row ${f.pieces.includes(p.slug) ? 'on' : ''}` }, [input, el('img', { src: p.src, alt: '', loading: 'lazy' }), el('span', { className: 'sl-pick-who' }, [el('strong', { textContent: p.title }), el('small', { textContent: [p.price, p.date ? date(p.date) : ''].filter(Boolean).join(' · ') })])])
+        input.addEventListener('change', () => {
+          if (input.checked && f.pieces.length >= 4) { input.checked = false; count.textContent = 'Four at most'; return }
+          f.pieces = input.checked ? [...f.pieces, p.slug] : f.pieces.filter((s) => s !== p.slug)
+          row.classList.toggle('on', input.checked); count.textContent = `${f.pieces.length} of 4 chosen`; eState.touched = true; preview()
+        })
+        return row
+      }) : [el('p', { className: 'sl-pick-empty', textContent: 'Nothing is in the shop just now.' })])
+      box.dataset.keepScroll = 'mail-pieces'
+      return [el('div', { className: 'sl-pick-top' }, [count, el('small', { className: 'sl-hint', textContent: 'Newest first. Each shows with its picture, name and price.' })]), box]
+    }
+    if (SOCIAL[r]) return [field(SOCIAL[r], mailInput('buttonUrl', { placeholder: 'https://…', spellcheck: false })), el('p', { className: 'sl-hint', textContent: 'The button in the email opens it. Filled in from your social links (Site → Name, colour and contact) when there is one: paste the link to the new one.' })]
+    if (r === 'event') {
+      const ev = f.event || {}
+      const list = eState.info.events
+      const s = list.length ? el('select', { className: 'sl-select', ariaLabel: 'Convention' }, [el('option', { value: '', textContent: 'Pick one of your conventions…' }), ...list.map((e) => el('option', { value: e.slug, textContent: [e.name, e.when].filter(Boolean).join(' · '), selected: ev.name === e.name }))]) : null
+      if (s) s.addEventListener('change', () => { const e = list.find((x) => x.slug === s.value); if (!e) return; f.event = { name: e.name, when: e.when, place: e.place, role: e.role }; if (e.url) f.buttonUrl = e.url; eState.touched = true; draw(); preview() })
+      const part = (k, label, ph) => {
+        const i = el('input', { type: 'text', className: 'sl-input', value: ev[k] || '', placeholder: ph, maxLength: 120 })
+        i.dataset.focus = `mail-event-${k}`
+        i.addEventListener('input', () => { f.event = { ...(f.event || {}), [k]: i.value }; eState.touched = true; preview() })
+        return field(label, i)
+      }
+      return [s ? field('From Conventions', s) : el('p', { className: 'sl-hint', textContent: 'No conventions on the site yet: type the details here (or add it under Conventions).' }),
+        el('div', { className: 'sl-pair' }, [part('name', 'Name', 'Comic Con Portugal'), part('when', 'When', '14–15 Nov 2026'), part('place', 'Where', 'Porto'), part('role', 'Where to find you there', 'Artist Alley, table 42')]),
+        el('p', { className: 'sl-hint', textContent: 'Shown in a box in the email. In the words, {event} stands for its name.' })]
+    }
+    return [el('p', { className: 'sl-hint', textContent: r === 'commissions' ? 'The button opens the commission request form on your site.' : 'Nothing more to pick: write your news below.' })]
+  }
+
+  // sending: a few at a time, until done, stopped, or the day's limit
+  const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms))
+  const runMailing = async (m) => {
+    if (eState.run && eState.run.going) return
+    const run = eState.run = { going: true, stop: false, mailing: m, message: '', capped: false }
+    draw()
+    let busy = 0
+    while (!run.stop) {
+      const r = await mApi({ action: 'adminMailSend', id: m.id })
+      if (r.json.mailing) run.mailing = r.json.mailing
+      if (r.json.today && eState.info) eState.info.today = r.json.today
+      if (r.status === 409 && busy++ < 10) { await sleep(3000); continue }
+      if (!r.ok) { run.message = r.json.message || 'Sending stopped: the site did not answer. Resume it from the list below.'; break }
+      busy = 0
+      if (r.json.capped) { run.capped = true; run.message = r.json.message; break }
+      if (run.mailing.done) break
+      draw()
+    }
+    run.going = false
+    if (run.stop && !run.mailing.done) run.message = 'Stopped. Resume it from the list below whenever you like: nobody gets it twice.'
+    draw()
+    loadMailInfo()
+  }
+  const startMailing = async () => {
+    const f = eState.fields
+    const n = countFor(eState.audience)
+    ask({
+      title: `Send to ${many(n, 'person', 'people')}?`,
+      text: `"${f.subject}" · ${AUDIENCE_SHORT[eState.audience]}`,
+      more: `It goes out ${eState.info.batch} at a time while this page stays open, each with their first name and an unsubscribe link. You can stop and carry on later: nobody gets it twice.${eState.audience === 'all' ? ' This goes to everyone with an account, also those who said no to news: only for notices about the service.' : ''}`,
+      yes: `Send to ${many(n, 'person', 'people')}`,
+      plain: true,
+      run: async () => {
+        const r = await mApi({ action: 'adminMailStart', fields: f, audience: eState.audience })
+        if (!r.ok) return r.json.message || 'It could not be started. Try again.'
+        setTimeout(() => runMailing(r.json.mailing), 0)
+        return ''
+      },
+    })
+  }
+  const sendTest = async (b) => {
+    b.disabled = true; b.textContent = 'Sending…'
+    const r = await mApi({ action: 'adminMailTest', fields: eState.fields, audience: eState.audience })
+    eState.note = r.ok ? { ok: true, text: `Test sent to ${r.json.to}` } : { ok: false, text: r.json.message || 'Not sent. Try again.' }
+    draw()
+  }
+  addEventListener('beforeunload', (e) => { if (eState.run && eState.run.going) { e.preventDefault(); e.returnValue = '' } })
+
+  const bar = (pct) => {
+    const b = el('div', { className: 'sl-mail-bar', role: 'progressbar', ariaLabel: 'Sent so far' }, [el('i', { style: `width:${pct}%` })])
+    b.setAttribute('aria-valuenow', String(pct))
+    return b
+  }
+  const progress = () => {
+    const run = eState.run
+    if (!run) return null
+    const m = run.mailing
+    const handled = m.sent + m.failed + m.skipped
+    const pct = m.total ? Math.round((handled / m.total) * 100) : 100
+    return el('div', { className: `sl-mail-run ${m.done ? 'is-done' : run.capped || run.message ? 'is-held' : ''}` }, [
+      el('div', { className: 'sl-mail-run-top' }, [
+        el('strong', { textContent: m.done ? `Sent: ${m.subject}` : run.going ? `Sending: ${m.subject}` : `Paused: ${m.subject}` }),
+        run.going ? button(run.stop ? 'Stopping…' : 'Stop', () => { run.stop = true; draw() }, 'ia-btn ghost') : button('Close', () => { eState.run = null; draw() }, 'sl-link'),
+      ]),
+      bar(pct),
+      el('p', { className: 'sl-hint', textContent: `${m.sent} of ${m.total} sent${m.failed ? ` · ${m.failed} failed` : ''}${m.skipped ? ` · ${m.skipped} left out (unsubscribed or gone since)` : ''}` }),
+      run.message ? el('p', { className: `sl-said ${run.capped ? 'is-bad' : ''}`, textContent: run.message }) : null,
+      run.capped ? button('Resume', () => runMailing(m), 'ia-btn sl-go') : null,
+    ])
+  }
+
+  const mailRow = (m) => {
+    const st = m.done ? (m.ended ? ['cancelled', 'Stopped'] : ['paid', 'Sent']) : ['packed', 'Not finished']
+    const running = eState.run && eState.run.going && eState.run.mailing.id === m.id
+    return el('div', { className: 'sl-row is-static', role: 'row' }, [
+      el('span', {}, [el('strong', { textContent: date(new Date(m.createdAt).getTime()) }), el('small', { textContent: m.finishedAt ? `finished ${date(new Date(m.finishedAt).getTime(), true)}` : m.lastAt ? `last sent ${date(new Date(m.lastAt).getTime(), true)}` : 'not sent yet' })]),
+      el('span', {}, [el('strong', { textContent: m.subject }), el('small', { textContent: `${reasonName(m.reason)} · ${AUDIENCE_SHORT[m.audience] || m.audience}` })]),
+      el('span', {}, [el('strong', { textContent: `${m.sent} / ${m.total}` }), el('small', { textContent: [m.failed ? `${m.failed} failed` : '', m.skipped ? `${m.skipped} left out` : ''].filter(Boolean).join(' · ') || 'sent' })]),
+      el('span', {}, [badge(st[0], running ? 'Sending' : st[1])]),
+      el('span', { className: 'sl-disc-links' }, [
+        !m.done && !running ? button('Resume', () => ask({ title: 'Carry on sending?', text: `"${m.subject}": ${m.total - m.sent - m.failed - m.skipped} still to go.`, more: 'It picks up where it stopped. Those who already have it do not get it again.', yes: 'Resume', plain: true, run: async () => { setTimeout(() => runMailing(m), 0); return '' } }), 'sl-link') : null,
+        button('Use again', () => {
+          eState.fields = { ...m.fields, pieces: [...(m.fields.pieces || [])] }
+          eState.audience = m.audience; eState.touched = true; eState.note = null
+          draw(); preview(); root.scrollTop = 0
+        }, 'sl-link'),
+        !m.done && !running ? button('Give up the rest', () => ask({ title: 'Give up the rest?', text: `"${m.subject}": ${m.sent} of ${m.total} sent.`, more: 'Nobody else gets it. It stays in this list, marked Stopped.', yes: 'Give up the rest', run: async () => { const r = await mApi({ action: 'adminMailEnd', id: m.id }); if (!r.ok) return r.json.message || 'Try again.'; loadMailInfo(); return '' } }), 'sl-link sl-danger') : null,
+      ]),
+    ])
+  }
+
+  const emailsView = () => {
+    const info = eState.info
+    const head_ = head('Emails', 'Write to your customers: news, a discount, new pieces, a convention. Ready-made emails in your own voice to start from, a preview of exactly what they get, then send.', [
+      button(eState.loading ? 'Loading…' : 'Refresh', () => { loadMailInfo(); loadDiscounts() }),
+    ])
+    if (eState.problem) return [head_, el('div', { className: 'sl-notice is-bad' }, [el('strong', { textContent: 'Emails are not available' }), el('p', { textContent: eState.problem })])]
+    if (!info) return [head_, el('p', { className: 'sl-count', textContent: 'Loading…' })]
+    const f = eState.fields
+    const n = countFor(eState.audience)
+    // 1. who
+    const seg = el('div', { className: 'sl-seg is-two', role: 'radiogroup', ariaLabel: 'Who it goes to' }, info.audiences.map((a) => {
+      const b = el('button', { type: 'button', role: 'radio', ariaChecked: String(eState.audience === a.id), className: `sl-stage ${eState.audience === a.id ? 'on' : ''}`, textContent: a.id === 'news' ? 'Agreed to news' : 'All account holders' })
+      b.addEventListener('click', () => { eState.audience = a.id; draw(); preview() })
+      return b
+    }))
+    const who = [seg,
+      el('p', { className: 'sl-mail-count' }, [el('b', { textContent: String(n) }), ` ${n === 1 ? 'person' : 'people'} · ${info.audiences.find((a) => a.id === eState.audience).label}`]),
+      eState.audience === 'all' ? el('p', { className: 'sl-mail-warn', textContent: 'Only for notices about the service (a change to the shop, to accounts, to how their data is kept). News, offers and new pieces may only go to those who agreed to news: that is the law in the EU.' }) : null,
+      el('p', { className: 'sl-hint', textContent: 'Accounts with a confirmed email only. Test addresses (example.com and the like) are never counted or sent to.' })]
+    // 2. why
+    const reasons = el('select', { className: 'sl-select', ariaLabel: 'Reason' }, [el('option', { value: '', textContent: 'Choose a reason…', selected: !f }), ...Object.entries(info.templates).map(([k, t]) => el('option', { value: k, textContent: t.label, selected: Boolean(f && f.reason === k) }))])
+    reasons.addEventListener('change', () => pickReason(reasons.value))
+    // 3. the words
+    const words = f ? [
+      el('div', { className: 'sl-pair' }, [field('Subject', mailInput('subject', { maxLength: 150 })), field('Small label', mailInput('kicker', { maxLength: 40, placeholder: 'Shop news' }))]),
+      field('Heading', mailInput('title', { maxLength: 120 })),
+      field('The text', mailInput('text', { maxLength: 5000 }, true)),
+      el('p', { className: 'sl-hint', textContent: 'Each line is a paragraph. Every email starts with "Hi" and the person\'s first name, and ends with a link to unsubscribe.' }),
+      el('div', { className: 'sl-pair' }, [field('Button words', mailInput('buttonLabel', { maxLength: 60, placeholder: 'Leave empty for no button' })), SOCIAL[f.reason] ? null : field('Button link', mailInput('buttonUrl', { maxLength: 500, placeholder: '/shop or https://…', spellcheck: false }))]),
+    ] : []
+    // 4. send
+    const today = info.today || { sent: 0, cap: 450 }
+    const going = Boolean(eState.run && eState.run.going)
+    const testBtn = button('Send a test to me', () => sendTest(testBtn), 'ia-btn ghost')
+    testBtn.disabled = !f || !info.testTo || going
+    const sendBtn = button(`Send to ${many(n, 'person', 'people')}`, startMailing, 'ia-btn sl-go')
+    sendBtn.disabled = !f || !n || going || today.sent >= today.cap
+    const frame = el('iframe', { className: 'sl-mail-frame', title: 'Preview of the email', srcdoc: eState.html || '' })
+    frame.setAttribute('sandbox', '') // the email's links stay put
+    return [
+      head_,
+      el('div', { className: 'sl-mail-grid' }, [
+        el('section', { className: 'sl-form sl-mail-form' }, [
+          el('h2', { className: 'sl-h2', textContent: 'New email' }),
+          step(1, 'Who it goes to', who),
+          step(2, 'Why you are writing', [reasons, ...(f ? extras() : [el('p', { className: 'sl-hint', textContent: 'Each reason starts you off with a ready-made email in your own words. You can change all of it.' })])]),
+          f ? step(3, 'The email', words) : null,
+          f ? step(4, 'Check and send', [
+            el('div', { className: 'sl-line' }, [testBtn, sendBtn]),
+            el('p', { className: 'sl-hint', textContent: `${info.testTo ? `The test goes to ${info.testTo}${info.testIsFake ? ' (a test address: it is only written in the server\'s log)' : ''}.` : 'Add your email under Site → Name, colour and contact to get tests.'} Sent by mailings in the last 24 hours: ${today.sent} of ${today.cap} (Gmail allows about 500 a day).` }),
+            today.sent >= today.cap ? el('p', { className: 'sl-said is-bad', textContent: "Gmail's daily limit is near: carry on tomorrow." }) : null,
+            eState.note ? el('p', { className: `sl-said ${eState.note.ok ? '' : 'is-bad'}`, textContent: eState.note.text }) : null,
+          ]) : null,
+          progress(),
+        ]),
+        el('aside', { className: 'sl-mail-side' }, [
+          el('div', { className: 'sl-mail-side-head' }, [el('span', { textContent: 'Preview' }), f ? el('small', { textContent: 'As "Alex" sees it' }) : null]),
+          f ? frame : el('div', { className: 'sl-mail-empty', textContent: 'Choose a reason, and the email shows here as it will arrive.' }),
+        ]),
+      ]),
+      el('h2', { className: 'sl-h2 is-list', textContent: 'Sent before' }),
+      info.mailings.length ? el('div', { className: 'sl-table is-mailings', role: 'table' }, [headRow(['Started', 'Subject', 'Sent', 'Status']), ...info.mailings.map(mailRow)])
+        : el('div', { className: 'sl-empty' }, [el('strong', { textContent: 'Nothing sent yet' }), el('p', { textContent: 'Your mailings show here, with how far each got.' })]),
+    ]
+  }
+
   // ---------- drawing ----------
   const draw = () => {
     if (!root) return
@@ -1582,7 +1848,7 @@ window.IASales = (() => {
     const inner = Object.fromEntries([...root.querySelectorAll('[data-keep-scroll]')].map((n) => [n.dataset.keepScroll, n.scrollTop]))
     const onCommissions = state.view === 'orders' && state.ordersTab === 'commissions'
     const open = state.view === 'orders' && !onCommissions && state.open && state.orders.find((o) => o.id === state.open)
-    const views = { orders: onCommissions ? commissionsView : ordersView, customers: customersView, discounts: discountsView }
+    const views = { orders: onCommissions ? commissionsView : ordersView, customers: customersView, discounts: discountsView, emails: emailsView }
     const panels = open ? orderPanel(open) : onCommissions && cState.open ? commissionPanel(cState.detail) : []
     // typing in an order's panel: leave it as it is. In a commission's window (its words are kept as
     // they are typed) it is drawn again, so a message arriving shows at once, and the field gets the
@@ -1593,11 +1859,19 @@ window.IASales = (() => {
     if (typingIn && !draftKey) return
     let sel = null
     if (draftKey) { try { sel = [typingIn.selectionStart, typingIn.selectionEnd, typingIn.scrollTop] } catch { sel = null } }
+    // a field of the new email being typed in (Emails) keeps the focus and the caret too
+    const focusKey = !draftKey && active && root.contains(active) && active.dataset && active.dataset.focus ? active.dataset.focus : ''
+    let fsel = null
+    if (focusKey) { try { fsel = [active.selectionStart, active.selectionEnd, active.scrollTop] } catch { fsel = null } }
     root.replaceChildren(el('div', { className: 'sl-inner' }, views[state.view]()), ...panels, ...modalLayer())
     root.scrollTop = scroll
     if (hadModal) root.querySelector('.sl-modal-shade')?.classList.add('is-still')
     root.querySelectorAll('[data-keep-scroll]').forEach((n) => { if (inner[n.dataset.keepScroll]) n.scrollTop = inner[n.dataset.keepScroll] })
     if (typing >= 0) { const s = root.querySelectorAll('.sl-search')[typing]; if (s) { s.focus(); try { s.setSelectionRange(caret, caret) } catch { /* not a text box */ } } }
+    if (focusKey) {
+      const again = root.querySelector(`[data-focus="${focusKey}"]`)
+      if (again) { again.focus({ preventScroll: true }); if (fsel) { try { again.setSelectionRange(fsel[0], fsel[1]); again.scrollTop = fsel[2] } catch { /* not a text box */ } } }
+    }
     if (draftKey) {
       const again = root.querySelector(`.sl-panel.is-commission [data-draft="${draftKey}"]`)
       if (again) { again.focus({ preventScroll: true }); if (sel) { try { again.setSelectionRange(sel[0], sel[1]); again.scrollTop = sel[2] } catch { /* not a text box */ } } }
@@ -1613,7 +1887,7 @@ window.IASales = (() => {
   /* Called by shell.js whenever the address changes to a Sales screen. */
   const show = (view, params) => {
     const before = state.view
-    state.view = ['customers', 'discounts'].includes(view) ? view : 'orders'
+    state.view = ['customers', 'discounts', 'emails'].includes(view) ? view : 'orders'
     if (state.view === 'orders') state.o.customer = params.get('customer') || ''
     // Orders has two tabs: the shop's orders, and the commissions (?tab=commissions, &c=<id> opens one)
     const tabBefore = state.ordersTab
@@ -1629,6 +1903,8 @@ window.IASales = (() => {
     // Customers shows each one's codes; Discounts offers every customer, account holders too
     if (state.view !== 'orders' && !dState.loaded && !dState.loading) loadDiscounts()
     if (state.view !== 'orders' && !mState.loaded && !mState.loading) loadMembers()
+    // Emails: who it can go to and what can go in it, asked afresh each time the screen opens
+    if (state.view === 'emails' && before !== 'emails' && !eState.loading) loadMailInfo()
     if (!state.loaded && !state.loading) load()
     else draw()
     if (before !== view || !state.loaded) readSwitch().then(draw)
@@ -1642,6 +1918,7 @@ window.IASales = (() => {
       { view: 'orders', href: '#/sales/orders', label: 'Orders', icon: 'M6 3h12l1 4H5z M5 7h14v13H5z M9 11h6 M9 15h4' },
       { view: 'discounts', href: '#/sales/discounts', label: 'Discounts', icon: 'M20 12l-8 8-8.5-8.5V4h7.5z M8 8.01h.01 M15 9l-6 6 M10 9.5h.01 M14 14.5h.01' },
       { view: 'customers', href: '#/sales/customers', label: 'Customers', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M2.5 20v-1a5.5 5.5 0 0 1 5.5-5.5h2A5.5 5.5 0 0 1 15.5 19v1 M16 4.3a3.5 3.5 0 0 1 0 6.4 M18 13.7a5.5 5.5 0 0 1 3.5 5.3v1' },
+      { view: 'emails', href: '#/sales/emails', label: 'Emails', icon: 'M3 5.5h18v13H3z M3.5 6l8.5 7 8.5-7' },
     ],
   }
 })()

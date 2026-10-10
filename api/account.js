@@ -5,6 +5,7 @@ import { forCustomer, numberMember, stripeCodes, usesHere } from './_orders.js'
 import { accountsMode } from './_buyer.js'
 import { countedMatch } from './_commissions.js'
 import { adminOk } from './_session.js'
+import { mailingAction, unsubscribe } from './_mailings.js'
 import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
@@ -20,6 +21,7 @@ import {
         { action: 'forgot', email }                       emails a reset link (always answers the same)
         { action: 'reset', token, password }
         { action: 'verify', token }                       confirms the email address
+        { action: 'unsubscribe', u, t }                   no more news emails (the link in a mailing: api/_mailings.js)
         { action: 'resend' }                              a new confirmation email
         { action: 'password', current, password }         change it (other devices are logged out)
         { action: 'profile', name, phone, marketing, avatar, card }
@@ -344,6 +346,8 @@ export default async function handler(req, res) {
     // ---------- the admin (Sales → Customers): the members, and rewards given to them as gifts
     if (action.startsWith('admin')) {
       if (!adminOk(req)) return say(res, 401, { message: 'Your login has run out. Sign out of the admin and sign in again.' })
+      // Sales → Emails: news and notices to many customers at once (api/_mailings.js)
+      if (action.startsWith('adminMail')) return say(res, ...(await mailingAction(req, d, action, body)))
       return say(res, ...(await adminAction(req, d, users, action, body)))
     }
 
@@ -442,6 +446,16 @@ export default async function handler(req, res) {
       const { rewards } = await giveReward(users, await users.findOne({ _id: token.userId }))
       const user = await currentUser(req)
       return say(res, 200, { verified: true, rewards, user: publicUser(user) })
+    }
+
+    if (action === 'unsubscribe') {
+      // from the link in a mailing, no login needed: the link carries the account's own token
+      if (await tooMany(`unsub-ip:${ip}`, 30, 15)) return say(res, 429, { message: 'Too many tries. Wait a few minutes.' })
+      const [status, answer] = await unsubscribe(d, body)
+      if (status !== 200) { await noteTry(`unsub-ip:${ip}`); return say(res, status, answer) }
+      // the same person logged in on this browser: their page shows the change at once
+      const me = await currentUser(req)
+      return say(res, 200, me && me._id === clean(body.u, 80) ? { ...answer, user: publicUser({ ...me, marketing: false }) } : answer)
     }
 
     // ---------- with a login

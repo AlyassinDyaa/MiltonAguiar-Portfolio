@@ -1,6 +1,6 @@
 {
   "pages": {
-    "work": false,
+    "work": true,
     "shop": true,
     "gallery": false,
     "commissions": true,
@@ -31,7 +31,7 @@
   },
   "art": {
     "comicsWatermark": false,
-    "watermark": true
+    "watermark": false
   },
   "commissions": {
     "request": true

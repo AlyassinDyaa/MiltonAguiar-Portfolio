@@ -2364,3 +2364,19 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
    or a finger resting on it (the lean follows the finger too, until a drag spins the card instead) */
 .acc-card3d-lean.is-touched .acc-card3d-shine { animation: none; }
 .acc-card3d-lean.is-touched { transition-duration: 0.15s; }
+
+/* Points under Rewards, coming soon: a quiet dashed box with the counter not yet running */
+.acct-soon { display: inline-block; vertical-align: middle; margin-left: 10px; padding: 4px 9px 3px; font-family: var(--display); font-size: 0.62rem; font-weight: 800; font-style: italic; letter-spacing: 0.14em; text-transform: uppercase; border: 1.5px solid var(--gold); color: var(--gold); transform: skewX(-8deg); }
+.acct-points { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(18px, 3vw, 32px); align-items: center; padding: clamp(18px, 2.6vw, 26px); border: 2px dashed var(--line-strong); background: color-mix(in srgb, var(--panel) 70%, transparent); }
+.acct-points-count { display: grid; place-items: center; min-width: 110px; aspect-ratio: 1; padding: 10px; border: 3px solid var(--line-strong); border-radius: 50%; color: var(--fg-mute); }
+.acct-points-count b { font-family: var(--display); font-size: 2.6rem; font-weight: 900; font-style: italic; line-height: 1; }
+.acct-points-count small { font-family: var(--display); font-size: 0.62rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.acct-points-what p { margin: 0 0 12px; color: var(--fg-dim); line-height: 1.55; }
+.acct-points-what ul { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; }
+.acct-points-what li { display: flex; align-items: baseline; gap: 6px; font-size: 0.9rem; color: var(--fg-dim); }
+.acct-points-what li b { font-family: var(--display); font-size: 0.8rem; font-weight: 800; font-style: italic; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg); }
+@media (max-width: 599px) {
+  .acct-points { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+  .acct-points-count { min-width: 92px; }
+  .acct-points-count b { font-size: 2.1rem; }
+}

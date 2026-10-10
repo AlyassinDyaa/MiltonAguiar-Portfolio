@@ -1454,6 +1454,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
           <div className="acct-reward-list">{earnable.map((r) => rewardCard(r))}</div>
         </section>
       )}
+      <Points />
       {/* tried on but not saved: the same bar as under Details, to keep it or go back */}
       <AnimatePresence>
         {pick && (
@@ -1468,6 +1469,32 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/* Points, on the way: a section under Rewards saying what is coming, with the counter not yet running */
+function Points() {
+  return (
+    <section className="acct-reward-group is-points" aria-labelledby="acct-points-title">
+      <header className="acct-group-head">
+        <h3 id="acct-points-title">Points <span className="acct-soon">Coming soon</span></h3>
+        <p>A points balance for your account is on the way.</p>
+      </header>
+      <div className="acct-points">
+        <div className="acct-points-count" aria-hidden="true">
+          <b>0</b>
+          <small>points</small>
+        </div>
+        <div className="acct-points-what">
+          <p>Soon, every order and every commission will earn you points, to spend on discounts, prints and more. What you have collected so far will count from the start.</p>
+          <ul>
+            <li><b>Earn</b><span>with every order and commission</span></li>
+            <li><b>Spend</b><span>on discounts, prints and more</span></li>
+            <li><b>Keep</b><span>they never run out</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -68,9 +68,10 @@
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
     'site/shop': {
-      groups: { enabled: 'Selling online', label: 'The Shop page', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', thanksTitle: 'After a purchase', emails: 'Emails to you' },
-      half: ['label', 'title', 'emptyTitle', 'emptyText', 'currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra', 'thanksTitle', 'thanksText'],
+      groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', emails: 'Emails to you' },
+      half: ['currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra'],
     },
+    'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
@@ -81,16 +82,15 @@
      config.yml ("work", "site/shop"), a screen of sales.js ("sales:orders") or the picture
      library ("media"). A section missing here still shows, at the end of Site. */
   const NAV = [
-    { label: 'Orders & customers', lead: 'Who bought what, commissions, and writing to your customers.', items: ['sales:orders', 'sales:customers', 'sales:emails'] },
+    { label: 'Orders & customers', lead: 'Who bought what, commissions, members and their rewards, and writing to your customers.', items: ['sales:orders', 'sales:customers', 'site/account', 'site/rewards', 'sales:emails'] },
     { label: 'Your art', lead: 'What you add to over time.', items: ['work', 'comics', 'gallery_sections', 'events'] },
     { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'site/sales', 'sales:discounts', 'site/categories', 'site/shop'] },
-    { label: 'Members', lead: 'Customer accounts, and what members earn.', items: ['site/rewards', 'site/account'] },
-    { label: 'Page text', lead: 'Headings, introductions and buttons, one form per page.', items: ['pages/home', 'pages/lists', 'pages/commissions', 'pages/about', 'pages/contact'] },
+    { label: 'Page text', lead: 'Headings, introductions and buttons, one form per page.', items: ['pages/home', 'pages/shop', 'pages/lists', 'pages/commissions', 'pages/about', 'pages/contact'] },
     { label: 'Site', lead: 'Your name and colour, what is switched on, and every picture.', items: ['site/brand', 'site/visibility', 'media'] },
   ]
   /* Names in the navigation (narrow). Tiles and form headings use the label in config.yml,
      which says the same thing in full ("Home page" for "Home"). */
-  const SHORT = { 'pages/home': 'Home', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/shop': 'Shop', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
   /* One line about each part: its tile on the Overview, and the line under its heading. */
   const ABOUT = {
     'sales:orders': 'Shop orders and commissions: mark them packed and shipped, answer messages, send quotes.',
@@ -106,6 +106,7 @@
     'pages/home': 'The top of the home page, its drawing, the current project, the pencils-to-colours sets and the heading of each part.',
     'pages/lists': 'The heading and introduction of the Work page, its comic samples and the Gallery page.',
     'pages/commissions': 'Open or closed, what you offer and what it costs, where "Get a quote" goes, how it works.',
+    'pages/shop': 'The words on the Shop page: heading, introduction, the list, while nothing is for sale, and after a purchase.',
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
@@ -120,6 +121,7 @@
     'pages/home': 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     'pages/lists': 'M4 5h16 M4 10h10 M4 15h16 M4 20h8',
     'pages/commissions': 'M5 4h14v16l-3.500-2-3.500 2-3.500-2L5 20z M9 9h6 M9 13h4',
+    'pages/shop': 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
     'pages/about': 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
     'pages/contact': 'M4 6h16v12H4z M4 7l8 6 8-6',
     'site/brand': 'M12 3l2.600 5.600 6.100.700-4.500 4.200 1.200 6-5.400-3-5.400 3 1.200-6L3.300 9.300l6.100-.700z',
@@ -207,7 +209,7 @@
       'site/shop': 'stripe paypal payments pay currency shipping delivery buy button online purchases tax', shop: 'items prints originals price sold out stock new tag sizes pictures', 'site/sales': 'price cut discount percent off sale everything category automatic',
       'sales:discounts': 'code codes promo coupon voucher percent off', 'sales:customers': 'members accounts buyers people email gift reward card', 'sales:orders': 'shipped packed delivered tracking paid refund commissions quote messages',
       'sales:emails': 'news newsletter mailing send unsubscribe notice', 'site/rewards': 'profile pictures card designs points gifts earn unlock', 'site/account': 'members accounts login sign up avatar free pictures',
-      'pages/home': 'hero welcome ticker band steps pencils inks colours latest events', 'pages/commissions': 'open closed quote request offers prices how it works', 'pages/about': 'story bio facts', 'pages/contact': 'email form questions', 'pages/lists': 'work gallery page text intro',
+      'pages/home': 'hero welcome ticker band steps pencils inks colours latest events', 'pages/commissions': 'open closed quote request offers prices how it works', 'pages/shop': 'shop page words heading introduction empty thank you after purchase', 'pages/about': 'story bio facts', 'pages/contact': 'email form questions', 'pages/lists': 'work gallery page text intro',
       work: 'pieces art pencils inks colours drawings pages covers', comics: 'samples comic book pages spread reader', gallery: 'sections pin-ups', events: 'conventions signings markets dates', 'site/categories': 'categories sub category type sizes', media: 'pictures uploads images files library',
     }
     const screens = () => groups.flatMap((g) => g.parts.map((p) => ({ ...p, group: g.label })))
@@ -258,6 +260,50 @@
       anchor.before(panel)
     }
     setInterval(findSync, 300)
+
+    /* ---- the lists of pieces, items for sale, comics, sections and events: a page at a time, like
+       the site's Shop. 10 to 50 to a page (the choice kept in this browser), and a bar under the list:
+       which these are, the pages, and how many to a page. Decap draws the list; this only hides the
+       cards off the page and keeps the bar under it, so a list drawn again (another sort, the other
+       view) is paged again at once. */
+    const PER = [10, 15, 20, 25, 50]
+    const perList = () => { let n = 0; try { n = Number(localStorage.getItem('ia-per')) } catch { /* nothing kept */ } return PER.includes(n) ? n : 20 }
+    const NOUNS = { shop: ['item', 'items'], work: ['piece', 'pieces'], comics: ['comic', 'comics'], gallery_sections: ['section', 'sections'], events: ['event', 'events'] }
+    const pageAt = {} // collection -> the page it is on
+    const pageList = () => {
+      const m = location.hash.match(/^#\/collections\/([^/?]+)\/?(\?.*)?$/)
+      const old = document.querySelector('.ia-pager')
+      const grid = m && document.querySelector('ul[class*="CardsGrid"]')
+      if (!grid) { if (old) old.remove(); return }
+      const name = m[1]
+      const items = [...grid.children]
+      const per = perList(), pages = Math.max(1, Math.ceil(items.length / per))
+      const page = Math.min(Math.max(1, pageAt[name] || 1), pages)
+      pageAt[name] = page
+      items.forEach((li, i) => { const on = i >= (page - 1) * per && i < page * per; const want = on ? '' : 'none'; if (li.style.display !== want) li.style.display = want })
+      const key = `${name}:${items.length}:${page}:${per}`
+      if (old && old.dataset.key === key && old.previousElementSibling === grid) return
+      if (old) old.remove()
+      if (items.length <= PER[0]) return // few enough to see at once: no bar
+      const [one, many] = NOUNS[name] || ['entry', 'entries']
+      const from = (page - 1) * per + 1, to = Math.min(items.length, page * per)
+      const go = (p) => { pageAt[name] = p; grid.scrollIntoView({ block: 'start' }); pageList() }
+      const pageBtn = (p) => { const b = el('button', { type: 'button', className: `ia-page ${p === page ? 'on' : ''}`, textContent: String(p), ariaCurrent: p === page ? 'page' : null }); b.addEventListener('click', () => go(p)); return b }
+      const arrow = (label, p, off) => { const b = el('button', { type: 'button', className: 'ia-page is-arrow', textContent: label, ariaLabel: p < page ? 'Previous page' : 'Next page' }); b.disabled = off; b.addEventListener('click', () => go(p)); return b }
+      // the pages: all of them up to seven, else the first, the last, and the ones around this one
+      const shown = pages <= 7 ? Array.from({ length: pages }, (_, i) => i + 1) : [...new Set([1, page - 1, page, page + 1, pages].filter((p) => p >= 1 && p <= pages))]
+      const nav = el('nav', { className: 'ia-pager-pages', ariaLabel: 'Pages' }, [arrow('‹', page - 1, page === 1), ...shown.flatMap((p, i) => (i && p - shown[i - 1] > 1 ? [el('span', { className: 'ia-page-gap', textContent: '…' }), pageBtn(p)] : [pageBtn(p)])), arrow('›', page + 1, page === pages)])
+      const sel = el('select', { className: 'sl-select ia-pager-sel', ariaLabel: 'How many to a page' }, PER.map((n) => el('option', { value: String(n), textContent: String(n), selected: n === per })))
+      sel.addEventListener('change', () => { try { localStorage.setItem('ia-per', sel.value) } catch { /* fine */ } pageAt[name] = 1; pageList() })
+      const bar = el('div', { className: 'ia-pager' }, [
+        el('span', { className: 'ia-pager-count', textContent: `${from}–${to} of ${items.length} ${items.length === 1 ? one : many}` }),
+        nav,
+        el('label', { className: 'ia-pager-per' }, [el('span', { textContent: 'Per page' }), sel]),
+      ])
+      bar.dataset.key = key
+      grid.after(bar)
+    }
+    setInterval(pageList, 300)
     const home = el('a', { href: HOME, className: 'ia-home-link' }, [icon('adminhome'), el('span', { textContent: 'Overview' })])
     const links = [] // [link, part]
     const badges = {} // part id -> its count in the navigation

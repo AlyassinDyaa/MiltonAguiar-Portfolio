@@ -373,6 +373,19 @@ collections:
           - { name: eventsLabel, label: Small label, widget: string, required: false }
           - { name: eventsTitle, label: Heading, widget: string }
 
+      - name: shop
+        label: Shop page
+        file: content/pages/shop.json
+        fields:
+          - { name: label, label: Small label, widget: string, required: false, hint: 'Above the heading, for example "The shop".' }
+          - { name: title, label: Heading, widget: string }
+          - { name: intro, label: Introduction, widget: text, required: false }
+          - { name: listLabel, label: Small label on the list, widget: string, required: false, hint: 'Beside the page number above the pieces, for example "For sale".' }
+          - { name: nothingText, label: When a filter finds nothing, widget: string, required: false, hint: 'Before the "Show everything" link.' }
+          - { name: emptyTitle, label: Heading while nothing has a price, widget: string, required: false }
+          - { name: emptyText, label: Text while nothing has a price, widget: string, required: false }
+          - { name: thanksTitle, label: Heading after a purchase, widget: string, required: false }
+          - { name: thanksText, label: Text after a purchase, widget: string, required: false }
       - name: lists
         label: Work & Gallery pages
         file: content/pages/lists.json
@@ -532,11 +545,6 @@ collections:
               - { label: 'PayPal', value: paypal }
               - { label: 'Both: buyers choose at checkout', value: both }
             hint: 'Stripe needs STRIPE_SECRET_KEY in the Vercel settings; PayPal needs PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (and PAYPAL_ENV = live for real money; without it PayPal runs in its sandbox, for testing). Discount codes are kept in Stripe, so they need the Stripe key either way.'
-          - { name: label, label: Small label, widget: string, required: false }
-          - { name: title, label: Heading, widget: string }
-          - { name: intro, label: Introduction, widget: text, required: false }
-          - { name: emptyTitle, label: Heading while nothing has a price, widget: string, required: false }
-          - { name: emptyText, label: Text while nothing has a price, widget: string, required: false }
           - { name: currency, label: Currency, widget: select, default: eur, options: [{ label: 'Euro (EUR)', value: eur }, { label: 'US dollar (USD)', value: usd }, { label: 'British pound (GBP)', value: gbp }, { label: 'Brazilian real (BRL)', value: brl }, { label: 'Canadian dollar (CAD)', value: cad }, { label: 'Australian dollar (AUD)', value: aud }] }
           - { name: buttonLabel, label: Wording of the Buy button, widget: string, hint: 'Shown as "… now" beside "Add to cart".' }
           - name: pricePlace
@@ -605,8 +613,6 @@ collections:
           - { name: signedExtra, label: Extra for a signed piece, widget: number, value_type: float, min: 0, default: 0, required: false, hint: 'Added to the price when the buyer switches the signature on. 0 for no extra cost.' }
           - { name: shipping, label: Ask for a delivery address, widget: boolean, default: true, required: false, hint: 'On for anything you post. Off for downloads.' }
           - { name: countries, label: Countries you post to, widget: list, required: false, hint: 'Two-letter country codes, separated by commas: PT, ES, FR, GB, US.' }
-          - { name: thanksTitle, label: Heading, widget: string, required: false }
-          - { name: thanksText, label: Text, widget: string, required: false }
           - name: emails
             label: Emails to you
             widget: object

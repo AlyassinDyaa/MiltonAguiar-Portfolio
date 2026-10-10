@@ -89,7 +89,7 @@ export default function Shop() {
 
       <section className="spread">
         <div className="container">
-          <Runner label={filtering ? FILTERS.map((f) => pick[f.field]).filter((x) => x !== 'All').join(' · ') : 'For sale'} page={2} />
+          <Runner label={filtering ? FILTERS.map((f) => pick[f.field]).filter((x) => x !== 'All').join(' · ') : shop.listLabel} page={2} />
           {running.length > 0 && (
             <ul className="shop-sales" aria-label="Sales on now">
               {running.map((s, i) => (
@@ -121,7 +121,7 @@ export default function Shop() {
               </div>
             </div>
           ) : shown.length === 0 ? (
-            <p className="shop-none">Nothing in that combination. <button type="button" onClick={clear}>Show everything</button></p>
+            <p className="shop-none">{shop.nothingText} <button type="button" onClick={clear}>Show everything</button></p>
           ) : (
             <>
               <motion.ul ref={paged.top} className="shop-grid" layout>

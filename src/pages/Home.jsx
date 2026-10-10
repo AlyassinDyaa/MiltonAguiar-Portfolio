@@ -282,16 +282,18 @@ export default function Home() {
                   <ul className="events">
                     {events.map((e) => (
                       <li key={e.slug}>
-                        <a className={`event ${(e.pictures || []).length ? 'has-pics' : ''}`} href={e.url || undefined} target={e.url ? '_blank' : undefined} rel="noreferrer">
-                          <span className="event-when">{e.when}</span>
-                          <span className="event-name">{e.name}</span>
-                          <span className="event-where">{[e.role, e.place].filter(Boolean).join(' · ')}</span>
-                          {/* up to three pictures (the admin's): the poster, the table, last time */}
-                          {(e.pictures || []).length > 0 && (
-                            <span className="event-pics" aria-hidden="true">
+                        <a className={`event ${(e.pictures || []).filter(Boolean).length ? 'has-pics' : ''}`} href={e.url || undefined} target={e.url ? '_blank' : undefined} rel="noreferrer">
+                          {/* up to three pictures (the admin's): the poster, the table, last time, as a small mosaic */}
+                          {(e.pictures || []).filter(Boolean).length > 0 && (
+                            <span className="event-pics" data-n={Math.min(3, (e.pictures || []).filter(Boolean).length)} aria-hidden="true">
                               {(e.pictures || []).filter(Boolean).slice(0, 3).map((pic, i) => <img key={i} src={asset(pic)} alt="" loading="lazy" draggable="false" />)}
                             </span>
                           )}
+                          <span className="event-body">
+                            <span className="event-when">{e.when}</span>
+                            <span className="event-name">{e.name}</span>
+                            {(e.role || e.place) && <span className="event-where">{[e.role, e.place].filter(Boolean).join(' · ')}</span>}
+                          </span>
                           {e.url && <span className="event-go">{e.linkLabel ? <span>{e.linkLabel}</span> : null}<i className="arrow" aria-hidden="true">↗</i></span>}
                         </a>
                       </li>

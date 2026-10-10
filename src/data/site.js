@@ -161,10 +161,11 @@ function assemble(content) {
   shop = {
     enabled: false, payments: 'stripe', currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
     signedChoice: false, signedExtra: 0, cartIcon: 'bag', accounts: 'off',
-    label: 'The shop', title: 'Take one home',
+    label: 'The shop', title: 'Take one home', listLabel: 'For sale', nothingText: 'Nothing in that combination.',
     thanksTitle: 'Thank you.', thanksText: 'Your order is in. A receipt is on its way to your email.',
     emptyTitle: 'The shop opens soon.', emptyText: 'Prints and originals are on their way. Follow along on Instagram to hear first.',
     ...given(site('shop')),
+    ...given(page('shop')), // the words on the page (Page text → Shop) come after the settings
   }
   sales = readSales(site('sales'))
   shop.accounts = accountPage.accounts || shop.accounts // off, optional or required (Shop → Customer accounts)

@@ -4,7 +4,7 @@
   "emptyTitle": "The shop opens soon.",
   "intro": "Prints and original art, straight from the drawing board. Open any piece to buy it.",
   "tagPlace": "corner",
-  "payments": "paypal",
+  "payments": "both",
   "shipping": true,
   "thanksTitle": "Thank you.",
   "currency": "eur",

@@ -48,6 +48,16 @@
       "cardArt": "/uploads/batman-and-robin.webp",
       "name": "Batman and Robin",
       "cardCrop": "100,19,112"
+    },
+    {
+      "cardLook": "ink",
+      "earnedBy": "commissions",
+      "count": 3,
+      "hidden": false,
+      "name": "Spawn",
+      "cardArt": "/uploads/spawnuary-2-week-1.webp",
+      "cardCrop": "20,29,129",
+      "cardBackCrop": "47,32,400"
     }
   ],
   "discounts": [

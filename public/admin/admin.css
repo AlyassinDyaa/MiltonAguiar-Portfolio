@@ -1044,20 +1044,22 @@ textarea.sl-input { resize: vertical; line-height: 1.5; }
   .is-orders .sl-row > :nth-child(3) { grid-column: 1 / -1; grid-row: 3; }
   .is-orders .sl-row > :nth-child(5) { grid-column: 1; grid-row: 4; }
   .is-orders .sl-row > :nth-child(6) { grid-column: 2 / -1; grid-row: 4; justify-items: end; }
-  /* a customer: who and what they spent; under it one line of where, how many orders and when, and the buttons */
-  .is-customers .sl-row { grid-template-columns: auto auto auto minmax(0, 1fr) auto; gap: 10px 14px; }
-  .is-customers .sl-row > .sl-c-who { grid-column: 1 / 5; grid-row: 1; }
-  .is-customers .sl-row > .sl-c-total { grid-column: 5; grid-row: 1; justify-items: end; align-self: start; }
-  .is-customers .sl-row > .sl-c-where { grid-column: 1; grid-row: 2; }
-  .is-customers .sl-row > .sl-c-orders { grid-column: 2; grid-row: 2; }
-  .is-customers .sl-row > .sl-c-when { grid-column: 3; grid-row: 2; }
-  .is-customers .sl-row > .sl-acts { grid-column: 5; grid-row: 2; margin: 0; justify-self: end; }
-  .is-customers .sl-row > .sl-c-where.is-empty { display: none; }
-  .is-customers .sl-row > .sl-c-where.is-empty ~ .sl-c-orders { grid-column: 1; }
-  .is-customers .sl-row > .sl-c-where.is-empty ~ .sl-c-when { grid-column: 2; }
-  .is-customers .sl-c-where, .is-customers .sl-c-orders, .is-customers .sl-c-when { display: flex !important; align-items: baseline; gap: 5px; padding: 3px 9px; border: 1px solid var(--line); background: rgba(243, 243, 241, 0.03); }
-  .is-customers .sl-c-orders strong { font-size: 0.85rem; }
+  /* a customer: who, and what they spent (nothing yet: nothing shown); under it one quiet line of
+     orders, where and when with a dot between, and the buttons at its end */
+  .is-customers .sl-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 16px 10px; }
+  .is-customers .sl-row > .sl-c-who { grid-column: 1; grid-row: 1; }
+  .is-customers .sl-row > .sl-c-total { grid-column: 2; grid-row: 1; justify-items: end; align-self: start; }
+  .is-customers .sl-row > .sl-c-total.is-zero { display: none; }
+  .is-customers .sl-row > .sl-c-line { grid-column: 1; grid-row: 2; display: flex !important; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
+  .is-customers .sl-row > .sl-acts { grid-column: 2; grid-row: 2; margin: 0; justify-self: end; align-self: center; }
+  .is-customers .sl-c-line > span { display: flex !important; align-items: baseline; gap: 4px; }
+  .is-customers .sl-c-line > .sl-c-where { order: 2; }
+  .is-customers .sl-c-line > .sl-c-when { order: 3; }
+  .is-customers .sl-c-line > .sl-c-where.is-empty { display: none !important; }
+  .is-customers .sl-c-line > span + span::before { content: '·'; margin: 0 7px; font-size: 0.8rem; color: var(--line-strong); }
+  .is-customers .sl-c-orders strong { font-size: 0.8rem; font-weight: 600; color: var(--fg); }
   .is-customers .sl-c-unit { display: inline !important; }
+  .is-customers .sl-c-orders .sl-hot { margin-left: 6px; }
 }
 .sl-row:hover, .sl-row.on { background: rgba(243, 243, 241, 0.04); }
 .sl-row.on { box-shadow: inset 3px 0 0 var(--accent); }
@@ -1768,3 +1770,10 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .sl-c-total.is-zero strong { color: var(--dim); font-size: 1rem; }
 .sl-badge.is-news { background: rgba(255, 211, 77, 0.14); color: #ffd34d; }
 .sl-badge.is-nonews { background: rgba(243, 243, 241, 0.06); color: var(--dim); }
+
+/* on a wide screen the holder of where, orders and when is see-through: its three are columns of the
+   table (Customer, Country, Orders, Spent, Last order), the spent column stepping in before the last */
+.is-customers .sl-c-line { display: contents; }
+.is-customers .sl-row > .sl-c-total { order: 1; }
+.is-customers .sl-c-when { order: 2; }
+.is-customers .sl-row > .sl-acts { order: 3; }

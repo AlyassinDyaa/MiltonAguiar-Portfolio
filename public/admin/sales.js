@@ -771,14 +771,16 @@ window.IASales = (() => {
                 c.member.news ? el('span', { className: 'sl-badge is-news', title: 'Agreed to news emails', textContent: 'News' }) : null,
               ]) : null,
             ])]),
-            el('span', { className: `sl-c-where ${c.country ? '' : 'is-empty'}` }, [el('small', { textContent: country(c.country) || '—' })]),
-            el('span', { className: 'sl-c-orders' }, [
-              el('strong', { textContent: String(c.orders) }),
-              el('small', { className: 'sl-c-unit', textContent: c.orders ? (c.orders === 1 ? 'order' : 'orders') : 'orders yet' }),
-              c.waiting ? el('small', { className: 'sl-hot', textContent: `${c.waiting} to ship` }) : null,
+            el('span', { className: 'sl-c-line' }, [
+              el('span', { className: `sl-c-where ${c.country ? '' : 'is-empty'}` }, [el('small', { textContent: country(c.country) || '—' })]),
+              el('span', { className: 'sl-c-orders' }, [
+                el('strong', { textContent: String(c.orders) }),
+                el('small', { className: 'sl-c-unit', textContent: c.orders ? (c.orders === 1 ? 'order' : 'orders') : 'orders yet' }),
+                c.waiting ? el('small', { className: 'sl-hot', textContent: `${c.waiting} to ship` }) : null,
+              ]),
+              el('span', { className: 'sl-c-when' }, [el('small', { textContent: c.orders ? date(c.last) : c.joined ? `Joined ${date(c.joined)}` : '—' })]),
             ]),
             el('span', { className: `sl-c-total ${c.orders ? '' : 'is-zero'}` }, [el('strong', { textContent: c.orders ? money(c.spent, c.currency) : '—' })]),
-            el('span', { className: 'sl-c-when' }, [el('small', { textContent: c.orders ? date(c.last) : c.joined ? `Joined ${date(c.joined)}` : '—' })]),
           ], () => open(c), [
             iconBtn('info', 'Customer details', () => open(c)),
             theirs ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),

@@ -1325,7 +1325,7 @@ a.buy-btn { text-decoration: none; }
 /* the overview opens with the customer's own collector card, the three numbers beside it */
 .acct-top { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: clamp(20px, 3vw, 36px); align-items: center; }
 .acct-top .acc-card3d-wrap { width: 100%; max-width: 520px; padding: 0 18px 18px 0; }
-.acct-top .acc-card3d { --rx: 2deg; --ry: -8deg; }
+.acct-top .acc-card3d-lean { --rx: 2deg; --ry: -8deg; }
 .acct-stats.is-stacked { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
 .acct-stats.is-stacked button { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 16px; padding: 14px 18px; }
 .acct-stats.is-stacked strong { font-size: clamp(1.8rem, 2.6vw, 2.4rem); min-width: 1.4ch; }
@@ -1336,7 +1336,7 @@ a.buy-btn { text-decoration: none; }
   .acct-stats.is-stacked button { grid-template-columns: minmax(0, 1fr); padding: 16px; }
 }
 @media (max-width: 599px) {
-  .acct-top .acc-card3d { --rx: 0deg; --ry: 0deg; }
+  .acct-top .acc-card3d-lean { --rx: 0deg; --ry: 0deg; }
   .acct-stats.is-stacked button { padding: 12px 10px; }
 }
 
@@ -1513,7 +1513,7 @@ a.buy-btn { text-decoration: none; }
 .acc-card3d-foot small { display: block; margin-bottom: 3px; font-size: 0.6rem; font-weight: 700; font-style: normal; letter-spacing: 0.16em; color: rgba(255, 255, 255, 0.72); }
 .acc-card3d-foot span:last-child { margin-left: auto; padding: 4px 10px 3px; background: #0b0b0c; color: #fff; }
 .acc-card3d-foot span:last-child small { color: rgba(255, 255, 255, 0.6); }
-@media (max-width: 1023px) { .acc-card3d-wrap { width: min(100%, 420px); } .acc-card3d { --ry: 0deg; --rx: 0deg; } }
+@media (max-width: 1023px) { .acc-card3d-wrap { width: min(100%, 420px); } .acc-card3d-lean { --ry: 0deg; --rx: 0deg; } }
 @media (max-width: 479px) { .acc-card3d-foot span:last-child { display: none; } }
 @media (prefers-reduced-motion: reduce) { .acc-card3d-shine { animation: none; } .acc-card3d { transition: none; } }
 
@@ -1909,7 +1909,7 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 .acct-reward-use[aria-pressed="true"] { color: var(--fg); }
 .acct-tryon { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; padding: 16px; border: 2px solid var(--accent); background: var(--accent-soft, oklch(0.56 0.22 var(--h) / 0.12)); }
 .acct-tryon .acc-card3d-wrap { width: min(100%, 380px); padding: 0 10px 10px 0; }
-.acct-tryon .acc-card3d { --rx: 0deg; --ry: 0deg; }
+.acct-tryon .acc-card3d-lean { --rx: 0deg; --ry: 0deg; }
 .acct-tryon-text { flex: 1 1 220px; min-width: 0; }
 .acct-tryon-text strong { display: block; font-family: var(--display); font-size: 1.05rem; font-weight: 900; font-style: italic; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
 .acct-tryon-text span { display: block; margin-top: 4px; font-size: 0.92rem; line-height: 1.5; color: var(--fg-dim); }
@@ -2312,3 +2312,46 @@ button.tier-go:focus-visible { background: var(--accent); color: var(--on-accent
   .acc-news > div:not(.acc-news-do) { flex-basis: calc(100% - 62px); }
   .acc-news-do { width: 100%; justify-content: space-between; }
 }
+
+/* The collector card as a real card: a layer that leans toward the pointer, and inside it the card
+   itself, which turns over (a tap, a click, or a drag round), the front and back two faces of it */
+.acc-card3d-lean { --rx: 4deg; --ry: -12deg; --mx: 30%; transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; transition: transform 0.5s var(--ease-out); }
+.acc-card3d-wrap:hover .acc-card3d-lean { transition-duration: 0.15s; }
+.acc-card3d-flip { --turn: 0deg; display: grid; transform: rotateY(var(--turn)); transform-style: preserve-3d; transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.acc-card3d-flip.is-dragging { transition: none; cursor: grabbing; }
+.acc-card3d-flip > .acc-card3d { grid-area: 1 / 1; transform: translateZ(1px); backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: none; }
+.acc-card3d-flip > .acc-card3d-back { transform: rotateY(180deg) translateZ(1px); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), -16px 16px 0 -3px var(--loud); }
+.acc-card3d-flip img { pointer-events: none; }
+
+/* the back: a stripe across it, the signature panel with a hologram, the numbers, a barcode and the small print */
+.acc-card3d-back { display: flex !important; flex-direction: column; justify-content: flex-end; gap: clamp(6px, 1.2vw, 10px); }
+.acc-card3d-back.has-art::after { background: linear-gradient(180deg, rgba(11, 11, 12, 0.6), rgba(11, 11, 12, 0.88)); }
+.acc-card3d-stripe { position: absolute; left: 0; right: 0; top: 9%; height: 19%; background: linear-gradient(180deg, #19191c, #0b0b0c 40%, #222226); }
+.acc-card3d-sign { position: relative; display: flex; align-items: center; gap: clamp(10px, 1.8vw, 16px); }
+.acc-card3d-sign-strip { flex: 1; min-width: 0; display: flex; align-items: center; height: clamp(30px, 4.2vw, 40px); padding: 0 12px; border: 2px solid #0b0b0c; background: repeating-linear-gradient(-45deg, #f6f3ea 0 6px, #ebe6d8 6px 12px); color: #1a2a6c; overflow: hidden; }
+.acc-card3d-sign-strip i { font-family: 'Segoe Script', 'Brush Script MT', 'Snell Roundhand', cursive; font-size: clamp(1rem, 2.1vw, 1.35rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: rotate(-3deg); }
+.acc-card3d-holo { flex: 0 0 auto; display: grid; place-items: center; width: clamp(38px, 5.4vw, 50px); aspect-ratio: 1; border: 2px solid #0b0b0c; border-radius: 50%; background: conic-gradient(from calc(var(--mx, 30%) * 3.6deg), #ff6b8b, #ffd36b, #7bffb0, #6bd5ff, #b48bff, #ff6b8b); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35); }
+.acc-card3d-holo b { font-family: var(--display); font-size: clamp(0.8rem, 1.4vw, 1rem); font-weight: 900; font-style: italic; color: rgba(11, 11, 12, 0.75); }
+.acc-card3d-sign-label { position: relative; margin-top: -4px; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.72; }
+.acc-card3d-facts { position: relative; display: flex; gap: clamp(14px, 2.4vw, 28px); font-family: var(--display); font-size: 0.9rem; font-weight: 800; font-style: italic; letter-spacing: 0.06em; text-transform: uppercase; }
+.acc-card3d-facts small { display: block; margin-bottom: 2px; font-size: 0.56rem; font-weight: 700; font-style: normal; letter-spacing: 0.16em; opacity: 0.72; }
+.acc-card3d-base { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.acc-card3d-bars { flex: 0 0 auto; height: clamp(20px, 3vw, 28px); padding: 0 6px; background-color: #fff; background-origin: content-box; background-clip: content-box; box-sizing: content-box; color: #0b0b0c; border: 4px solid #fff; }
+.acc-card3d-base p { margin: 0; max-width: 24ch; font-size: 0.56rem; line-height: 1.35; text-align: right; opacity: 0.72; }
+.acc-card3d.is-gold .acc-card3d-sign-label, .acc-card3d.is-chrome .acc-card3d-sign-label { opacity: 0.7; }
+.acc-card3d.has-art .acc-card3d-sign-label, .acc-card3d.has-art .acc-card3d-base p { color: #fff; }
+
+/* the button under the card */
+.acc-card3d-turn { display: inline-flex; align-items: center; gap: 6px; margin: 14px auto 0; padding: 4px 2px; border: 0; background: none; font-family: var(--display); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-mute); cursor: pointer; }
+.acc-card3d-wrap { display: grid; }
+.acc-card3d-turn span { font-size: 1rem; letter-spacing: 0; transition: transform 0.4s var(--ease-out); }
+.acc-card3d-turn:hover { color: var(--fg); }
+.acc-card3d-turn:hover span { transform: rotate(180deg); }
+.acc-card3d-turn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+@media (max-width: 599px) {
+  .acc-card3d-flip > .acc-card3d-back { box-shadow: 0 24px 50px rgba(0, 0, 0, 0.55), -10px 10px 0 -2px var(--loud); padding: 14px 16px; gap: 6px; }
+  .acc-card3d-base p { display: none; }
+  .acc-card3d-facts { font-size: 0.8rem; }
+}
+@media (prefers-reduced-motion: reduce) { .acc-card3d-lean, .acc-card3d-flip { transition: none; } }

@@ -84,37 +84,115 @@ const designStyle = (d) => {
   return { '--card-art': `url("${asset(d.cardArt)}")`, '--art-x': `${c.x ?? 50}%`, '--art-y': `${c.y ?? 25}%`, '--art-zoom': (c.zoom || 100) / 100 }
 }
 
+/* The barcode on the back of the card, made from the member number: bars of one to three widths,
+   the same for the same number every time. */
+const barsOf = (number) => {
+  const digits = String(number || '').replace(/\D/g, '').padStart(4, '0')
+  const seq = `${digits}${[...digits].reverse().join('')}7319${digits}`.split('').map(Number)
+  const stops = []
+  let x = 0
+  seq.forEach((n, i) => {
+    const w = 2 * (1 + (n % 3))
+    const gap = 2 * (1 + ((n + i) % 2))
+    stops.push(`currentColor ${x}px ${x + w}px`, `transparent ${x + w}px ${x + w + gap}px`)
+    x += w + gap
+  })
+  return { backgroundImage: `linear-gradient(90deg, ${stops.join(', ')})`, width: `${x}px` }
+}
+
+/* The collector card, a real card with two sides: the front (the name, the year they joined, the
+   number, what they have collected) and the back (a magnetic stripe, their signature, a hologram, the
+   number again as a barcode, the small print). It leans toward the pointer; a tap or click turns it
+   over, and a drag spins it round by hand, settling on whichever side is nearer when let go. */
 function CollectorCard({ name, since, number, prints, design = null }) {
-  const card = useRef(null)
-  // the card leans toward the pointer, a little
-  const lean = (e) => {
-    const el = card.current
-    if (!el || e.pointerType === 'touch') return
+  const lean = useRef(null)
+  const flip = useRef(null)
+  const turn = useRef(0) // how far round it is turned, in degrees: 0 the front, 180 the back, 360 the front again
+  const drag = useRef(null)
+  const [back, setBack] = useState(false)
+  const setTurn = (deg, moving = false) => {
+    turn.current = deg
+    const el = flip.current
+    if (el) { el.style.setProperty('--turn', `${deg}deg`); el.classList.toggle('is-dragging', moving) }
+    setBack(Math.abs(Math.round(deg / 180)) % 2 === 1)
+  }
+  const settle = () => Math.round(turn.current / 180) * 180
+  const turnOver = () => setTurn(settle() + 180)
+  // the card leans toward the pointer, a little (not while it is being spun, nor for a finger)
+  const leanTo = (e) => {
+    const el = lean.current
+    if (!el || e.pointerType === 'touch' || drag.current) return
     const r = el.getBoundingClientRect()
     el.style.setProperty('--rx', `${((e.clientY - r.top) / r.height - 0.5) * -10}deg`)
     el.style.setProperty('--ry', `${((e.clientX - r.left) / r.width - 0.5) * 14}deg`)
     el.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`)
   }
-  const rest = () => { const el = card.current; if (el) { el.style.removeProperty('--rx'); el.style.removeProperty('--ry'); el.style.removeProperty('--mx') } }
+  const rest = () => { const el = lean.current; if (el && !drag.current) { el.style.removeProperty('--rx'); el.style.removeProperty('--ry'); el.style.removeProperty('--mx') } }
+  const down = (e) => {
+    if (e.button !== undefined && e.button !== 0) return
+    drag.current = { x: e.clientX, from: turn.current, moved: false, id: e.pointerId }
+  }
+  const move = (e) => {
+    const d = drag.current
+    if (!d) { leanTo(e); return }
+    const dx = e.clientX - d.x
+    if (!d.moved && Math.abs(dx) < 6) return
+    if (!d.moved) { d.moved = true; try { flip.current.setPointerCapture(d.id) } catch { /* fine */ } }
+    setTurn(d.from + dx * 0.55, true)
+  }
+  const up = () => {
+    const d = drag.current
+    drag.current = null
+    if (!d) return
+    if (d.moved) setTurn(settle())
+    else turnOver()
+  }
   const shown = (name || '').trim()
+  const looks = `${design ? `is-${design.cardLook}` : ''} ${design && design.cardArt ? 'has-art' : ''}`
+  const host = typeof window !== 'undefined' ? window.location.host : ''
   return (
-    <div className="acc-card3d-wrap" onPointerMove={lean} onPointerLeave={rest}>
-      <div ref={card} className={`acc-card3d ${design ? `is-${design.cardLook}` : ''} ${design && design.cardArt ? 'has-art' : ''}`} style={designStyle(design)} role="img" aria-label={`${brand.name} collector card${shown ? ` for ${shown}` : ''}`}>
-        <span className="acc-card3d-shine" />
-        <span className="acc-card3d-dots" aria-hidden="true" />
-        <span className="acc-card3d-mark" aria-hidden="true">{monogram()}</span>
-        <div className="acc-card3d-top" aria-hidden="true">
-          <span className="acc-card3d-brand">{brand.logo && <img src={asset(brand.logo)} alt="" />}<Wordmark /></span>
-          <span className="acc-card3d-kind">{accountPage.cardLabel}</span>
-        </div>
-        <span className="acc-card3d-chip" aria-hidden="true" />
-        <div className={`acc-card3d-name ${shown ? '' : 'is-empty'}`} aria-hidden="true">{shown || 'Your name here'}</div>
-        <div className="acc-card3d-foot" aria-hidden="true">
-          <span><small>Member since</small>{since}</span>
-          <span><small>Member no.</small>{number}</span>
-          <span><small>Collected</small>{prints}</span>
+    <div className="acc-card3d-wrap" onPointerLeave={rest} role="group" aria-label={`${brand.name} collector card${shown ? ` for ${shown}` : ''}, ${back ? 'the back' : 'the front'}`}>
+      <div ref={lean} className="acc-card3d-lean">
+        <div ref={flip} className="acc-card3d-flip" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+          <div className={`acc-card3d is-front ${looks}`} style={designStyle(design)} aria-hidden={back}>
+            <span className="acc-card3d-shine" />
+            <span className="acc-card3d-dots" aria-hidden="true" />
+            <span className="acc-card3d-mark" aria-hidden="true">{monogram()}</span>
+            <div className="acc-card3d-top">
+              <span className="acc-card3d-brand">{brand.logo && <img src={asset(brand.logo)} alt="" draggable="false" />}<Wordmark /></span>
+              <span className="acc-card3d-kind">{accountPage.cardLabel}</span>
+            </div>
+            <span className="acc-card3d-chip" aria-hidden="true" />
+            <div className={`acc-card3d-name ${shown ? '' : 'is-empty'}`}>{shown || 'Your name here'}</div>
+            <div className="acc-card3d-foot">
+              <span><small>Member since</small>{since}</span>
+              <span><small>Member no.</small>{number}</span>
+              <span><small>Collected</small>{prints}</span>
+            </div>
+          </div>
+          <div className={`acc-card3d acc-card3d-back ${looks}`} style={designStyle(design)} aria-hidden={!back}>
+            <span className="acc-card3d-shine" />
+            <span className="acc-card3d-stripe" aria-hidden="true" />
+            <div className="acc-card3d-sign">
+              <span className="acc-card3d-sign-strip"><i>{shown || 'Your name'}</i></span>
+              <span className="acc-card3d-holo" aria-hidden="true"><b>{monogram()}</b></span>
+            </div>
+            <small className="acc-card3d-sign-label">Collector’s signature</small>
+            <div className="acc-card3d-facts">
+              <span><small>Member no.</small>{number}</span>
+              <span><small>Since</small>{since}</span>
+              <span><small>Collected</small>{prints}</span>
+            </div>
+            <div className="acc-card3d-base">
+              <span className="acc-card3d-bars" style={barsOf(number)} aria-hidden="true" />
+              <p>Original art by {brand.name}. This card belongs to its member{host ? ` · ${host}` : ''}</p>
+            </div>
+          </div>
         </div>
       </div>
+      <button type="button" className="acc-card3d-turn" onClick={turnOver} aria-label={back ? 'Turn the card to its front' : 'Turn the card over'}>
+        <span aria-hidden="true">↻</span> {back ? 'See the front' : 'Turn over'}
+      </button>
     </div>
   )
 }

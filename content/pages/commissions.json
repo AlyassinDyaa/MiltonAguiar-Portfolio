@@ -26,7 +26,7 @@
   ],
   "requestTitle": "Tell me the idea",
   "processTitle": "How it works",
-  "open": false,
+  "open": true,
   "closedTitle": "Join the queue",
   "intro": "Your favourite character, your own character, or a cover for your book, drawn in my style. Tell me what you have in mind.",
   "tiers": [

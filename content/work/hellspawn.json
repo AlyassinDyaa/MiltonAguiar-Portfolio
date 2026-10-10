@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/spawnuary-2-week-1.webp",
+  "universe": "Image",
+  "hidden": false,
+  "date": "2024-01-07",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Hellspawn",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/spawn-frame.webp",
+  "face": "46,27,214",
+  "category": "Fan art",
+  "look": "default"
+}

@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/spawnuary-1.webp",
+  "universe": "Image",
+  "hidden": false,
+  "date": "2024-01-04",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Demon and the Clown",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/spawn-2-frame.webp",
+  "face": "58,32,400",
+  "category": "Fan art",
+  "look": "default"
+}

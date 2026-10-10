@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -245,6 +246,25 @@ const cardPictures = () => {
   } catch { /* no rewards file: nothing */ }
   return set
 }
+/* The admin's own scripts and styles are loaded by name (shell.js, admin.css...). After a deploy a
+   browser could keep an old copy while Decap fetched the new config, and the two would not match. So
+   the built admin page names each with a stamp of its contents (shell.js?v=…): a change is a new
+   address, and an unchanged file can stay cached. */
+const stampAdmin = () => {
+  const dir = resolve('dist/admin')
+  const page = resolve(dir, 'index.html')
+  if (!existsSync(page)) return
+  let html = readFileSync(page, 'utf8')
+  for (const name of ['admin.css', 'login.css', 'sales.js', 'shell.js']) {
+    const file = resolve(dir, name)
+    if (!existsSync(file)) continue
+    const stamp = createHash('md5').update(readFileSync(file)).digest('hex').slice(0, 10)
+    // the name as written in the page, inside double or single quotes
+    html = html.split(`"${name}"`).join(`"${name}?v=${stamp}"`).split(`'${name}'`).join(`'${name}?v=${stamp}'`)
+  }
+  writeFileSync(page, html)
+  console.log('  admin: scripts and styles stamped with their contents')
+}
 /* One picture as visitors get it: at most ART_MAX pixels on its long side, and for the artwork the
    logo inside the picture, clearly in a corner and faintly and large in the middle (cropping the
    corner off does not remove it). Answers null when the picture needs nothing. */
@@ -338,6 +358,7 @@ const protectArt = () => ({
   },
   async closeBundle() {
     if (!building) return
+    stampAdmin()
     const dir = resolve('dist/uploads')
     if (!existsSync(dir)) return
     const { default: sharp } = await import('sharp')

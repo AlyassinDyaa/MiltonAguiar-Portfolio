@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, buyable, catOf, commissions, day } from '../data/site'
 import { useFinePointer } from '../hooks/useMedia'
@@ -76,7 +77,9 @@ export default function Lightbox({ items, sel, setSel }) {
     }
   }, [open, many, step])
 
-  return (
+  // drawn at the top of the page, so no part of it (a band with a layer of its own, the last page) can sit over it
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div ref={box} className="lightbox" role="dialog" aria-modal="true" aria-label={piece.title || 'Picture'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} onClick={() => setSel(null)} data-lenis-prevent>
@@ -89,7 +92,10 @@ export default function Lightbox({ items, sel, setSel }) {
               </motion.div>
             </AnimatePresence>
             <div className="lightbox-info">
-              {(catOf(piece) || piece.date) && <div className="label accent">{[catOf(piece), day(piece.date)].filter(Boolean).join(' · ')}</div>}
+              {/* what it is and when; a sticker or photo card (Stickers & more): its kind, its date says nothing */}
+              {piece.shelf === 'merch'
+                ? piece.type && <div className="label accent">{piece.type}</div>
+                : (catOf(piece) || piece.date) && <div className="label accent">{[catOf(piece), day(piece.date)].filter(Boolean).join(' · ')}</div>}
               {piece.title && <h2 className="display h-md">{piece.title}</h2>}
               {piece.hover && piece.src && (
                 <div className="lightbox-pics" role="group" aria-label="Pictures">
@@ -118,6 +124,7 @@ export default function Lightbox({ items, sel, setSel }) {
           <button className="lightbox-x" onClick={() => setSel(null)} aria-label="Close">×</button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }

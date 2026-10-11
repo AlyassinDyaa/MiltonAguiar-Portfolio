@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/invincible-and-atom-eve-inks_01.webp",
+  "universe": "Image",
+  "hidden": false,
+  "date": "2025-02-14",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "I'm *Title Card*",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/invincible-and-atom-eve-frame.png",
+  "face": "51,16,186",
+  "category": "Fan Art",
+  "look": "default"
+}

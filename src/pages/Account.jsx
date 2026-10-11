@@ -974,7 +974,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
           : (
             <div className="acc-email-side">
               <span className="acc-tag is-wait">Not confirmed yet</span>
-              <button type="button" className="acc-link" disabled={Boolean(resent)} onClick={async () => { try { await call('resend'); setResent('Link sent') } catch (err) { setResent(err.message) } }}>{resent || 'Send the link again'}</button>
+              <button type="button" className="acc-link" disabled={Boolean(resent)} onClick={async () => { try { const r = await call('resend'); setResent(r && r.mailed === false ? 'The email could not be sent just now. Try again in a few minutes.' : 'Link sent') } catch (err) { setResent(err.message) } }}>{resent || 'Send the link again'}</button>
             </div>
           )}
       </div>
@@ -1611,7 +1611,7 @@ function PointsPanel({ points, onRedeem, busy, said, onRefresh = () => {} }) {
   const copy = async (code) => { try { await navigator.clipboard.writeText(code); setCopied(code); setTimeout(() => setCopied(''), 1500) } catch { /* the code is on screen */ } }
   const ways = [
     perUnit > 0 && { key: 'order', pts: perUnit === 1 ? `1 ${one}` : `${perUnit} ${name}`, text: `for every ${money(1, true)} you spend`, done: false, to: '/shop', go: 'Shop' },
-    signup > 0 && { key: 'email', pts: `+${signup}`, text: 'confirm your email', done: Boolean(user && user.verified), run: () => call('resend'), go: 'Send the link', after: 'Link sent' },
+    signup > 0 && { key: 'email', pts: `+${signup}`, text: 'confirm your email', done: Boolean(user && user.verified), run: async () => { const r = await call('resend'); if (r && r.mailed === false) throw new Error('not sent') }, go: 'Send the link', after: 'Link sent' },
     field > 0 && { key: 'detail', pts: `+${field}`, text: `each detail on your account${fields.length ? ` (${fields.map((k) => (k === 'phone' ? 'phone number' : 'name')).join(', ')} to add)` : ''}`, done: !fields.length, to: '/account?tab=details', go: 'Add it' },
     news > 0 && newsBonus !== 'taken' && { key: 'news', pts: `+${news}`, text: 'say yes to news', done: newsBonus === 'given', wait: user && user.marketing && !user.verified ? 'Yes ✓ · the points come when your email is confirmed' : '', run: () => call('news', { on: true }), go: 'Yes, email me' },
   ].filter(Boolean)
@@ -1903,7 +1903,7 @@ function Home() {
           {!user.verified && tab !== 'details' && (
             <div className="acc-verify" role="status">
               <span>Confirm your email: there is a link in your inbox at <b>{user.email}</b>.{accountPage.verifiedIcons.length > 0 && <> {accountPage.rewardText}</>}</span>
-              <button type="button" className="acc-link" disabled={Boolean(resent)} onClick={async () => { try { await call('resend'); setResent('Sent. Check your inbox (and spam).') } catch (e) { setResent(e.message) } }}>{resent || 'Send it again'}</button>
+              <button type="button" className="acc-link" disabled={Boolean(resent)} onClick={async () => { try { const r = await call('resend'); setResent(r && r.mailed === false ? 'The email could not be sent just now. Try again in a few minutes.' : 'Sent. Check your inbox (and spam).') } catch (e) { setResent(e.message) } }}>{resent || 'Send it again'}</button>
             </div>
           )}
           <motion.div key={tab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE }}>

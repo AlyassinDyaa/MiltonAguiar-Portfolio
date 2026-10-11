@@ -73,7 +73,7 @@
     },
     'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
-    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts', points: 'Points' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook', 'cost', 'kind', 'on', 'perUnit', 'signup', 'news'] },
+    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts', points: 'Points' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook', 'cost', 'kind', 'perUnit', 'signup', 'field', 'news'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request'] },
   }

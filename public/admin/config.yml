@@ -787,15 +787,15 @@ collections:
             label: Points
             widget: object
             collapsed: false
-            hint: 'Every paid order and commission earns points for what was paid; confirming the email and saying yes to news earn a one-off bonus; points are spent on the ladder below. The account page shows the balance, how far to the next reward, and the ladder.'
+            hint: 'Orders and commissions earn points for what was paid; a few one-off bonuses on top; points are spent on the ladder below.'
             fields:
-              - { name: on, label: Points are running, widget: boolean, default: true, required: false, hint: 'Off: points leave the site entirely (the account page, the card, the sign-up), and nothing is earned or spent. The balances are kept. Switched on again, every account is caught up on what it would have earned meanwhile: its orders, commissions and bonuses.' }
-              - { name: perUnit, label: Points for each euro paid, widget: number, value_type: float, min: 0, default: 1, required: false, hint: '1: a €40 order earns 40 points. Whole points, on what was actually paid, once per order; taken back if the payment is refunded.' }
-              - { name: signup, label: Points for confirming the email, widget: number, value_type: int, min: 0, default: 50, required: false, hint: 'Once, when the address is confirmed.' }
-              - { name: field, label: Points for each detail filled in, widget: number, value_type: int, min: 0, default: 10, required: false, hint: 'The name, the phone number, the email and the password (which counts as two: typed and confirmed), once each, the moment they are there.' }
-              - { name: news, label: Points for saying yes to news, widget: number, value_type: int, min: 0, default: 25, required: false, hint: 'Once ever: taken back if they unsubscribe, and not given a second time.' }
+              - { name: on, label: Points are running, widget: boolean, default: true, required: false, hint: 'Off hides points everywhere on the site. Balances are kept, and everyone is caught up when it is switched back on.' }
+              - { name: perUnit, label: Per €1 paid, widget: number, value_type: float, min: 0, default: 1, required: false, hint: '1: a €40 order earns 40.' }
+              - { name: signup, label: Confirming the email, widget: number, value_type: int, min: 0, default: 50, required: false, hint: 'Once.' }
+              - { name: field, label: Each detail filled in, widget: number, value_type: int, min: 0, default: 10, required: false, hint: 'Name, phone, email; the password counts twice.' }
+              - { name: news, label: Saying yes to news, widget: number, value_type: int, min: 0, default: 25, required: false, hint: 'Once ever; taken back on unsubscribing.' }
               - { name: name, label: What they are called, widget: string, default: points, required: false, hint: 'For example "points" or "stars".' }
-              - { name: intro, label: A line about them, widget: string, required: false, hint: 'Shown over the ladder in the account, for example "Every order earns points. Spend them on prints and discounts."' }
+              - { name: intro, label: A line about them, widget: string, required: false, hint: 'Shown over the rewards road in the account, for example "Every order earns points. Spend them on prints and discounts."' }
               - name: rewards
                 label: The ladder (what points buy)
                 label_singular: reward

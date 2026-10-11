@@ -1882,3 +1882,7 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
   .sl-claims li > .sl-badge { flex: 0 0 auto; width: auto; }
   .sl-claim-btn { margin-left: auto; }
 }
+
+/* Rewards → Points: the four numbers as a tidy two by two, the labels whole */
+[data-ia-grid]:has(> [data-ia-inner] [id^='perUnit-field']) { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+@media (max-width: 599px) { [data-ia-grid]:has(> [data-ia-inner] [id^='perUnit-field']) { grid-template-columns: minmax(0, 1fr); } }

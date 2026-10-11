@@ -4,7 +4,7 @@
       "name": "Originals"
     },
     {
-      "name": "Fan art"
+      "name": "Fan Art"
     },
     {
       "name": "Covers"
@@ -20,6 +20,14 @@
     },
     {
       "name": "Commissions"
+    },
+    {
+      "hidden": false,
+      "name": "Stickers"
+    },
+    {
+      "hidden": false,
+      "name": "Photo Cards"
     }
   ],
   "subcategories": [
@@ -64,5 +72,6 @@
       "name": "50 × 70 cm",
       "note": "Canvas"
     }
-  ]
+  ],
+  "merchKinds": []
 }

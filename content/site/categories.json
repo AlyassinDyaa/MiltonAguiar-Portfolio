@@ -65,5 +65,14 @@
       "note": "Canvas"
     }
   ],
-  "merchKinds": []
+  "merchKinds": [
+    {
+      "hidden": false,
+      "name": "Stickers"
+    },
+    {
+      "hidden": false,
+      "name": "Photo Cards"
+    }
+  ]
 }

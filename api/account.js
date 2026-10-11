@@ -564,6 +564,7 @@ export default async function handler(req, res) {
       if (await tooMany(`unsub-ip:${ip}`, 30, 15)) return say(res, 429, { message: 'Too many tries. Wait a few minutes.' })
       const [status, answer] = await unsubscribe(d, body)
       if (status !== 200) { await noteTry(`unsub-ip:${ip}`); return say(res, status, answer) }
+      if (body.check) return say(res, 200, answer) // only looking: nothing was changed
       // the news points go with the news
       try { const gone = await users.findOne({ _id: clean(body.u, 80) }); if (gone) await newsPoints(d, gone, false) } catch (e) { console.error('news points not taken:', e.message) }
       // the same person logged in on this browser: their page shows the change at once

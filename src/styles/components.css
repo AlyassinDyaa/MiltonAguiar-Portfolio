@@ -2738,3 +2738,9 @@ form.lined .acc-phone-number input { padding-right: 0; }
 .cart-extra-words small { color: var(--fg-mute); font-size: 0.76rem; }
 .cart-extra-add { display: grid; place-items: center; width: 34px; height: 34px; font-size: 1.2rem; font-weight: 800; background: var(--accent); color: #fff; border: 2px solid #0b0b0c; cursor: pointer; }
 .cart-extra-add:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 #0b0b0c; }
+
+/* news: the points beside the box once given and taken back, and the unsubscribe page asking first */
+.acc-bonus.is-off { color: var(--fg-mute); font-weight: 600; }
+.acc-done.is-warn { border-color: var(--gold); }
+.acc-done.is-warn > i { background: var(--gold); color: #0b0b0c; }
+.acc-done.is-warn .acc-row { display: flex; flex-wrap: wrap; gap: 10px; }

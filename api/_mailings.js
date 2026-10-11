@@ -299,6 +299,8 @@ export const unsubscribe = async (d, body) => {
   const users = d.collection('users')
   const user = await users.findOne({ _id: u })
   if (!user || !user.unsubToken || !same(t, user.unsubToken)) return bad
+  // looking first (the page asks before taking away the points saying yes earned): nothing changes yet
+  if (body.check) return [200, { subscribed: Boolean(user.marketing), bonus: user.newsBonus === 'given' }]
   if (user.marketing !== false || !user.unsubscribedAt) await users.updateOne({ _id: u }, { $set: { marketing: false, unsubscribedAt: new Date() } })
   return [200, { done: true }]
 }

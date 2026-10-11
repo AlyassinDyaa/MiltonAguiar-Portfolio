@@ -327,6 +327,7 @@ export const publicUser = (u) => (u ? {
   verified: Boolean(u.verified),
   marketing: Boolean(u.marketing),
   newsAsked: Boolean(u.newsAskedAt || u.unsubscribedAt), // said no thanks to news (or unsubscribed): the account stops asking
+  newsBonus: u.newsBonus === 'given' || u.newsBonus === 'taken' ? u.newsBonus : '', // the points for saying yes to news: had now, gone for good, or not yet (api/_points.js)
   createdAt: u.createdAt,
   lastVisit: u.prevLogin || u.createdAt, // for "new since your last visit"
   avatar: typeof u.avatar === 'string' ? u.avatar : '',

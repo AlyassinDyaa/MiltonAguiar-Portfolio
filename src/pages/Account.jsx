@@ -472,20 +472,36 @@ function Unsubscribe() {
   const t = params.get('t') || ''
   const [state, setState] = useState(u && t ? 'working' : 'missing')
   const [text, setText] = useState('')
+  const pts = accountPage.points || {}
+  const go = (stale = () => false) => call('unsubscribe', { u, t }).then(() => { if (!stale()) setState('done') }).catch((e) => { if (!stale()) { setState('failed'); setText(e.message) } })
   useEffect(() => {
     if (!u || !t) return
     let stale = false
-    call('unsubscribe', { u, t }).then(() => { if (!stale) setState('done') }).catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
+    // first a look: with the points for saying yes still on the account, it asks before they go
+    call('unsubscribe', { u, t, check: true })
+      .then((r) => { if (stale) return; if (r && r.bonus && r.subscribed && pts.on && pts.news > 0) setState('ask'); else go(() => stale) })
+      .catch((e) => { if (!stale) { setState('failed'); setText(e.message) } })
     return () => { stale = true }
-  }, [u, t, call])
+  }, [u, t, call]) // eslint-disable-line react-hooks/exhaustive-deps
   const details = '/account?tab=details'
   return (
-    <Shell title={state === 'done' ? 'You are unsubscribed' : 'Unsubscribe'} label="News emails">
+    <Shell title={state === 'done' ? 'You are unsubscribed' : state === 'ask' ? 'Stop the news emails?' : 'Unsubscribe'} label="News emails">
+      {state === 'ask' ? (
+        <div className="acc-card acc-done is-warn" role="alert">
+          <i aria-hidden="true">!</i>
+          <p>You will lose the <b>{pts.news} {pts.name}</b> you got for saying yes to news, and they are given only once: signing up again later will not bring them back.</p>
+          <div className="acc-row">
+            <button type="button" className="btn sm" onClick={() => { setState('working'); go() }}>Unsubscribe, lose {pts.news} {pts.name}</button>
+            <Link className="btn ghost sm" to="/">Keep the news <span className="arrow">→</span></Link>
+          </div>
+        </div>
+      ) : (
       <div className={`acc-card acc-done ${state === 'failed' || state === 'missing' ? 'is-bad' : ''}`} role="status">
         <i aria-hidden="true">{state === 'done' ? '✓' : state === 'working' ? '…' : '!'}</i>
         <p>{state === 'working' ? 'One moment…' : state === 'done' ? 'You won’t get news emails any more. Emails about your orders and your account still come as usual. Changed your mind? Turn news back on under Details in your account.' : state === 'missing' ? 'This page needs the link from the email. You can also turn news emails off under Details in your account.' : text}</p>
         <Link className="btn ghost sm" to={user ? details : `/account/login?next=${encodeURIComponent(details)}`}>{state === 'done' ? 'Resubscribe in Details' : 'Go to Details'} <span className="arrow">→</span></Link>
       </div>
+      )}
     </Shell>
   )
 }
@@ -510,7 +526,7 @@ function Confirm({ open, title, text, yes, onYes, onClose, no = 'Stay logged in'
         <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }}>
           <motion.div className={`acc-modal-box ${danger ? 'is-danger' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby="acc-modal-title" aria-describedby="acc-modal-text" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
             <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close" disabled={busy}>×</button>
-            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={icon === 'key' ? 'M15 7a4 4 0 1 1-4 4 M11 11l-7 7 M7 15l2 2 M5 17l2 2' : icon === 'bin' ? 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6' : 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4 M10 16l-4-4 4-4 M6 12h10'} /></svg></span>
+            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={icon === 'mail' ? 'M3 6h18v12H3z M3 7l9 6 9-6' : icon === 'key' ? 'M15 7a4 4 0 1 1-4 4 M11 11l-7 7 M7 15l2 2 M5 17l2 2' : icon === 'bin' ? 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6' : 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4 M10 16l-4-4 4-4 M6 12h10'} /></svg></span>
             <h2 id="acc-modal-title">{title}</h2>
             <p id="acc-modal-text">{text}</p>
             <div className="acc-modal-actions">
@@ -962,6 +978,11 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
   useEffect(() => () => onPreview(null), []) // eslint-disable-line react-hooks/exhaustive-deps
   const undo = () => { f.set('avatar')(user.avatar || ''); f.set('card')(user.card || '') }
   const submit = (e) => f.run(e, async () => { await call('profile', f.values); setSaved(true); setTimeout(() => setSaved(false), 2500) })
+  // news off with the points for saying yes still on the account: a window says they go, for good, before anything changes
+  const pts = accountPage.points || {}
+  const newsPts = pts.on && pts.news > 0 && user.newsBonus === 'given' && user.marketing ? pts.news : 0
+  const [askNewsOff, setAskNewsOff] = useState(false)
+  const newsBox = (on) => { if (!on && newsPts) { setAskNewsOff(true); return } f.set('marketing')(on) }
   return (
     <form className="acc-card lined" onSubmit={submit} noValidate>
       {/* the email, with whether it is confirmed (and a way to send the link again) */}
@@ -984,9 +1005,14 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
         <PhoneField label="Phone (optional, for the courier)" value={f.values.phone} onChange={f.set('phone')} error={errorFor(f.problem, 'phone')} />
       </div>
       <label className="acc-check">
-        <input type="checkbox" checked={f.values.marketing} onChange={(e) => f.set('marketing')(e.target.checked)} />
-        <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.{newsBonusLine()}</span>
+        <input type="checkbox" checked={f.values.marketing} onChange={(e) => newsBox(e.target.checked)} />
+        <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.{newsNote(user, f.values.marketing)}</span>
       </label>
+      <Confirm open={askNewsOff} icon="mail" danger title="Stop the news emails?"
+        text={`You will lose the ${newsPts} ${pts.name} you got for saying yes, and they are given only once: signing up again later will not bring them back.`}
+        yes={`Stop them, lose ${newsPts} ${pts.name}`} no="Keep the news" busyText="Stopping…"
+        onClose={() => setAskNewsOff(false)}
+        onYes={async () => { try { await call('news', { on: false }); f.set('marketing')(false) } finally { setAskNewsOff(false) } }} />
       <fieldset className="acct-pick">
         <legend>Your picture</legend>
         <div className={`acct-try ${trying ? 'is-trying' : ''}`} aria-live="polite">
@@ -1596,6 +1622,15 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
    itself (Redeem once the balance covers it), what was redeemed, and the history. The rules and
    the ladder are the admin's (Rewards → Points); the numbers come with the rewards (api/_points.js). */
 const newsBonusLine = (how = '') => (accountPage.points && accountPage.points.on && accountPage.points.news > 0 ? <b className="acc-bonus"> +{accountPage.points.news} {accountPage.points.name}{how}</b> : null)
+/* Beside the news box under Details: what saying yes gives (once), that it was earned (and goes if
+   they say no), or, once given and taken back, that it is not given again. */
+const newsNote = (user, ticked) => {
+  const p = accountPage.points || {}
+  if (!p.on || !(p.news > 0)) return null
+  if (user.newsBonus === 'taken') return <b className="acc-bonus is-off"> No {p.name} this time: they are given once, and went when you unsubscribed.</b>
+  if (user.newsBonus === 'given' && user.marketing) return ticked ? <b className="acc-bonus"> ✓ {p.news} {p.name} earned (they go if you unsubscribe)</b> : null
+  return newsBonusLine()
+}
 function PointsPanel({ points, onRedeem, busy, said, onRefresh = () => {} }) {
   const { call, user } = useAccount()
   const { balance, rewards, claims, log, name, intro, perUnit, signup, news, newsBonus, field = 0, fields = [] } = points

@@ -68,9 +68,9 @@ const priceText = (p, sales, cur) => {
 export const shopPieces = () => {
   const shop = readJson('content/site/shop.json') || {}
   const sales = readSales(readJson('content/site/sales.json'))
-  let files = []
-  try { files = readdirSync(join(process.cwd(), 'content/work')).filter((f) => f.endsWith('.json')) } catch { return [] }
-  return files.map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/work/${f}`) || {}) }))
+  // the art for sale, and the small things (Shop → Stickers & more, all of them for sale)
+  const inFolder = (dir) => { try { return readdirSync(join(process.cwd(), 'content', dir)).filter((f) => f.endsWith('.json')).map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/${dir}/${f}`) || {}), ...(dir === 'merch' ? { inShop: true } : {}) })) } catch { return [] } }
+  return [...inFolder('work'), ...inFolder('merch')]
     .filter((p) => p.title && p.src && p.inShop && !p.hidden && p.status !== 'soldout')
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
     .map((p) => ({ slug: p.slug, title: String(p.title), src: String(p.src), price: priceText(p, sales, shop.currency), date: p.date || '' }))

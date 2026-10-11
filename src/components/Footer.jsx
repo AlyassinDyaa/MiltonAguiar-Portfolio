@@ -11,12 +11,15 @@ import QuoteLink from './QuoteLink'
 export default function Footer() {
   const [year] = useState(() => new Date().getFullYear()) // read on every visit, so the © line rolls over by itself on 1 January
   const hire = shows('pages', 'commissions')
+  // each box can be switched off (Show / hide → The last page); the ones left share the row
+  const on = { end: shows('footer', 'end'), brand: shows('footer', 'brand'), pages: shows('footer', 'pages'), follow: shows('footer', 'follow') && social.length > 0 }
+  const below = [on.brand, on.pages, on.follow].filter(Boolean).length
   return (
     <footer className="footer">
       <div className="container">
         <Runner label="Last page" />
-        <div className="ft">
-          <div className="hp is-red ft-end">
+        <div className={`ft ${below === 2 ? 'is-two' : below === 1 ? 'is-one' : ''}`}>
+          {on.end && <div className="hp is-red ft-end">
             <div className="hp-in">
               <div className="words">
                 {footer.line && <p className="ft-line">{footer.line}</p>}
@@ -26,8 +29,8 @@ export default function Footer() {
                 </div>
               </div>
             </div>
-          </div>
-          <div className="hp ft-brand">
+          </div>}
+          {on.brand && <div className="hp ft-brand">
             <div className="hp-in">
               <div className="words">
                 <Link to="/" className="ft-mark" aria-label={`${brand.name} home`}>
@@ -38,8 +41,8 @@ export default function Footer() {
                 {brand.email && <a className="mail" href={`mailto:${brand.email}`}>{brand.email}</a>}
               </div>
             </div>
-          </div>
-          <div className="hp ft-pages">
+          </div>}
+          {on.pages && <div className="hp ft-pages">
             <div className="hp-in">
               <div className="words">
                 <div className="label">Pages</div>
@@ -48,8 +51,8 @@ export default function Footer() {
                 </ul>
               </div>
             </div>
-          </div>
-          {social.length > 0 && (
+          </div>}
+          {on.follow && (
             <div className="hp ft-follow">
               <div className="hp-in">
                 <div className="words">

@@ -34,9 +34,13 @@ export let nav
    (a T-shirt, a book) are left out of it, so they never land on the Work page or the home page. */
 export let work
 /* Selling online (Shop and payments in the admin), and everything that can be bought: the pieces
-   with a price, newest first, whether or not they are on the Work page too. `everything` is every
-   piece, so the cart can find what it holds. */
-export let shop, forSale, everything
+   with a price, newest first, whether or not they are on the Work page too, and the small things
+   (Shop → Stickers & more). `everything` is every piece and item, so the cart can find what it
+   holds. The Shop page is in two parts: `artForSale` and `merchForSale` (each item there has
+   shelf: 'merch'). */
+export let shop, forSale, everything, artForSale, merchForSale
+/* The kinds of stickers & more in use (Stickers, Bookmarks...), in the admin's order. */
+export let merchKinds
 /* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
    the admin lists them; only the ones in use. */
 export let types
@@ -164,7 +168,7 @@ function assemble(content) {
   shop = {
     enabled: false, payments: 'stripe', currency: 'eur', buttonLabel: 'Buy', shipping: true, pricePlace: 'corner', tagPlace: 'corner',
     signedChoice: false, signedExtra: 0, cartIcon: 'bag', accounts: 'off',
-    label: 'The shop', title: 'Take one home', listLabel: 'For sale', nothingText: 'Nothing in that combination.',
+    label: 'The shop', title: 'Take one home', listLabel: 'For sale', nothingText: 'Nothing in that combination.', merchLabel: 'Small things', merchCaption: 'Meanwhile, at the merch table…', merchTitle: 'Grab and go', merchIntro: 'Small pieces of the universe to take home.', extrasTitle: 'Little extras',
     thanksTitle: 'Thank you.', thanksText: 'Your order is in. A receipt is on its way to your email.',
     emptyTitle: 'The shop opens soon.', emptyText: 'Prints and originals are on their way. Follow along on Instagram to hear first.',
     ...given(site('shop')),
@@ -216,13 +220,23 @@ function assemble(content) {
   const LOOKS = ['poster', 'framed', 'board', 'comic', 'plain']
   const looks = Object.fromEntries(kinds.map((t) => [String(t.name).trim(), t.look]))
   const lookOf = (p) => [p.look, looks[String(p.type || '').trim()], shop.look, 'poster'].find((l) => LOOKS.includes(l))
-  everything = live(folder('work'))
+  const shopLists = site('categories')
+  // the small things: never on the Work page, shown whole on their card, and what the buyer gets from their kind's line
+  const smallKinds = (Array.isArray(shopLists.merchKinds) ? shopLists.merchKinds : []).filter((t) => t && String(t.name || '').trim())
+  const smallNotes = Object.fromEntries(smallKinds.map((t) => [String(t.name).trim(), String(t.note || '').trim()]))
+  const small = live(folder('merch')).filter((p) => p.title)
+    .map((p) => ({ ...p, inShop: true, shopOnly: true, shelf: 'merch', what: smallNotes[String(p.type || '').trim()] || '', look: 'item', face: null }))
+  everything = [...live(folder('work'))
     .filter((p) => p.title)
+    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p), face: parseFace(p.face) })), ...small]
     .sort((a, b) => String(b.date).localeCompare(String(a.date)))
-    .map((p) => ({ ...p, what: notes[String(p.type || '').trim()] || shop.note || '', look: lookOf(p), face: parseFace(p.face) }))
   work = everything.filter((p) => !p.shopOnly)
   forSale = everything.filter(buyable)
-  const shopLists = site('categories')
+  artForSale = forSale.filter((p) => p.shelf !== 'merch')
+  merchForSale = forSale.filter((p) => p.shelf === 'merch')
+  const hiddenKinds = new Set(smallKinds.filter((t) => t.hidden).map((t) => String(t.name).trim()))
+  const kindsUsed = new Set(merchForSale.map((p) => String(p.type || '').trim()).filter((n) => n && !hiddenKinds.has(n)))
+  merchKinds = [...smallKinds.map((t) => String(t.name).trim()).filter((n) => kindsUsed.has(n)), ...[...kindsUsed].filter((n) => !(n in smallNotes))]
   const named = (list) => (Array.isArray(list) ? list : []).map((x) => String((x && x.name) || '').trim()).filter(Boolean)
   // a category or sub category switched to "Hide" in the list: not offered as a filter, not named on cards
   const hiddenIn = (list) => new Set((Array.isArray(list) ? list : []).filter((x) => x && x.hidden).map((x) => String(x.name || '').trim()))
@@ -231,12 +245,12 @@ function assemble(content) {
   hiddenSubs = hiddenIn(shopLists.subcategories)
   // the admin's order first, then anything in use that the lists do not name; hidden ones left out
   const inUse = (listed, field, hidden) => {
-    const used = new Set(forSale.map((p) => String(p[field] || '').trim()).filter((n) => n && !hidden.has(n)))
+    const used = new Set(artForSale.map((p) => String(p[field] || '').trim()).filter((n) => n && !hidden.has(n)))
     return [...listed.filter((n) => used.has(n)), ...[...used].filter((n) => !listed.includes(n))]
   }
   shopCats = inUse(named(shopLists.categories), 'category', hiddenCats)
   subCats = inUse(named(shopLists.subcategories), 'universe', hiddenSubs)
-  const sold = new Set(forSale.map((p) => p.type).filter(Boolean))
+  const sold = new Set(artForSale.map((p) => p.type).filter(Boolean))
   types = [...kinds.map((t) => String(t.name).trim()).filter((n) => sold.has(n)), ...[...sold].filter((n) => !(n in notes))]
   categories = [...new Set(work.map((p) => p.category).filter((c) => c && !hiddenCats.has(String(c).trim())))]
   // the ticked pieces in the order given to them ("Place on the home page"), newest first among those with none
@@ -359,6 +373,8 @@ export const fromPrice = (piece) => { const all = sizesOf(piece); return all.len
 export const manyPrices = (piece) => new Set(sizesOf(piece).map((r) => r.now)).size > 1
 /* It can go into a checkout: it shows a price and is not sold out. */
 export const canBuy = (piece) => buyable(piece) && !soldOut(piece)
+/* Can the buyer ask for it signed? Only art, and only while the admin offers signing. */
+export const signable = (piece) => Boolean(shop?.signedChoice) && piece?.shelf !== 'merch'
 /* The small tag on a piece. "New" shows whenever it is set; "Sale" and "Sold out" only while
    prices are showing, since without a price neither means anything. */
 export const badge = (piece) => {

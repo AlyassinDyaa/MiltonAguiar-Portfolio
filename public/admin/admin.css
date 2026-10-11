@@ -422,6 +422,8 @@ html[data-ia-view='gallery'] [class*='GridCardLink'][data-ia-thumb='none']::afte
 
 /* on/off switches in a row of boxes line up with the boxes, not with their labels */
 [data-ia-grid] > [data-ia-inner]:has([role='switch']) { align-self: end; }
+/* a group made only of switches (Show / hide): every box in a row the same height, its words and switch centred in it */
+[data-ia-grid]:has(> [data-ia-inner] :is([id^='work-field'], [id^='ticker-field'], [id^='offers-field'], [id^='filters-field'], [id^='story-field'], [id^='form-field'], [id^='end-field'], [id^='dark-field'], [id^='watermark-field'], [id^='steps-field'], [id^='testOrders-field'])) > [data-ia-inner] { align-self: stretch; }
 
 /* a plain-words notice when a save is refused (shell.js) */
 .ia-notice { position: fixed; z-index: 100001; right: 24px; bottom: 24px; width: min(420px, calc(100vw - 48px)); padding: 18px 44px 18px 20px; background: var(--panel); border: 1px solid var(--accent); border-radius: var(--r-card); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); animation: ia-fade 0.2s ease-out; }

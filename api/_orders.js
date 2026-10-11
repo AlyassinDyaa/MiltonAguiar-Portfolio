@@ -54,12 +54,16 @@ export const takeFromCart = async (userId, bought) => {
    (the longest title it starts with), its size, signed or not, and the piece's type, category,
    universe and picture from the site's content. Works for every order, old ones too. */
 export const piecesNow = () => {
-  try {
-    const dir = join(process.cwd(), 'content/work')
-    return readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => {
-      try { return { slug: f.slice(0, -5), ...JSON.parse(readFileSync(join(dir, f), 'utf8')) } } catch { return null }
-    }).filter((p) => p && p.title).sort((a, b) => String(b.title).length - String(a.title).length)
-  } catch { return [] }
+  // the art, and the small things sold beside it (Shop → Stickers & more)
+  const inFolder = (name) => {
+    try {
+      const dir = join(process.cwd(), 'content', name)
+      return readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => {
+        try { return { slug: f.slice(0, -5), ...JSON.parse(readFileSync(join(dir, f), 'utf8')) } } catch { return null }
+      })
+    } catch { return [] }
+  }
+  return [...inFolder('work'), ...inFolder('merch')].filter((p) => p && p.title).sort((a, b) => String(b.title).length - String(a.title).length)
 }
 export const describeItem = (name, pieces) => {
   const full = String(name || '')

@@ -16,6 +16,14 @@ import { priceWith, readSales, saleFor } from '../src/data/sales.js'
    shows them with (src/data/sales.js): the biggest live sale on a piece, or its own sale price
    if that is lower. A discount code then comes off the total, as before. */
 export const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return null } }
+/* A piece for sale by its slug: the art (content/work), else the small things (Shop → Stickers &
+   more, content/merch, whose file names start "merch-"), marked merch: true. */
+export const readPiece = (slug) => {
+  const art = read(`content/work/${slug}.json`)
+  if (art) return art
+  const small = read(`content/merch/${slug}.json`)
+  return small ? { ...small, merch: true, inShop: true } : null
+}
 const MAX_LINES = 20
 const MAX_QTY = 10
 
@@ -37,8 +45,13 @@ export async function priceCart(body, user = null) {
   // signed or unsigned: only while the admin offers the choice; the extra for signing is read here too
   const choice = Boolean(shop.signedChoice)
   const extra = Math.max(0, Number(shop.signedExtra) || 0)
-  // what the buyer gets: the line written beside the piece's type, or the shop's own line
-  const typeNote = (type) => { const t = (Array.isArray(shop.types) ? shop.types : []).find((x) => x && String(x.name).trim() === String(type || '').trim()); return (t && String(t.note || '').trim()) || '' }
+  // what the buyer gets: the line written beside the piece's type (or the small thing's kind), or the shop's own line
+  const kindsOf = (list) => (Array.isArray(list) ? list : [])
+  const typeNote = (piece) => {
+    const list = piece.merch ? kindsOf((read('content/site/categories.json') || {}).merchKinds) : kindsOf(shop.types)
+    const t = list.find((x) => x && String(x.name).trim() === String(piece.type || '').trim())
+    return (t && String(t.note || '').trim()) || (piece.merch ? '' : shop.note || '')
+  }
   // the shop sales, checked against the time now: one moment for the whole cart
   const sales = readSales(read('content/site/sales.json'))
   const now = Date.now()
@@ -46,7 +59,7 @@ export async function priceCart(body, user = null) {
   for (const item of asked) {
     const slug = String((item && item.slug) || '')
     if (!/^[a-z0-9-]{1,80}$/.test(slug)) return no(400, 'Something in the cart is not a piece on this site.')
-    const piece = read(`content/work/${slug}.json`)
+    const piece = readPiece(slug)
     if (!piece || piece.hidden || !piece.inShop) return no(404, 'Something in the cart is no longer for sale. Remove it and try again.')
     if (piece.status === 'soldout') return no(409, `"${piece.title || slug}" has sold out. Remove it from the cart and try again.`)
     // a shop sale running on it now (the biggest), weighed against its own sale price below
@@ -56,7 +69,7 @@ export async function priceCart(body, user = null) {
     let price, size = ''
     if (sizes.length) {
       const row = sizes.find((r) => String(r.size).trim() === String((item && item.size) || '').trim())
-      if (!row) return no(400, `Choose a size for "${piece.title || slug}" and try again.`)
+      if (!row) return no(400, `Choose ${piece.merch ? 'an option' : 'a size'} for "${piece.title || slug}" and try again.`)
       size = String(row.size).trim()
       price = priceWith(row.price, row.salePrice, deal)
     } else {
@@ -65,7 +78,7 @@ export async function priceCart(body, user = null) {
     }
     const base = price.now
     const sale = price.by === 'sale' ? { name: deal.name, percent: deal.percent } : null // the shop sale that made the price
-    const signed = choice ? Boolean(item.signed === true) : null
+    const signed = choice && !piece.merch ? Boolean(item.signed === true) : null // stickers & more are never signed
     const cents = Math.round((base + (signed ? extra : 0)) * 100)
     if (!(cents >= 50)) return no(404, `"${piece.title || slug}" is not for sale.`)
     const qty = Math.min(MAX_QTY, Math.max(1, Math.round(Number(item.qty) || 1)))
@@ -83,11 +96,11 @@ export async function priceCart(body, user = null) {
   return {
     shop, lines, deal, choice, cents,
     off: deal ? discountCents(cents, deal.percent) : 0,
-    name: (l) => `${String(l.piece.title || l.slug).slice(0, 90)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${choice ? (l.signed ? ' (signed)' : ' (unsigned)') : ''}`,
+    name: (l) => `${String(l.piece.title || l.slug).slice(0, 90)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${l.signed == null ? '' : l.signed ? ' (signed)' : ' (unsigned)'}`,
     // what the buyer gets, and the shop sale on it ("Black Friday: 10% off"); the name above stays
     // as it is, since an order's pieces are read back from it (api/_orders.js describeItem)
-    what: (l) => [typeNote(l.piece.type) || shop.note || '', l.sale ? `${l.sale.name || 'Sale'}: ${l.sale.percent}% off` : ''].filter(Boolean).join(' · '),
+    what: (l) => [typeNote(l.piece), l.sale ? `${l.sale.name || 'Sale'}: ${l.sale.percent}% off` : ''].filter(Boolean).join(' · '),
     // what was ordered, readable in the dashboard: "raptor A3 x2 signed, hulk x1"
-    summary: lines.map((l) => `${l.slug}${l.size ? ` ${l.size}` : ''} x${l.qty}${choice ? (l.signed ? ' signed' : ' unsigned') : ''}`).join(', '),
+    summary: lines.map((l) => `${l.slug}${l.size ? ` ${l.size}` : ''} x${l.qty}${l.signed == null ? '' : l.signed ? ' signed' : ' unsigned'}`).join(', '),
   }
 }

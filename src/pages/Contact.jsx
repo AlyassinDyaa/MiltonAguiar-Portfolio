@@ -27,7 +27,7 @@ export default function Contact() {
               <h1 className="display h-xl">{contact.title}</h1>
               <p className="lead">{contact.intro}</p>
             </header>
-            <Reveal>
+            {shows('contact', 'form') && <Reveal>
               {state === 'sent' ? (
                 <div className="form-sent" role="status">
                   <i aria-hidden="true">✓</i>
@@ -46,23 +46,23 @@ export default function Contact() {
                   {problem && <p className="form-alt is-bad" role="alert">{problem}{fallback && <> <Elsewhere subject="A message from the website" /></>}</p>}
                 </form>
               )}
-            </Reveal>
+            </Reveal>}
           </div>
           <Reveal delay={0.1} className="contact-side">
-            {brand.email && (
+            {brand.email && shows('contact', 'email') && (
               <div>
                 <div className="label">Email</div>
                 <a className="mail" href={`mailto:${brand.email}`}>{brand.email}</a>
               </div>
             )}
-            {shows('pages', 'commissions') && (
+            {shows('pages', 'commissions') && shows('contact', 'hire') && (
               <div>
                 <div className="label">Want a piece drawn?</div>
                 <p className="dim">Commissions have a page of their own, with what I draw and how it works.</p>
                 <Link className="btn ghost sm" to="/commissions">Commissions <span className="arrow">→</span></Link>
               </div>
             )}
-            {social.length > 0 && (
+            {social.length > 0 && shows('contact', 'follow') && (
               <div>
                 <div className="label">Follow</div>
                 <ul className="social">

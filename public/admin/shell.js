@@ -21,6 +21,7 @@
     home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
     work: 'M4 5h16v14H4z M4 15l4-4 4 4 3-3 5 5 M9 9h.01',
     shop: 'M5 8h14l-1 12H6z M9 8V6a3 3 0 0 1 6 0v2',
+    merch: 'M5 4h14v9l-7 7H5z M12 20v-7h7 M9 9h.01',
     comics: 'M12 7v13 M12 7c-2-1.600-5-2-8-1.500v13c3-.500 6-.100 8 1.500 M12 7c2-1.600 5-2 8-1.500v13c-3-.500-6-.100-8 1.500',
     gallery_sections: 'M4 4h7v9H4z M13 4h7v5h-7z M13 11h7v9h-7z M4 15h7v5H4z',
     redraws: 'M4 5h16v14H4z M12 3v18 M8 10l-2 2 2 2 M16 10l2 2-2 2',
@@ -71,11 +72,11 @@
       groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', emails: 'Emails to you' },
       half: ['currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra'],
     },
-    'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
+    'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', merchLabel: 'Stickers & more (under your art)', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'merchLabel', 'merchCaption', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts', points: 'Points' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook', 'cost', 'kind', 'perUnit', 'signup', 'field', 'news'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
-    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request'] },
+    'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'merch', 'extras', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request', 'notes', 'filters', 'samples', 'story', 'facts', 'credits', 'form', 'email', 'hire', 'follow', 'end', 'brand', 'pages', 'steps', 'banners'] },
   }
 
   /* The navigation and the Overview, group by group, in this order. An item is a section of
@@ -84,13 +85,13 @@
   const NAV = [
     { label: 'Orders & customers', lead: 'Who bought what, commissions, members and their rewards, and writing to your customers.', items: ['sales:orders', 'sales:customers', 'site/account', 'site/rewards', 'sales:emails'] },
     { label: 'Your art', lead: 'What you add to over time.', items: ['work', 'comics', 'gallery_sections', 'events'] },
-    { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'site/sales', 'sales:discounts', 'site/categories', 'site/shop'] },
+    { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'merch', 'site/sales', 'sales:discounts', 'site/categories', 'site/shop'] },
     { label: 'Page text', lead: 'Headings, introductions and buttons, one form per page.', items: ['pages/home', 'pages/shop', 'pages/lists', 'pages/commissions', 'pages/about', 'pages/contact'] },
     { label: 'Site', lead: 'Your name and colour, what is switched on, and every picture.', items: ['site/brand', 'site/visibility', 'media'] },
   ]
   /* Names in the navigation (narrow). Tiles and form headings use the label in config.yml,
      which says the same thing in full ("Home page" for "Home"). */
-  const SHORT = { 'pages/home': 'Home', 'pages/shop': 'Shop', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Items for sale', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/shop': 'Shop', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Art for sale', merch: 'Stickers & more', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
   /* One line about each part: its tile on the Overview, and the line under its heading. */
   const ABOUT = {
     'sales:orders': 'Shop orders and commissions: mark them packed and shipped, answer messages, send quotes.',
@@ -101,7 +102,8 @@
     comics: 'A few pages of a comic, read as a small book on the Work page.',
     gallery_sections: 'The Gallery page, in sections you name. Off until you switch it on in Show / hide.',
     events: 'Conventions, markets and signings where people can meet you.',
-    shop: 'Everything you sell: prints, original art, comics, with prices and sizes.',
+    shop: 'Your art for sale: prints, original art, comics, with prices and sizes.',
+    merch: 'Stickers, bookmarks, pins and anything small you sell, on their own tab in the Shop.',
     media: 'Every picture uploaded to the site. Upload new ones or remove old ones.',
     'pages/home': 'The top of the home page, its drawing, the current project, the pencils-to-colours sets and the heading of each part.',
     'pages/lists': 'The heading and introduction of the Work page, its comic samples and the Gallery page.',
@@ -111,7 +113,7 @@
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
     'site/shop': 'Shop on or off, how buyers pay, currency, what you sell, signed pieces, delivery, emails to you.',
-    'site/categories': 'Categories, sub categories and print sizes: add, rename, reorder or hide them.',
+    'site/categories': 'Categories, sub categories, print sizes and the kinds of stickers & more: add, rename, reorder or hide them.',
     'site/visibility': 'Switch pages, parts of the home and Commissions pages, dark or light mode, the watermark and test data on or off.',
     'site/account': 'Accounts on or off, the membership card, your note on their page, free profile pictures.',
     'site/rewards': 'Profile pictures, card designs and discounts members earn; and points: what earns them and what they buy.',
@@ -210,7 +212,7 @@
       'sales:discounts': 'code codes promo coupon voucher percent off', 'sales:customers': 'members accounts buyers people email gift reward card', 'sales:orders': 'shipped packed delivered tracking paid refund commissions quote messages',
       'sales:emails': 'news newsletter mailing send unsubscribe notice', 'site/rewards': 'profile pictures card designs points gifts earn unlock', 'site/account': 'members accounts login sign up avatar free pictures',
       'pages/home': 'hero welcome ticker band steps pencils inks colours latest events', 'pages/commissions': 'open closed quote request offers prices how it works', 'pages/shop': 'shop page words heading introduction empty thank you after purchase', 'pages/about': 'story bio facts', 'pages/contact': 'email form questions', 'pages/lists': 'work gallery page text intro',
-      work: 'pieces art pencils inks colours drawings pages covers', comics: 'samples comic book pages spread reader', gallery: 'sections pin-ups', events: 'conventions signings markets dates', 'site/categories': 'categories sub category type sizes', media: 'pictures uploads images files library',
+      work: 'pieces art pencils inks colours drawings pages covers', comics: 'samples comic book pages spread reader', gallery: 'sections pin-ups', events: 'conventions signings markets dates', 'site/categories': 'categories sub category type sizes kinds stickers', merch: 'stickers bookmarks pins patches merch small things', shop: 'art for sale prints originals comics prices', media: 'pictures uploads images files library',
     }
     const screens = () => groups.flatMap((g) => g.parts.map((p) => ({ ...p, group: g.label })))
     const findScreens = (q) => {
@@ -268,7 +270,7 @@
        view) is paged again at once. */
     const PER = [10, 15, 20, 25, 50]
     const perList = () => { let n = 0; try { n = Number(localStorage.getItem('ia-per')) } catch { /* nothing kept */ } return PER.includes(n) ? n : 20 }
-    const NOUNS = { shop: ['item', 'items'], work: ['piece', 'pieces'], comics: ['comic', 'comics'], gallery_sections: ['section', 'sections'], events: ['event', 'events'] }
+    const NOUNS = { shop: ['piece', 'pieces'], merch: ['item', 'items'], work: ['piece', 'pieces'], comics: ['comic', 'comics'], gallery_sections: ['section', 'sections'], events: ['event', 'events'] }
     const pageAt = {} // collection -> the page it is on
     const pageList = () => {
       const m = location.hash.match(/^#\/collections\/([^/?]+)\/?(\?.*)?$/)
@@ -730,7 +732,7 @@
     { id: 'cards', label: 'Cards', cards: true },
     { id: 'gallery', label: 'Big pictures', cards: true },
   ]
-  const PICTURED = new Set(['work', 'shop', 'comics', 'gallery_sections', 'redraws'])
+  const PICTURED = new Set(['work', 'shop', 'merch', 'comics', 'gallery_sections', 'redraws'])
   const viewPlace = () => currentSection() || (/^#\/search/.test(location.hash) ? 'search' : 'other')
   const chosenView = () => {
     let saved = null

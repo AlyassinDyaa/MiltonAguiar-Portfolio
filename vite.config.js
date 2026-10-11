@@ -66,6 +66,8 @@ const thumbs = () => {
     const picture = pulled || (section.data.items || []).find((item) => item && item.src)?.src
     if (picture) index[`gallery_sections/${section.slug}`] = picture
   }
+  // stickers & more: their picture
+  for (const item of read('merch')) if (item.data.src) index[`merch/${item.slug}`] = item.data.src
   // a comic sample: its cover
   for (const comic of read('comics')) if (comic.data.cover) index[`comics/${comic.slug}`] = comic.data.cover
   for (const set of read('redraws')) {

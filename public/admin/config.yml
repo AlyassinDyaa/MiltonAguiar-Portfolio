@@ -140,9 +140,9 @@ collections:
       - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
 
   - name: shop
-    label: Items for sale
-    label_singular: Item for sale
-    description: 'Everything you sell: prints, original art, comics. A new item can be bought once it has a price. A piece under Your art → Work shows here too once "Sell it in the Shop" is on.'
+    label: Art for sale
+    label_singular: Piece for sale
+    description: 'Your art for sale: prints, original art, comics. A new piece can be bought once it has a price. A piece under Your art → Work shows here too once "Sell it in the Shop" is on. Stickers, bookmarks and other small things go under Stickers & more.'
     folder: content/work
     filter: { field: inShop, value: true }
     create: true
@@ -200,6 +200,52 @@ collections:
         hint: 'Sell it in as many sizes as you like: Add size, pick the size from the drop-down, type its price and, for a discount, a lower price. Drag the rows into the order buyers should see. With sizes here, the price above is not used. The sizes in the drop-down are kept under Shop → Categories & sizes.'
         fields:
           - { name: size, label: Size, widget: relation, collection: site, file: categories, value_field: 'sizes.*.name', search_fields: ['sizes.*.name'], display_fields: ['sizes.*.name'], hint: 'Pick it from your list of print sizes (Shop → Categories & sizes).' }
+          - { name: price, label: Price, widget: number, value_type: float, min: 0 }
+          - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
+
+  - name: merch
+    label: Stickers & more
+    label_singular: Item
+    description: 'The small things you sell beside your art: stickers, bookmarks, pins, patches, tote bags... anything. They have their own tab on the Shop page, and can be bought once they have a price.'
+    folder: content/merch
+    create: true
+    extension: json
+    format: json
+    identifier_field: title
+    slug: 'merch-{{slug}}'
+    summary: '{{title}} — {{type}}'
+    sortable_fields: [date, title, price]
+    fields:
+      - { name: inShop, widget: hidden, default: true }
+      - { name: title, label: Name, widget: string, hint: 'For example "Raptor sticker" or "Batman bookmark".' }
+      - { name: type, label: What it is, widget: relation, collection: site, file: categories, value_field: 'merchKinds.*.name', search_fields: ['merchKinds.*.name'], display_fields: ['merchKinds.*.name'], required: false, hint: 'Stickers, Bookmarks, Pins... The Shop page can be filtered by it. The list is kept under Shop → Categories & sizes.' }
+      - { name: src, label: Picture, widget: image, choose_url: false, hint: 'Square or portrait works best. Shown whole on its card and when it is opened.' }
+      - { name: hover, label: Second picture, widget: image, choose_url: false, required: false, hint: 'Optional: on a laptop, in a book, the back... In the Shop it fades in over the first when someone points at it.' }
+      - { name: price, label: Price, widget: number, value_type: float, min: 0, required: false, hint: 'In the currency set under Shop → Settings & payments. Sold in several options (one sticker, a pack of five)? Leave it empty and add the options at the bottom.' }
+      - { name: salePrice, label: Sale price, widget: number, value_type: float, min: 0, required: false, hint: 'Only used while the tag is "On sale", and only when it is lower than the price.' }
+      - name: status
+        label: Tag
+        widget: select
+        default: none
+        required: false
+        options:
+          - { label: 'None', value: none }
+          - { label: 'New (shows a "New" tag)', value: new }
+          - { label: 'On sale (shows the old and the new price)', value: sale }
+          - { label: 'Sold out (no Buy button)', value: soldout }
+      - { name: date, label: Date, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, hint: 'Newest come first.' }
+      - { name: note, label: A few words about it, widget: text, required: false, hint: 'Its size, what it is made of... Shown beside the picture when it is opened.' }
+      - { name: hidden, label: Hide from the site, widget: boolean, default: false, required: false, hint: 'Takes it off the site but keeps it here.' }
+      - name: sizes
+        label: Options and prices
+        label_singular: option
+        widget: list
+        collapsed: false
+        required: false
+        summary: '{{fields.size}} — {{fields.price}}'
+        hint: 'Sell it in as many options as you like: Add option, name it, type its price and, for a discount, a lower price. Drag the rows into the order buyers should see. With options here, the price above is not used.'
+        fields:
+          - { name: size, label: Option, widget: string, hint: 'For example "Single", "Pack of 5", "Holographic".' }
           - { name: price, label: Price, widget: number, value_type: float, min: 0 }
           - { name: salePrice, label: Discount price, widget: number, value_type: float, min: 0, required: false }
 
@@ -383,6 +429,11 @@ collections:
           - { name: intro, label: Introduction, widget: text, required: false }
           - { name: steps, label: The steps under the introduction, widget: list, required: false, max: 4, field: { name: step, label: Step, widget: string }, hint: 'Shown as 01, 02, 03: for example "Pick a piece", "Pay by card or PayPal", "Posted to your door". Left empty, the usual three are used, worded for how buyers pay and whether you post.' }
           - { name: listLabel, label: Small label on the list, widget: string, required: false, hint: 'Beside the page number above the pieces, for example "For sale".' }
+          - { name: merchLabel, label: Small label, widget: string, required: false, hint: 'Once something is for sale under Stickers & more, it has a merch table of its own on the Shop page, under your art. This is the label beside its page number. Empty: "Small things".' }
+          - { name: merchCaption, label: Caption box, widget: string, required: false, hint: 'The yellow comic caption over the heading. Empty: "Meanwhile, at the merch table…".' }
+          - { name: merchTitle, label: Heading, widget: string, required: false, hint: 'Empty: "Grab and go".' }
+          - { name: merchIntro, label: Introduction, widget: text, required: false, hint: 'Empty: "Small pieces of the universe to take home."' }
+          - { name: extrasTitle, label: In the cart, widget: string, required: false, hint: 'The row of stickers & more offered in the cart when it holds a piece of art, for example "Add a sticker?". Empty: "Little extras".' }
           - { name: nothingText, label: When a filter finds nothing, widget: string, required: false, hint: 'Before the "Show everything" link.' }
           - { name: emptyTitle, label: Heading while nothing has a price, widget: string, required: false }
           - { name: emptyText, label: Text while nothing has a price, widget: string, required: false }
@@ -662,6 +713,18 @@ collections:
             fields:
               - { name: name, label: Name, widget: string }
               - { name: note, label: Measurements, widget: string, required: false }
+          - name: merchKinds
+            label: Kinds of stickers & more
+            label_singular: kind
+            widget: list
+            collapsed: false
+            required: false
+            summary: '{{fields.name}}'
+            hint: 'Stickers, Bookmarks, Pins, Patches... What each item under Stickers & more is. The Shop page can be filtered by it, in this order. Beside each, what the buyer gets (shown when an item is opened). Hide: left out of the drop-down, but its items stay in the Shop.'
+            fields:
+              - { name: name, label: Name, widget: string }
+              - { name: note, label: What the buyer gets, widget: string, required: false, hint: 'For example "Vinyl, waterproof, about 7 cm".' }
+              - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
 
       - name: account
         label: Member settings
@@ -881,11 +944,50 @@ collections:
             label: Parts of the Commissions page
             widget: object
             collapsed: false
-            hint: 'The page itself is switched on or off under Pages. Whether new requests are being taken (open, or closed with a note) is under Page text → Commissions.'
+            hint: 'The page itself is switched on or off under Pages. Whether new requests are being taken (open, or closed with a note) is under Page text → Commissions. The request card off: nobody can ask on the site; the card leaves the page and the account, and quote buttons go to your email instead (left out without one). Commissions already asked for carry on.'
             fields:
-              - { name: offers, label: What I draw (the offers), widget: boolean, default: true, required: false }
+              - { name: offers, label: What I draw, widget: boolean, default: true, required: false }
               - { name: process, label: How it works, widget: boolean, default: true, required: false }
-              - { name: request, label: The request card, widget: boolean, default: true, required: false, hint: 'Off: nobody can ask on the site. The card leaves the page and the account, and quote buttons go to your email instead (left out without one). Commissions already asked for carry on.' }
+              - { name: request, label: The request card, widget: boolean, default: true, required: false }
+              - { name: notes, label: Good to know, widget: boolean, default: true, required: false }
+          - name: work
+            label: Parts of the Work page
+            widget: object
+            collapsed: false
+            hint: 'The category buttons at the top, and the two parts under the pieces (shown while every piece is showing).'
+            fields:
+              - { name: filters, label: Category buttons, widget: boolean, default: true, required: false }
+              - { name: samples, label: Comic samples, widget: boolean, default: true, required: false }
+              - { name: redraws, label: Pencils to colours, widget: boolean, default: true, required: false }
+          - name: about
+            label: Parts of the About page
+            widget: object
+            collapsed: false
+            hint: 'Each part also needs something in it (under Page text → About) before it shows.'
+            fields:
+              - { name: story, label: Origin story, widget: boolean, default: true, required: false }
+              - { name: facts, label: The artist file, widget: boolean, default: true, required: false }
+              - { name: credits, label: Covers and collaborations, widget: boolean, default: true, required: false }
+          - name: contact
+            label: Parts of the Contact page
+            widget: object
+            collapsed: false
+            hint: 'The form, and the boxes beside it. Off: the form leaves the page (the heading and introduction stay).'
+            fields:
+              - { name: form, label: The message form, widget: boolean, default: true, required: false }
+              - { name: email, label: Email address, widget: boolean, default: true, required: false }
+              - { name: hire, label: Want a piece drawn?, widget: boolean, default: true, required: false }
+              - { name: follow, label: Follow links, widget: boolean, default: true, required: false }
+          - name: footer
+            label: The last page (the foot of every page)
+            widget: object
+            collapsed: false
+            hint: 'The red closing panel, and the three boxes under it; the ones left share the row.'
+            fields:
+              - { name: end, label: Red closing panel, widget: boolean, default: true, required: false }
+              - { name: brand, label: Name and email, widget: boolean, default: true, required: false }
+              - { name: pages, label: List of pages, widget: boolean, default: true, required: false }
+              - { name: follow, label: Find me, widget: boolean, default: true, required: false }
           - name: themes
             label: Dark and light
             widget: object
@@ -898,19 +1000,23 @@ collections:
             label: Artwork
             widget: object
             collapsed: false
-            hint: 'The Milton Aguiar logo inside the pictures of the Work, Shop and Gallery pages and the pencils-to-colours sets: clear in a corner, faint and large in the middle, so nobody can pass the art off as theirs. It is put on when the site is rebuilt, a minute or two after you save. Pictures stay web-sized either way. Your uploads are never changed.'
+            hint: 'The Milton Aguiar logo inside the pictures of the Work, Shop and Gallery pages and the pencils-to-colours sets: clear in a corner, faint and large in the middle, so nobody can pass the art off as theirs. It is put on when the site is rebuilt, a minute or two after you save. Pictures stay web-sized either way. Your uploads are never changed. On the comic samples too off: the comic books (Your art → Comic samples) are shown without the logo, while the rest of the artwork keeps it.'
             fields:
-              - { name: watermark, label: Logo on the artwork (watermark), widget: boolean, default: true, required: false }
-              - { name: comicsWatermark, label: Logo on the comic samples too, widget: boolean, default: true, required: false, hint: 'Off: the comic books (Your art → Comic samples) are shown without the logo, while the rest of the artwork keeps it.' }
+              - { name: watermark, label: Logo on the artwork, widget: boolean, default: true, required: false }
+              - { name: comicsWatermark, label: On the comic samples too, widget: boolean, default: true, required: false }
           - name: shop
             label: Parts of the Shop page
             widget: object
             collapsed: false
-            hint: 'The drop-downs above the pieces. Each also needs two or more choices in use before it shows.'
+            hint: 'The steps under the introduction, the red banners of the sales on now, the drop-downs above the pieces (each also needs two or more choices in use before it shows). Stickers & more: the merch table under your art, once something under Shop → Stickers & more has a price; hidden, it is off the Shop page, but what is already in a cart or saved can still be bought. Cart extras: the row of stickers & more offered in the cart when it holds a piece of art.'
             fields:
+              - { name: steps, label: Steps under the introduction, widget: boolean, default: true, required: false }
+              - { name: banners, label: Sale banners, widget: boolean, default: true, required: false }
               - { name: category, label: Category drop-down, widget: boolean, default: true, required: false }
               - { name: subcategory, label: Sub category drop-down, widget: boolean, default: true, required: false }
               - { name: type, label: Type drop-down, widget: boolean, default: true, required: false }
+              - { name: merch, label: 'Stickers & more', widget: boolean, default: true, required: false }
+              - { name: extras, label: Cart extras, widget: boolean, default: true, required: false }
           - name: sales
             label: Test data
             widget: object

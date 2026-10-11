@@ -182,11 +182,12 @@ const cardAllowed = async (d, user, card) => {
   return Boolean(r) && earns(r, await progressOf(d, user))
 }
 
-const pieces = () => {
+// the art, and the small things sold beside it (Shop → Stickers & more)
+const pieces = () => ['work', 'merch'].flatMap((dir) => {
   try {
-    return readdirSync(join(process.cwd(), 'content/work')).filter((f) => f.endsWith('.json')).map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/work/${f}`) || {}) })).filter((p) => p.title)
+    return readdirSync(join(process.cwd(), 'content', dir)).filter((f) => f.endsWith('.json')).map((f) => ({ slug: f.slice(0, -5), ...(readJson(`content/${dir}/${f}`) || {}) })).filter((p) => p.title)
   } catch { return [] }
-}
+})
 // the pieces this customer has bought (an order line "Born Again — A3 (signed)" is Born Again)
 const ownedSlugs = async (d, user) => {
   const orders = await countedOrders(d, user)

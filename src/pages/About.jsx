@@ -31,7 +31,7 @@ export default function About() {
         </div>
       </PageTitle>
 
-      {about.story.length > 0 && (
+      {about.story.length > 0 && shows('about', 'story') && (
         <section className="spread">
           <div className="container">
             <Runner label="Origin story" page={++n} />
@@ -60,7 +60,7 @@ export default function About() {
         </section>
       )}
 
-      {(about.facts.length > 0 || social.length > 0) && (
+      {(about.facts.length > 0 || social.length > 0) && shows('about', 'facts') && (
         <section className="spread">
           <div className="container">
             <Runner label="The file" page={++n} />
@@ -106,7 +106,7 @@ export default function About() {
         </section>
       )}
 
-      {credits.length > 0 && (
+      {credits.length > 0 && shows('about', 'credits') && (
         <section className="spread">
           <div className="container">
             <Runner label="Covers and collaborations" page={++n} />

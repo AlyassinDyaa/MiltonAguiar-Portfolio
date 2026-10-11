@@ -1,4 +1,14 @@
 {
+  "contact": {
+    "form": true,
+    "email": true,
+    "hire": true,
+    "follow": true
+  },
+  "art": {
+    "comicsWatermark": false,
+    "watermark": true
+  },
   "pages": {
     "work": true,
     "shop": true,
@@ -7,15 +17,45 @@
     "about": true,
     "contact": true
   },
-  "shop": {
-    "category": true,
-    "subcategory": true,
-    "type": true
+  "commissions": {
+    "offers": true,
+    "process": true,
+    "request": true,
+    "notes": true
+  },
+  "themes": {
+    "dark": true,
+    "light": true
   },
   "sales": {
     "testOrders": false,
     "testCustomers": false,
     "testCodes": false
+  },
+  "about": {
+    "story": true,
+    "facts": true,
+    "credits": true
+  },
+  "work": {
+    "filters": true,
+    "samples": true,
+    "redraws": true
+  },
+  "shop": {
+    "steps": true,
+    "banners": true,
+    "category": true,
+    "subcategory": true,
+    "type": true,
+    "merch": true,
+    "extras": true
+  },
+  "footer": {
+    "end": true,
+    "brand": true,
+    "pages": true,
+    "follow": true
   },
   "home": {
     "ticker": true,
@@ -24,18 +64,5 @@
     "redraws": true,
     "commissions": true,
     "events": true
-  },
-  "themes": {
-    "dark": true,
-    "light": true
-  },
-  "art": {
-    "comicsWatermark": false,
-    "watermark": false
-  },
-  "commissions": {
-    "request": true,
-    "process": true,
-    "offers": true
   }
 }

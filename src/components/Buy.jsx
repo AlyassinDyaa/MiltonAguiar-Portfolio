@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, sizeNotes, sizesOf, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, signable, sizeNotes, sizesOf, soldOut } from '../data/site'
 import Dropdown from './Dropdown'
 import { checkout, payLine } from '../data/checkout'
 import { QuoteGo } from './QuoteLink'
@@ -51,7 +51,7 @@ export default function Buy({ piece }) {
   const [size, setSize] = useState(() => sizesOf(piece)[0]?.name || '') // the print size: the first to start with
   useEffect(() => { if (!added) return; const t = setTimeout(() => setAdded(false), 1800); return () => clearTimeout(t) }, [added])
   if (!buyable(piece)) return null
-  const choice = Boolean(shop.signedChoice)
+  const choice = signable(piece) // signed or not: art only, while the admin offers it
   const out = soldOut(piece)
   const extra = choice && signed ? Math.max(0, Number(shop.signedExtra) || 0) : 0
   const where = shop.shipping !== false ? shipsTo(shop.countries) : ''
@@ -83,7 +83,7 @@ export default function Buy({ piece }) {
       {sale && !out && <p className="buy-save">{deal && <b className="buy-deal">{deal.name || 'Sale'} −{deal.percent}%</b>}You save {money(full - now, true)}</p>}
       {sizes.length > 0 && !out && (
         <Dropdown
-          className="buy-size" label="Size" value={size} onChange={setSize}
+          className="buy-size" label={piece.shelf === 'merch' ? 'Option' : 'Size'} value={size} onChange={setSize}
           options={sizes.map((r) => ({ value: r.name, label: r.name, note: sizeNotes[r.name] || '', aside: r.sale ? <><s>{money(r.price, true)}</s> {money(r.now, true)}</> : money(r.now, true) }))}
         />
       )}

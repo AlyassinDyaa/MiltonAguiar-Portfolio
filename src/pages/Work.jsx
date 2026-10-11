@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { catOf, categories, comics, day, home, pages, redraws, work } from '../data/site'
+import { catOf, categories, comics, day, home, pages, redraws, shows, work } from '../data/site'
 import Page from '../components/Page'
 import Reveal from '../components/Reveal'
 import Poster from '../components/Poster'
@@ -23,7 +23,7 @@ export default function Work() {
   return (
     <Page title="Work">
       <PageTitle tone="red" label={pages.work.label} title={pages.work.title} lead={pages.work.intro} slides={work}>
-        {categories.length > 1 && (
+        {categories.length > 1 && shows('work', 'filters') && (
           <div className="filters" role="group" aria-label="Show">
             {['All', ...categories].map((c) => (
               <button key={c} type="button" className={`chip ${filter === c ? 'on' : ''}`} aria-pressed={filter === c} onClick={() => choose(c)}>
@@ -56,7 +56,7 @@ export default function Work() {
         </div>
       </section>
 
-      {comics.length > 0 && filter === 'All' && (
+      {comics.length > 0 && filter === 'All' && shows('work', 'samples') && (
         <section className="spread">
           <div className="container">
             <Runner label={pages.samples.label} page={3} />
@@ -69,7 +69,7 @@ export default function Work() {
         </section>
       )}
 
-      {redraws.length > 0 && filter === 'All' && (
+      {redraws.length > 0 && filter === 'All' && shows('work', 'redraws') && (
         <section className="spread">
           <div className="container">
             <Runner label={home.redrawLabel} page={comics.length > 0 ? 4 : 3} />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, money, payWays, shop, shows } from '../data/site'
+import { asset, canBuy, merchForSale, money, nowPrice, payWays, shop, shows, signable, sizesOf } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
 import { checkout, payLine } from '../data/checkout'
@@ -86,7 +86,7 @@ export default function CartDrawer() {
                         <span className="cart-thumb">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
                         <div className="cart-info">
                           <strong>{l.piece.title}</strong>
-                          <small>{[l.size, shop.signedChoice ? (l.signed ? 'Signed' : 'Unsigned') : '', l.piece.type].filter(Boolean).join(' · ')}</small>
+                          <small>{[l.size, signable(l.piece) ? (l.signed ? 'Signed' : 'Unsigned') : '', l.piece.type].filter(Boolean).join(' · ')}</small>
                           {l.deal && <span className="cart-sale">{l.deal.name || 'Sale'} −{l.deal.percent}%</span>}
                           <div className="cart-row">
                             <div className="cart-qty" role="group" aria-label={`How many of ${l.piece.title}`}>
@@ -102,6 +102,30 @@ export default function CartDrawer() {
                     ))}
                   </AnimatePresence>
                 </ul>
+
+                {/* little extras: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option) */}
+                {(() => {
+                  if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
+                  const extras = merchForSale.filter((p) => canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8)
+                  if (!extras.length) return null
+                  return (
+                    <div className="cart-extras">
+                      <h3>{shop.extrasTitle}</h3>
+                      <ul data-lenis-prevent>
+                        {extras.map((p) => {
+                          const opt = sizesOf(p)[0]?.name || ''
+                          return (
+                            <li key={p.slug}>
+                              <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
+                              <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
+                              <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  )
+                })()}
 
                 <footer className="cart-foot">
                   {/* a discount code: a link that opens the box; once applied, a line with what it takes off */}

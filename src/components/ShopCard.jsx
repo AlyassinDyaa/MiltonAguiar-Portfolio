@@ -25,6 +25,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const gone = soldOut(p)
   const sizes = sizesOf(p)
   const choose = sizes.length > 1 // more than one size: the size is picked on the piece itself
+  const sizeWord = p.shelf === 'merch' ? ['option', 'options'] : ['size', 'sizes'] // stickers & more come in options (a pack of five), art in sizes
   const add = () => {
     if (choose) return onOpen()
     cart.add(p.slug, false, sizes[0]?.name || ''); setAdded(true); setTimeout(() => cart.setOpen(true), 300)
@@ -32,7 +33,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
   const from = manyPrices(p)
   const one = sizes[0]?.name // the size whose price shows when there is only one price
   const sale = !from && onSale(p, one)
-  const what = [p.type, filedUnder(p), sizes.length > 1 ? `${sizes.length} sizes` : sizes[0]?.name].filter(Boolean).join(' · ')
+  const what = [p.type, filedUnder(p), sizes.length > 1 ? `${sizes.length} ${sizeWord[1]}` : sizes[0]?.name].filter(Boolean).join(' · ')
   const look = p.src ? p.look || 'poster' : 'plain'
   return (
     <article className={`pc look-${look} ${gone ? 'is-gone' : ''} ${alt ? 'is-alt' : ''}`}>
@@ -47,7 +48,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
         </button>
         {tag && shop.tagPlace !== 'below' && <span className={`sc-tag is-${tag.kind}`}>{tag.text}</span>}
         {canBuy(p) && (
-          <button type="button" className={`pc-add ${added ? 'is-added' : ''}`} onClick={add} aria-label={choose ? `Choose a size of ${p.title}` : `Add ${p.title} to the cart`} title={choose ? 'Choose a size' : 'Add to cart'}>
+          <button type="button" className={`pc-add ${added ? 'is-added' : ''}`} onClick={add} aria-label={choose ? `Choose ${sizeWord[0] === 'size' ? 'a size' : 'an option'} of ${p.title}` : `Add ${p.title} to the cart`} title={choose ? `Choose ${sizeWord[0] === 'size' ? 'a size' : 'an option'}` : 'Add to cart'}>
             {added ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> : <CartIcon />}
           </button>
         )}

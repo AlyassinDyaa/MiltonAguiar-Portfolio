@@ -342,7 +342,7 @@ export default function Commissions() {
               <h2 className="cmr-title">{open ? requestTitle : closedTitle}</h2>
             </header>
             <div className="cmr-body">
-              {notes.length > 0 && (
+              {notes.length > 0 && shows('commissions', 'notes') && (
                 <aside className="cmr-notes" aria-labelledby="cmr-notes-title">
                   <h3 id="cmr-notes-title">Good to know</h3>
                   <ul>{notes.map((x) => <li key={x}>{x}</li>)}</ul>

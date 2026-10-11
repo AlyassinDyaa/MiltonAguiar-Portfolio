@@ -1425,10 +1425,11 @@ a.buy-btn { text-decoration: none; }
 /* the tabs: one row, sticky under the menu, scrolls sideways on a phone */
 .acct2-tabs { position: sticky; z-index: 30; top: var(--nav); display: flex; gap: 4px; margin-top: clamp(22px, 3vw, 34px); padding: 0 4px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); background: var(--page); backdrop-filter: blur(10px); }
 .acct2-tabs::-webkit-scrollbar { display: none; }
+.acct2-tabs { overflow-y: hidden; overscroll-behavior-x: contain; } /* sideways only: never dragged up or down */
 .acct2-tabs button { position: relative; flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 16px 16px 15px; font-family: var(--display); font-size: 0.74rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-dim); cursor: pointer; transition: color 0.2s; }
 .acct2-tabs button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .acct2-tabs button small { min-width: 22px; padding: 1px 6px; text-align: center; font-size: 0.66rem; background: var(--line); color: var(--fg); }
-.acct2-tabs button::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 3px; background: var(--accent); transform: skewX(-40deg) scaleX(0); transform-origin: left; transition: transform 0.35s var(--ease-out); }
+.acct2-tabs button::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px; background: var(--accent); transform: skewX(-40deg) scaleX(0); transform-origin: left; transition: transform 0.35s var(--ease-out); }
 .acct2-tabs button:hover, .acct2-tabs button.on { color: var(--fg); }
 .acct2-tabs button.on svg { color: var(--accent); }
 .acct2-tabs button.on small { background: var(--accent); color: var(--on-accent); }
@@ -2641,3 +2642,13 @@ form.lined .acc-phone-number input { padding-right: 0; }
 @keyframes parts-in { from { opacity: 0; transform: translateY(6px); } }
 .acct-rewards.is-parted .acct-reward-group > .acct-group-head h3, .acct-rewards.is-parted .pts-head-words h3 { display: none; } /* the bar already names the part */
 @media (prefers-reduced-motion: reduce) { .acct-rewards.is-parted > * { animation: none; } }
+
+/* The account's sections on a phone: one row that scrolls sideways (a finger runs through them), and
+   only sideways: the row is exactly as tall as its tabs and can't be pulled up or down, so the names
+   never shift while the page scrolls. The edges fade where there are more tabs to see. */
+@media (max-width: 799px) {
+  .acct2-tabs { height: 48px; overflow: auto hidden; overscroll-behavior-x: contain; touch-action: pan-x pan-y; scroll-padding-inline: var(--gutter);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--gutter), #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 var(--gutter), #000 calc(100% - 28px), transparent); }
+  .acct2-tabs button { height: 47px; padding: 0 12px; }
+  .acct-parts { top: calc(var(--nav) + 49px); } /* under that row, which stays in view too */
+}

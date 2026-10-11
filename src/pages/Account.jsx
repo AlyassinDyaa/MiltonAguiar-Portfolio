@@ -1810,6 +1810,13 @@ function Home() {
   useEffect(() => { if (tab === 'rewards' && popGifts.length) closePop() }, [tab, popGifts.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const owned = ownedIn(orders)
   const grid = useRef(null)
+  // where the row of sections scrolls sideways (a phone), the open one slides into view; only the row moves, never the page
+  useEffect(() => {
+    const row = grid.current
+    const on = row && row.querySelector('button.on')
+    if (!on || row.scrollWidth <= row.clientWidth) return
+    row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }, [tab, Boolean(user)]) // eslint-disable-line react-hooks/exhaustive-deps
   // the browser tab's title follows the section, without the page's own scroll-to-top on a new title
   useEffect(() => { const name = TABS.find(([k]) => k === tab)[1]; document.title = `${tab === 'overview' ? 'Your account' : name} — ${brand.name}` }, [tab])
   // the line that says something just happened (email confirmed, welcome, new password, thank you)

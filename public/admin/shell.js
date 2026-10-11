@@ -73,7 +73,7 @@
     },
     'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
-    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook'] },
+    'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts', points: 'Points' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook', 'cost', 'kind', 'on', 'perUnit', 'signup', 'news'] },
     'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request'] },
   }
@@ -114,7 +114,7 @@
     'site/categories': 'Categories, sub categories and print sizes: add, rename, reorder or hide them.',
     'site/visibility': 'Switch pages, parts of the home and Commissions pages, dark or light mode, the watermark and test data on or off.',
     'site/account': 'Accounts on or off, the membership card, your note on their page, free profile pictures.',
-    'site/rewards': 'Profile pictures, card designs and discounts members earn by confirming their email, ordering or collecting.',
+    'site/rewards': 'Profile pictures, card designs and discounts members earn; and points: what earns them and what they buy.',
     'site/sales': 'Automatic price cuts with a start and an end: 10% off everything, 25% off a category. No code needed.',
   }
   Object.assign(ICONS, {

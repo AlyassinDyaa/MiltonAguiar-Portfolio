@@ -241,15 +241,26 @@ window.IASales = (() => {
   })
   /* Deleting a customer takes their orders off the admin, and deletes the discount codes made
      for their email (they stop working). An account on the site is not touched. */
-  const askCustomer = (c) => {
+  /* Deleting a customer, after the "are you sure" window: their orders leave the admin, their
+     discount codes stop, and their account on the site goes too (they can no longer log in; their
+     points, rewards and saved pieces go with it). Stripe and PayPal keep their own records. */
+  const dropMember = async (mem) => {
+    if (!mem) return ''
+    const r = await mApi({ action: 'adminDeleteMember', email: mem.email })
+    if (!r.ok) return r.json.message || 'The account was not deleted. Try again.'
+    mState.list = mState.list.filter((m) => m.email !== mem.email)
+    return ''
+  }
+  const askCustomer = (c, back = null) => {
     const theirs = state.orders.filter((o) => keyOf(o) === c.key)
     const codes = codesOf(c.email)
     ask({
+      back,
       title: `Delete ${c.name || c.email}?`,
-      text: [c.email, many(theirs.length, 'order'), money(c.spent, c.currency), codes.length ? many(codes.length, 'discount code') : ''].filter(Boolean).join(' · '),
-      more: `Their orders${codes.length ? ' and discount codes' : ''} are taken off the admin for good${codes.length ? '; the codes stop working' : ''}. Stripe keeps its own record of the payments.${c.member ? ' Their account on the site stays.' : ''}`,
-      yes: 'Delete customer',
-      run: async () => (await hideOrders(theirs)) || (await dropCodes(codes)),
+      text: [c.email, c.member ? `member ${memberNo(c.member.memberNo)}` : 'no account', many(theirs.length, 'order'), money(c.spent, c.currency), codes.length ? many(codes.length, 'discount code') : '', c.member && c.member.points ? `${c.member.points} points` : ''].filter(Boolean).join(' · '),
+      more: `Their orders${codes.length ? ' and discount codes' : ''} are taken off the admin for good${codes.length ? '; the codes stop working' : ''}. Stripe keeps its own record of the payments.${c.member ? ' Their account on the site goes too: they can no longer log in, and their points, rewards and saved pieces go with it.' : ''}`,
+      yes: c.member ? 'Delete customer and account' : 'Delete customer',
+      run: async () => { const problem = (await hideOrders(theirs)) || (await dropCodes(codes)) || (await dropMember(c.member)); if (!problem && back) state.modal = null; return problem },
     })
   }
   const confirmModal = (m) => {
@@ -316,7 +327,7 @@ window.IASales = (() => {
           el('span', { className: 'ia-cardprev-foot sl-card3d-foot' }, [
             el('span', {}, [el('small', { textContent: 'Member no.' }), memberNo(mem.memberNo)]),
             el('span', {}, [el('small', { textContent: 'Since' }), String(since)]),
-            el('span', {}, [el('small', { textContent: 'Points' }), String(mem.points || 0)]),
+            el('span', {}, [el('small', { textContent: 'Total earned' }), String(Math.max(mem.pointsEarned || 0, mem.points || 0))]),
             el('span', {}, [el('small', { textContent: 'Collected' }), `${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`]),
           ])]))
       return f
@@ -410,6 +421,7 @@ window.IASales = (() => {
           stat('Last order', bought ? date(c.last) : '—'),
         ]),
         email ? block('Rewards gifted', [giftsFor(m, email)]) : null,
+        mem ? block('Points', [pointsFor(m, mem)]) : null,
         block('Contact', [el('p', { className: 'sl-who' }, [
           email ? el('span', { className: 'sl-mail' }, [el('span', { textContent: email }), copyBtn(email, 'email')]) : el('span', { textContent: 'No email' }),
           phone ? el('a', { href: `tel:${phone.replace(/[^+\d]/g, '')}`, textContent: phone }) : el('span', { className: 'sl-dim', textContent: 'No phone number given' }),
@@ -429,6 +441,7 @@ window.IASales = (() => {
       el('div', { className: 'sl-modal-foot' }, [
         email ? button('Give them a discount', () => discountFor([c ? c.key : email.toLowerCase()], email, name), 'ia-btn ghost') : null,
         mem ? button('See their card', () => { state.modal = { kind: 'card', email, back: m }; draw() }, 'ia-btn ghost') : null,
+        c && (theirs.length || mem) ? button('Delete…', () => askCustomer(c, m), 'ia-btn ghost sl-danger-btn') : null,
         email ? copyBtn(email, 'email', 'ia-btn ghost') : null,
         theirs.length ? button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(email || first.name)}`; draw() }, 'ia-btn ghost') : null,
         button('Close', () => { state.modal = null; draw() }, 'ia-btn'),
@@ -699,6 +712,50 @@ window.IASales = (() => {
   }
   const giveGift = (m, mem, rw) => giveGifts(m, mem, [rw])
 
+  /* A member's points in their window: the balance, the rewards they spent points on (a gift to
+     send is marked as sent here; a code is shown), the last changes, and points added or taken by
+     hand with a note they see. */
+  const WHY = { order: 'order', commission: 'commission', signup: 'email confirmed', detail: 'detail added', news: 'said yes to news', 'news-off': 'unsubscribed', refund: 'refunded', redeem: 'spent on', admin: 'from you' }
+  const pointsAct = async (m, mem, body) => {
+    m.busy = true; m.ptsSaid = ''; draw()
+    const r = await mApi(body)
+    m.busy = false
+    if (!r.ok) { m.ptsSaid = r.json.message || 'That did not work.'; m.ptsBad = true; return draw() }
+    if (r.json.member) keepMember(mem, r.json.member)
+    m.pts = ''; m.ptsNote = ''; m.ptsBad = false
+    m.ptsSaid = body.action === 'adminPoints' ? `${body.delta > 0 ? '+' : ''}${body.delta} points for ${mem.name || mem.email}: they have ${mem.points || 0} now.` : 'Marked as sent.'
+    draw()
+  }
+  const pointsFor = (m, mem) => {
+    const kids = [el('p', { className: 'sl-points-balance' }, [el('strong', { textContent: String(mem.points || 0) }), el('span', { textContent: mem.points === 1 ? ' point' : ' points' })])]
+    const claims = mem.claims || []
+    if (claims.length) {
+      kids.push(el('ul', { className: 'sl-items sl-claims' }, claims.map((c) => {
+        const li = el('li', { className: 'is-static' }, [
+          el('span', {}, [el('strong', { textContent: c.name }), el('small', { textContent: ` · ${c.cost} points · ${date(c.at)}${c.code ? ` · code ${c.code.code}` : ''}` })]),
+          c.kind === 'gift' ? (c.status === 'sent' ? badge('verified', 'Sent') : badge('unverified', 'To send')) : badge('member', 'Code'),
+        ])
+        if (c.kind === 'gift' && c.status !== 'sent') { const b = button('Mark as sent', () => pointsAct(m, mem, { action: 'adminClaimSent', email: mem.email, claim: c.id }), 'ia-btn ghost sl-claim-btn'); b.disabled = Boolean(m.busy); li.append(b) }
+        return li
+      })))
+    }
+    const log = mem.pointsLog || []
+    if (log.length) kids.push(el('p', { className: 'sl-dim sl-points-log', textContent: `Lately: ${log.slice(0, 6).map((x) => `${x.delta > 0 ? '+' : ''}${x.delta} ${WHY[x.why] || x.why}${x.ref ? ` (${x.ref})` : ''}`).join(' · ')}` }))
+    const amount = el('input', { className: 'sl-input', type: 'number', step: '1', placeholder: '100, or -50 to take', ariaLabel: 'Points to add; a minus takes them', value: m.pts || '' })
+    amount.addEventListener('input', () => { m.pts = amount.value })
+    const note = el('input', { className: 'sl-input', type: 'text', maxLength: 120, placeholder: 'Why, in a few words: they see it ("Instagram post", "came to the signing")', value: m.ptsNote || '' })
+    note.addEventListener('input', () => { m.ptsNote = note.value })
+    const give = button(m.busy ? 'Saving…' : 'Add points', () => {
+      const n = Math.round(Number(m.pts))
+      if (!n) { m.ptsSaid = 'Type how many points: a minus sign takes them.'; m.ptsBad = true; return draw() }
+      pointsAct(m, mem, { action: 'adminPoints', email: mem.email, delta: n, note: (m.ptsNote || '').trim() })
+    }, 'ia-btn')
+    give.disabled = Boolean(m.busy)
+    kids.push(el('div', { className: 'sl-points-adjust' }, [amount, note, give]))
+    if (m.ptsSaid) kids.push(el('p', { className: `sl-gift-note ${m.ptsBad ? 'is-bad' : ''}`, role: 'status', textContent: m.ptsSaid }))
+    return el('div', { className: 'sl-points' }, kids)
+  }
+
   /* The rewards in a customer's window: what they have been gifted (× takes one back), and
      "+ Gift a reward", which opens the rewards not yet theirs as tiles, a note and Gift it. */
   const giftsFor = (m, email) => {
@@ -899,7 +956,7 @@ window.IASales = (() => {
             el('span', { className: `sl-c-total ${c.orders ? '' : 'is-zero'}` }, [el('strong', { textContent: c.orders ? money(c.spent, c.currency) : '—' })]),
           ], () => open(c), [
             iconBtn('info', 'Customer details', () => open(c)),
-            theirs ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
+            theirs || c.member ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
           ])
         }),
       ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'Nobody matches' : 'No customers yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Everyone who buys from the shop, or makes an account, shows up here.' })]) : null),

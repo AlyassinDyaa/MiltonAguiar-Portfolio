@@ -197,6 +197,7 @@ export const tellBuyer = async (ref, site) => {
         member ? 'You can follow it in your account, from packing to your door, with the tracking number once it is posted.'
           : unconfirmed ? 'Confirm the email address of your account and you can follow it there, from packing to your door, with the tracking number once it is posted.'
             : 'Make an account with this email address and you can follow it there, from packing to your door, with the tracking number once it is posted.',
+        ...(order.points > 0 ? [`You earned ${order.points} points with this order. They add up under Rewards in your account.`] : []),
       ],
       orders: [{
         title: `Order ${no}`,

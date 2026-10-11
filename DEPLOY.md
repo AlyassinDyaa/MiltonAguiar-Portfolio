@@ -20,7 +20,7 @@ Never put any of these values in the code or in GitHub. On your own computer the
 | Stripe | Card, Apple Pay and Google Pay payments, and discount codes | A fee per sale |
 | PayPal Business | PayPal payments | A fee per sale |
 | Gmail (or Resend) | Sends the confirm-your-email and reset-password emails | Free |
-| A domain (optional) | `miltonaguiar.com` instead of `miltonaguiar.vercel.app` | About $12 a year |
+| A domain (optional) | `miltonaguiar.com` (done) instead of `miltonaguiar.vercel.app` | About $12 a year |
 
 ---
 
@@ -39,7 +39,7 @@ Never put any of these values in the code or in GitHub. On your own computer the
 
 | Name | Value | Notes |
 |---|---|---|
-| `SITE_URL` | `https://miltonaguiar.vercel.app` (or your domain) | Links in emails and the email pictures use it. No slash at the end |
+| `SITE_URL` | `https://miltonaguiar.com` (or your domain) | Links in emails and the email pictures use it. No slash at the end |
 
 ### Customer accounts and orders (database)
 
@@ -60,12 +60,12 @@ Either Gmail (simple, about 500 emails a day):
 | `SMTP_PASS` | The 16-letter Gmail **app password** (not the normal Gmail password) |
 | `MAIL_FROM` | `Milton Aguiar <dyaa.alyassin0@gmail.com>` |
 
-Or Resend (for sending from your own domain, e.g. `hello@miltonaguiar.com`):
+Or Resend (for sending from your own domain, e.g. `contact@miltonaguiar.com`):
 
 | Name | Value |
 |---|---|
 | `RESEND_API_KEY` | resend.com → API Keys |
-| `MAIL_FROM` | `Milton Aguiar <hello@your-domain>` (a domain verified in Resend) |
+| `MAIL_FROM` | `Milton Aguiar <contact@miltonaguiar.com>` (a domain verified in Resend) |
 
 Optional for both:
 
@@ -100,7 +100,7 @@ Optional for both:
 ```
 ADMIN_PASSCODE=
 GITHUB_TOKEN=
-SITE_URL=https://miltonaguiar.vercel.app
+SITE_URL=https://miltonaguiar.com
 MONGODB_URI=mongodb+srv://milton-app:<password>@testcluster.tbbqflh.mongodb.net/?appName=TestCluster
 MONGODB_DB=miltona
 SMTP_HOST=smtp.gmail.com
@@ -126,7 +126,7 @@ Preview, so test deployments never take real money.
 
 ### Step 1. The Vercel project
 1. vercel.com → **Add New → Project** → import `AlyassinDyaa/MiltonAguiar-Portfolio` → **Deploy**.
-   (Already done: the site is at miltonaguiar.vercel.app.)
+   (Already done: the site is at miltonaguiar.com (miltonaguiar.vercel.app still answers).)
 2. The free Hobby plan allows 100 deployments a day, and every admin Save is one. If the admin is
    used a lot, move to Pro.
 
@@ -161,7 +161,7 @@ Preview, so test deployments never take real money.
    `RESEND_API_KEY` and change `MAIL_FROM` (remove the `SMTP_` ones).
 
 ### Step 6. The site's address
-1. Add `SITE_URL` = `https://miltonaguiar.vercel.app` (or the domain from step 11).
+1. Add `SITE_URL` = `https://miltonaguiar.com` (or the domain from step 11).
 
 ### Step 7. Stripe, live
 1. Stripe dashboard → **Activate payments**: business details, identity, the bank account payouts
@@ -171,7 +171,7 @@ Preview, so test deployments never take real money.
 
 ### Step 8. Stripe's webhook (so card orders reach the database and customers' accounts)
 1. Stripe (live mode) → **Developers → Webhooks → Add endpoint**.
-2. Endpoint URL: `https://miltonaguiar.vercel.app/api/stripe-webhook` (your `SITE_URL` +
+2. Endpoint URL: `https://miltonaguiar.com/api/stripe-webhook` (your `SITE_URL` +
    `/api/stripe-webhook`).
 3. Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
    `charge.refunded`.

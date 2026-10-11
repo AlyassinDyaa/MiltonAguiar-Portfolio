@@ -5,6 +5,7 @@ import Page from '../components/Page'
 import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, sizesOf, soldOut } from '../data/site'
 import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
+import PhoneField from '../components/PhoneField'
 import { useAccount } from '../hooks/useAccount'
 import { useCart } from '../hooks/useCart'
 import AccountCommissions, { useCommissionList } from '../components/AccountCommissions'
@@ -43,7 +44,7 @@ function Submit({ busy, children }) {
 }
 
 /* the frame of the smaller pages: a label, a title, a line, and a card with the form */
-function Shell({ title, label, lead, children, cardName }) {
+function Shell({ title, label, lead, children, cardName, cardPoints }) {
   return (
     <Page title={title}>
       <div className="container acc-split">
@@ -55,7 +56,7 @@ function Shell({ title, label, lead, children, cardName }) {
           </header>
           <div className="acc-narrow">{children}</div>
         </div>
-        <AuthArt cardName={cardName} />
+        <AuthArt cardName={cardName} cardPoints={cardPoints} />
       </div>
     </Page>
   )
@@ -111,7 +112,8 @@ const barsOf = (number) => {
    number again as a barcode, the small print). It leans toward the pointer; a tap or click turns it
    over, and a drag spins it round by hand, settling on whichever side is nearer when let go. */
 const EDGE = [-3, -2, -1, 0, 1, 2, 3] // the slices of the card's body, from its back face to its front
-function CollectorCard({ name, since, number, prints, points = 0, design = null }) {
+function CollectorCard({ name, since, number, prints, points: given = 0, earned = null, design = null }) {
+  const points = accountPage.points && accountPage.points.on ? given : null // points switched off: none on the card
   const lean = useRef(null)
   const flip = useRef(null)
   const turn = useRef(0) // how far round it is turned, in degrees: 0 the front, 180 the back, 360 the front again
@@ -197,7 +199,7 @@ function CollectorCard({ name, since, number, prints, points = 0, design = null 
             <div className="acc-card3d-foot">
               <span><small>Member since</small>{since}</span>
               <span><small>Member no.</small>{number}</span>
-              <span><small>Points</small>{points}</span>
+              {points != null && <span><small>Points</small>{points}</span>}
               <span><small>Collected</small>{prints}</span>
             </div>
           </div>
@@ -212,7 +214,7 @@ function CollectorCard({ name, since, number, prints, points = 0, design = null 
             <div className="acc-card3d-facts">
               <span><small>Member no.</small>{number}</span>
               <span><small>Since</small>{since}</span>
-              <span><small>Points</small>{points}</span>
+              {points != null && <span><small>Total earned</small>{earned == null ? points : earned}</span>}
               <span><small>Collected</small>{prints}</span>
             </div>
             <div className="acc-card3d-base">
@@ -235,14 +237,15 @@ const countryName = (code) => { if (!code) return ''; try { return new Intl.Disp
 // member 1 reads #0001
 const memberNumber = (n) => (n ? `#${String(n).padStart(4, '0')}` : '#----')
 
-function AuthArt({ cardName }) {
-  // logged in (confirming the email, for example): their own card
+// the card beside the forms: logged in, their own; making an account, the name as it is typed and
+// the points the account starts with (confirming the email, and the news if ticked)
+function AuthArt({ cardName, cardPoints = 0 }) {
   const { user } = useAccount()
   return (
     <aside className="acc-art">
       {user
-        ? <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints="Your collection" design={designOf(user.card)} />
-        : <CollectorCard name={cardName} since={new Date().getFullYear()} number={memberNumber(null)} prints="Your collection" />}
+        ? <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints="Your collection" points={user.points || 0} earned={user.pointsEarned || 0} design={designOf(user.card)} />
+        : <CollectorCard name={cardName} since={new Date().getFullYear()} number={memberNumber(null)} prints="Your collection" points={cardPoints} />}
       <ul className="acc-perks">
         {PERKS.map(([t, d]) => <li key={t}><i aria-hidden="true" /><div><b>{t}</b><span>{d}</span></div></li>)}
       </ul>
@@ -313,13 +316,15 @@ function Signup() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))
-  const f = useForm({ name: '', email: '', password: '', again: '', marketing: false })
+  const f = useForm({ name: '', phone: '', email: '', password: '', again: '', marketing: false })
   const made = useRef(false) // just made here: the account page greets them
   if (user) return <Navigate to={made.current && next === '/account' ? '/account?welcome=1' : next} replace />
   return (
-    <Shell title="Make an account" label="Your account" lead="Keep your cart, follow your orders, and buy faster next time." cardName={f.values.name}>
+    <Shell title="Make an account" label="Your account" lead="Keep your cart, follow your orders, and buy faster next time." cardName={f.values.name} cardPoints={accountPage.points.on ? accountPage.points.field * ['name', 'phone', 'email', 'password', 'again'].filter((k) => String(f.values[k] || '').trim()).length : null}>
       <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { const { again, ...values } = f.values; mustMatch(values.password, again); made.current = true; await call('signup', { ...values, cart: cart.stored }); navigate(next === '/account' ? '/account?welcome=1' : next, { replace: true }) })} noValidate>
+        {/* the points each detail earns are not written here: the card beside the form counts them as they are filled in */}
         <Field label="Your name" autoComplete="name" value={f.values.name} onChange={f.set('name')} required={false} maxLength={80} />
+        <PhoneField label="Phone (optional, for the courier)" value={f.values.phone} onChange={f.set('phone')} error={errorFor(f.problem, 'phone')} />
         <Field label="Email" type="email" autoComplete="email" value={f.values.email} onChange={f.set('email')} error={errorFor(f.problem, 'email')} />
         <Field label="Password" type="password" autoComplete="new-password" value={f.values.password} onChange={f.set('password')} error={errorFor(f.problem, 'password')} hint="At least 8 characters." />
         <PasswordAgain form={f} />
@@ -486,7 +491,7 @@ function Unsubscribe() {
 
 /* ---------- "are you sure?": a small window over the page. Escape, the cross or a click outside
    says no; the answer button runs the action and shows that it is working. */
-function Confirm({ open, title, text, yes, onYes, onClose }) {
+function Confirm({ open, title, text, yes, onYes, onClose, no = 'Stay logged in', busyText = 'Logging out…', danger = false, icon = 'out' }) {
   const [busy, setBusy] = useState(false)
   const yesBtn = useRef(null)
   useEffect(() => {
@@ -502,14 +507,14 @@ function Confirm({ open, title, text, yes, onYes, onClose }) {
     <AnimatePresence>
       {open && (
         <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }}>
-          <motion.div className="acc-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="acc-modal-title" aria-describedby="acc-modal-text" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
+          <motion.div className={`acc-modal-box ${danger ? 'is-danger' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby="acc-modal-title" aria-describedby="acc-modal-text" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
             <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close" disabled={busy}>×</button>
-            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4 M10 16l-4-4 4-4 M6 12h10" /></svg></span>
+            <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={icon === 'key' ? 'M15 7a4 4 0 1 1-4 4 M11 11l-7 7 M7 15l2 2 M5 17l2 2' : icon === 'bin' ? 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6' : 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4 M10 16l-4-4 4-4 M6 12h10'} /></svg></span>
             <h2 id="acc-modal-title">{title}</h2>
             <p id="acc-modal-text">{text}</p>
             <div className="acc-modal-actions">
-              <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>Stay logged in</button>
-              <button ref={yesBtn} type="button" className="btn sm acc-modal-yes" disabled={busy} onClick={async () => { setBusy(true); try { await onYes() } finally { setBusy(false) } }}>{busy ? 'Logging out…' : yes}</button>
+              <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>{no}</button>
+              <button ref={yesBtn} type="button" className="btn sm acc-modal-yes" disabled={busy} onClick={async () => { setBusy(true); try { await onYes() } finally { setBusy(false) } }}>{busy ? busyText : yes}</button>
             </div>
           </motion.div>
         </motion.div>
@@ -975,11 +980,11 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
       </div>
       <div className="acc-grid">
         <Field label="Your name" autoComplete="name" value={f.values.name} onChange={f.set('name')} required={false} maxLength={80} />
-        <Field label="Phone (optional, for the courier)" type="tel" autoComplete="tel" value={f.values.phone} onChange={f.set('phone')} required={false} maxLength={30} />
+        <PhoneField label="Phone (optional, for the courier)" value={f.values.phone} onChange={f.set('phone')} error={errorFor(f.problem, 'phone')} />
       </div>
       <label className="acc-check">
         <input type="checkbox" checked={f.values.marketing} onChange={(e) => f.set('marketing')(e.target.checked)} />
-        <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.</span>
+        <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.{newsBonusLine()}</span>
       </label>
       <fieldset className="acct-pick">
         <legend>Your picture</legend>
@@ -1052,7 +1057,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
             const changed = f.values.card !== (user.card || '')
             return (
               <div className={`acct-card-preview ${peek !== null && peek !== f.values.card ? 'is-peek' : changed ? 'is-trying' : ''}`} aria-live="polite">
-                <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints={prog.pieces ? `${prog.pieces} ${prog.pieces === 1 ? 'piece' : 'pieces'}` : 'Your collection'} design={d} />
+                <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints={prog.pieces ? `${prog.pieces} ${prog.pieces === 1 ? 'piece' : 'pieces'}` : 'Your collection'} points={user.points || 0} earned={user.pointsEarned || 0} design={d} />
                 <span>{peek !== null && peek !== f.values.card ? `${d ? d.name : 'Comic red'}: click it below to choose it` : changed ? 'Preview: save to keep this design.' : 'Your card now.'}</span>
               </div>
             )
@@ -1091,15 +1096,29 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
 
 function Security() {
   const { call } = useAccount()
-  const navigate = useNavigate()
   const pw = useForm({ current: '', password: '', again: '' })
   const [changed, setChanged] = useState(false)
-  const del = useForm({ password: '' })
+  const del = useForm({ password: '', again: '' })
   const [deleting, setDeleting] = useState(false)
+  // the questions before it happens: the form checks first, then this window asks
+  const [askChange, setAskChange] = useState(false)
+  const [askDelete, setAskDelete] = useState(false)
+  const quiet = { preventDefault() {} } // the form's work, run from the window once it is answered
+  // the form is checked first (all there, the two the same, not the current one); then the window asks
+  const askFirst = (form, test, open) => (e) => {
+    e.preventDefault()
+    try { test(); form.setProblem({ field: '', text: '' }); open(true) } catch (err) { form.setProblem({ field: err.field || '', text: err.message }) }
+  }
+  const need = (v, field, text) => { if (!String(v || '').length) { const p = new Error(text); p.field = field; throw p } }
   const [askAll, setAskAll] = useState(false)
   return (
     <div className="acc-stack">
-      <form className="acc-card lined" onSubmit={(e) => pw.run(e, async () => { setChanged(false); mustMatch(pw.values.password, pw.values.again); await call('password', { current: pw.values.current, password: pw.values.password }); setChanged(true); pw.set('current')(''); pw.set('password')(''); pw.set('again')('') })} noValidate>
+      <form className="acc-card lined" onSubmit={askFirst(pw, () => {
+        need(pw.values.current, 'current', 'Type your current password.')
+        need(pw.values.password, 'password', 'Type the new password.')
+        mustMatch(pw.values.password, pw.values.again)
+        if (pw.values.password === pw.values.current) { const p = new Error('That is your current password. Choose a new one.'); p.field = 'password'; throw p }
+      }, setAskChange)} noValidate>
         <h3 className="acc-h3">Change the password</h3>
         <div className="acc-grid">
           <Field label="Current password" type="password" autoComplete="current-password" value={pw.values.current} onChange={pw.set('current')} error={errorFor(pw.problem, 'current')} />
@@ -1109,7 +1128,10 @@ function Security() {
           <PasswordAgain form={pw} label="New password again" />
         </div>
         <Problem text={pw.problem.field ? '' : pw.problem.text} />
-        <div className="acc-row"><Submit busy={pw.busy}>Change it</Submit>{changed && <span className="acc-saved" role="status">Changed. Any other device was logged out.</span>}</div>
+        <div className="acc-row"><Submit busy={pw.busy}>Change it</Submit>{changed && <span className="acc-saved" role="status">Changed. Any other device was logged out, and an email is on its way.</span>}</div>
+        <Confirm open={askChange} title="Change your password?" text="The new password works from now on. Every other device is logged out, and an email tells you it was changed." yes="Change it" no="Not now" busyText="Changing…" icon="key"
+          onClose={() => setAskChange(false)}
+          onYes={async () => { setAskChange(false); setChanged(false); await pw.run(quiet, async () => { await call('password', { current: pw.values.current, password: pw.values.password }); setChanged(true); pw.set('current')(''); pw.set('password')(''); pw.set('again')('') }) }} />
       </form>
       <div className="acc-card">
         <h3 className="acc-h3">Log out everywhere</h3>
@@ -1123,13 +1145,17 @@ function Security() {
         {!deleting ? (
           <button type="button" className="btn ghost sm acc-danger" onClick={() => setDeleting(true)}>Delete my account</button>
         ) : (
-          <form className="lined" onSubmit={(e) => del.run(e, async () => { await call('delete', del.values); navigate('/', { replace: true }) })} noValidate>
-            <Field label="Your password, to be sure" type="password" autoComplete="current-password" value={del.values.password} onChange={del.set('password')} error={errorFor(del.problem, 'password')} />
+          <form className="lined" onSubmit={askFirst(del, () => { need(del.values.password, 'password', 'Type your password.'); mustMatch(del.values.password, del.values.again) }, setAskDelete)} noValidate>
+            <Field label="Your password" type="password" autoComplete="current-password" value={del.values.password} onChange={del.set('password')} error={errorFor(del.problem, 'password')} />
+            <PasswordAgain form={del} label="Your password again" />
             <Problem text={del.problem.field ? '' : del.problem.text} />
             <div className="acc-row">
               <button className="btn sm acc-danger-solid" type="submit" disabled={del.busy}>{del.busy ? 'Deleting…' : 'Yes, delete it'}</button>
               <button type="button" className="btn ghost sm" onClick={() => setDeleting(false)}>Keep it</button>
             </div>
+            <Confirm open={askDelete} title="Delete your account for good?" text="Your login, details, points, rewards and saved pieces go, and this cannot be undone. The shop keeps its record of past sales, no longer linked to you." yes="Delete my account" no="Keep it" busyText="Deleting…" icon="bin" danger
+              onClose={() => setAskDelete(false)}
+              onYes={async () => { setAskDelete(false); await del.run(quiet, async () => { await call('delete', { password: del.values.password, again: del.values.again }); window.location.replace('/') /* home, not the login page the account would send them to */ }) }} />
           </form>
         )}
       </div>
@@ -1165,7 +1191,7 @@ function NewsAsk({ go }) {
             {problem && <p className="acc-news-problem" role="alert">{problem}</p>}
           </div>
           <div className="acc-news-do">
-            <button type="button" className="btn" disabled={state === 'busy'} onClick={answer(true)}>Yes, email me</button>
+            <button type="button" className="btn" disabled={state === 'busy'} onClick={answer(true)}>Yes, email me{accountPage.points.on && accountPage.points.news > 0 ? ` (+${accountPage.points.news} ${accountPage.points.name})` : ''}</button>
             <button type="button" className="acc-link" disabled={state === 'busy'} onClick={answer(false)}>No thanks</button>
           </div>
         </>
@@ -1191,13 +1217,15 @@ function Overview({ orders, go, commissions = null, openCommissions = () => {} }
           since={new Date(user.createdAt).getFullYear()}
           number={memberNumber(user.memberNo)}
           prints={orders ? `${collected} ${collected === 1 ? 'piece' : 'pieces'}` : '…'}
+          points={user.points || 0}
+          earned={user.pointsEarned || 0}
           design={designOf(user.card)}
         />
       <div className="acct-stats is-stacked">
         <button type="button" onClick={() => go('orders')}><strong>{orders ? shopOrders.length : '–'}</strong><span>{shopOrders.length === 1 ? 'Order' : 'Orders'}</span></button>
         <button type="button" onClick={() => go('orders')}><strong>{orders ? collected : '–'}</strong><span>{collected === 1 ? 'Piece collected' : 'Pieces collected'}</span></button>
         <button type="button" onClick={() => go('saved')}><strong>{saved.length}</strong><span>Saved for later</span></button>
-        <button type="button" onClick={() => go('rewards')}><strong>{user.points || 0}</strong><span>Points <i className="acct-soon is-mini">Soon</i></span></button>
+        {accountPage.points.on && <button type="button" onClick={() => go('rewards')}><strong>{user.points || 0}</strong><span>{accountPage.points.name[0].toUpperCase() + accountPage.points.name.slice(1)}</span></button>}
       </div>
       </div>
 
@@ -1293,6 +1321,18 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   const [keeping, setKeeping] = useState(false)
   const [keepProblem, setKeepProblem] = useState('')
   const [kept, setKept] = useState('')
+  const [tick, setTick] = useState(0) // asked again after points are spent
+  const [redeeming, setRedeeming] = useState('')
+  const [redeemSaid, setRedeemSaid] = useState('')
+  const redeem = async (id) => {
+    setRedeeming(id); setRedeemSaid('')
+    try {
+      const r = await call('redeem', { id })
+      const c = r.claim || {}
+      setRedeemSaid(c.kind === 'discount' ? (c.code ? `Done: your code ${c.code.code} is below, and in your email.` : 'Done: your code is being made and shows below in a moment.') : `Done: Milton has been told about your ${c.name} and will be in touch.`)
+      setTick((t) => t + 1)
+    } catch (e) { setRedeemSaid(e.message) } finally { setRedeeming('') }
+  }
   useEffect(() => {
     let stale = false
     let later = null
@@ -1304,7 +1344,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
     }).catch((e) => { if (!stale) setProblem(e.message) })
     ask(true)
     return () => { stale = true; clearTimeout(later) }
-  }, [call])
+  }, [call, tick])
   // the picture being tried on shows at the top of the account at once; going back, or leaving
   // the tab, puts the old one back
   const nowAvatar = user.avatar || ''
@@ -1319,7 +1359,8 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   const giftCodes = data.giftCodes || []
   const gifted = list.filter((r) => r.gifted)
   const earnable = list.filter((r) => !r.gifted)
-  if (!list.length && !giftCodes.length) return <div className="acc-empty"><strong>No rewards yet</strong><p>Rewards for members are on their way.</p></div>
+  const pointsOn = Boolean(data.points && data.points.on)
+  if (!list.length && !giftCodes.length && !pointsOn) return <div className="acc-empty"><strong>No rewards yet</strong><p>Rewards for members are on their way.</p></div>
   const have = (r) => (r.earnedBy === 'orders' ? p.orders : r.earnedBy === 'pieces' ? p.pieces : r.earnedBy === 'commissions' ? p.commissions || 0 : p.verified ? 1 : 0)
   const need = (r) => (r.earnedBy === 'verify' ? 1 : r.count)
   const unit = (r) => (r.earnedBy === 'pieces' ? 'pieces' : r.earnedBy === 'commissions' ? 'commissions' : 'orders')
@@ -1357,7 +1398,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
     <div className="acct-tryon" role="region" aria-label={`Preview of ${r.name}`} aria-live="polite">
       {r.kind === 'picture'
         ? <Avatar user={{ ...user, avatar: valueOf(r) }} size="lg" />
-        : <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints={prints} design={designOf(r.id) || r} />}
+        : <CollectorCard name={user.name || user.email.split('@')[0]} since={new Date(user.createdAt).getFullYear()} number={memberNumber(user.memberNo)} prints={prints} points={user.points || 0} earned={user.pointsEarned || 0} design={designOf(r.id) || r} />}
       <div className="acct-tryon-text">
         <strong>Preview</strong>
         <span>{r.kind === 'picture' ? 'Your picture, as it shows at the top of your account and beside your name.' : `Your membership card in the ${r.name} design.`} It is only a preview until you save.</span>
@@ -1472,6 +1513,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
         {giftCount > 0 && <span><b>{giftCount}</b> {giftCount === 1 ? 'gift' : 'gifts'}</span>}
       </div>
       {kept && <p className="acc-welcome" role="status">{kept}</p>}
+      {pointsOn && <PointsPanel points={data.points} onRedeem={redeem} busy={redeeming} said={redeemSaid} onRefresh={() => setTick((t) => t + 1)} />}
       {giftCount > 0 && (
         <section className="acct-reward-group is-gifts">
           <header className="acct-group-head">
@@ -1511,7 +1553,6 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
           <div className="acct-reward-list">{earnable.map((r) => rewardCard(r))}</div>
         </section>
       )}
-      <Points />
       {/* tried on but not saved: the same bar as under Details, to keep it or go back */}
       <AnimatePresence>
         {pick && (
@@ -1529,28 +1570,152 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   )
 }
 
-/* Points, on the way: a section under Rewards saying what is coming, with the counter not yet running */
-function Points() {
+/* Points, at the top of Rewards: the balance, how far to the next reward on the ladder, the ladder
+   itself (Redeem once the balance covers it), what was redeemed, and the history. The rules and
+   the ladder are the admin's (Rewards → Points); the numbers come with the rewards (api/_points.js). */
+const newsBonusLine = (how = '') => (accountPage.points && accountPage.points.on && accountPage.points.news > 0 ? <b className="acc-bonus"> +{accountPage.points.news} {accountPage.points.name}{how}</b> : null)
+function PointsPanel({ points, onRedeem, busy, said, onRefresh = () => {} }) {
+  const { call, user } = useAccount()
+  const { balance, rewards, claims, log, name, intro, perUnit, signup, news, newsBonus, field = 0, fields = [] } = points
+  const Name = name[0].toUpperCase() + name.slice(1)
+  const one = name.replace(/s$/, '')
+  // the balance counts up when the panel appears (straight to it for those who prefer less motion)
+  const [shown, setShown] = useState(balance)
+  const [grown, setGrown] = useState(false)
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setShown(balance); setGrown(true); return undefined }
+    let raf = 0
+    const from = 0, start = performance.now(), took = 900
+    const step = (t) => { const k = Math.min(1, (t - start) / took); setShown(Math.round(from + (balance - from) * (1 - (1 - k) ** 3))); if (k < 1) raf = requestAnimationFrame(step) }
+    raf = requestAnimationFrame(step)
+    const g = setTimeout(() => setGrown(true), 60)
+    return () => { cancelAnimationFrame(raf); clearTimeout(g) }
+  }, [balance])
+  // the road: each reward a checkpoint, evenly spaced; "you" between the last one reached and the next
+  const next = rewards.find((r) => r.cost > balance) || null
+  const at = (() => {
+    if (!rewards.length) return 0
+    const i = rewards.findIndex((r) => r.cost > balance)
+    if (i === -1) return 100
+    const prev = i ? rewards[i - 1].cost : 0
+    return ((i + (balance - prev) / (rewards[i].cost - prev)) / rewards.length) * 100
+  })()
+  const [pick, setPick] = useState(() => (next || rewards[rewards.length - 1] || {}).id)
+  const chosen = rewards.find((r) => r.id === pick) || next || rewards[0]
+  const left = chosen ? Math.max(0, chosen.cost - balance) : 0
+  const euros = perUnit > 0 ? Math.ceil(left / perUnit) : 0
+  // the ways to earn, each one done or one tap away
+  const [doing, setDoing] = useState('')
+  const [copied, setCopied] = useState('')
+  const act = async (what, work) => { setDoing(what); try { await work(); onRefresh() } catch { /* the chip stays as it was */ } finally { setDoing('') } }
+  const copy = async (code) => { try { await navigator.clipboard.writeText(code); setCopied(code); setTimeout(() => setCopied(''), 1500) } catch { /* the code is on screen */ } }
+  const ways = [
+    perUnit > 0 && { key: 'order', pts: perUnit === 1 ? `1 ${one}` : `${perUnit} ${name}`, text: `for every ${money(1, true)} you spend`, done: false, to: '/shop', go: 'Shop' },
+    signup > 0 && { key: 'email', pts: `+${signup}`, text: 'confirm your email', done: Boolean(user && user.verified), run: () => call('resend'), go: 'Send the link', after: 'Link sent' },
+    field > 0 && { key: 'detail', pts: `+${field}`, text: `each detail on your account${fields.length ? ` (${fields.map((k) => (k === 'phone' ? 'phone number' : 'name')).join(', ')} to add)` : ''}`, done: !fields.length, to: '/account?tab=details', go: 'Add it' },
+    news > 0 && newsBonus !== 'taken' && { key: 'news', pts: `+${news}`, text: 'say yes to news', done: newsBonus === 'given', wait: user && user.marketing && !user.verified ? 'Yes ✓ · the points come when your email is confirmed' : '', run: () => call('news', { on: true }), go: 'Yes, email me' },
+  ].filter(Boolean)
+  const [sent, setSent] = useState('')
+  const WHY = { order: 'Order', commission: 'Commission', signup: 'Email confirmed', detail: 'Detail added', news: 'Said yes to news', 'news-off': 'Unsubscribed from news', refund: 'Refunded', redeem: 'Spent on', admin: 'From Milton' }
+  const day = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const [more, setMore] = useState(false)
   return (
-    <section className="acct-reward-group is-points" aria-labelledby="acct-points-title">
-      <header className="acct-group-head">
-        <h3 id="acct-points-title">Points <span className="acct-soon">Coming soon</span></h3>
-        <p>A points balance for your account is on the way.</p>
-      </header>
-      <div className="acct-points">
-        <div className="acct-points-count" aria-hidden="true">
-          <b>0</b>
-          <small>points</small>
-        </div>
-        <div className="acct-points-what">
-          <p>Soon, every order and every commission will earn you points, to spend on discounts, prints and more. What you have collected so far will count from the start.</p>
-          <ul>
-            <li><b>Earn</b><span>with every order and commission</span></li>
-            <li><b>Spend</b><span>on discounts, prints and more</span></li>
-            <li><b>Keep</b><span>they never run out</span></li>
-          </ul>
+    <section className="pts" aria-labelledby="pts-title">
+      <div className="pts-head">
+        <div className="pts-burst" aria-live="polite"><b>{shown}</b><small>{name}</small></div>
+        <div className="pts-head-words">
+          <h3 id="pts-title">{Name}</h3>
+          <p>{intro || `Every order earns ${name}. Spend them on the rewards below.`}</p>
+          {next
+            ? <p className="pts-next"><b>{next.cost - balance}</b> more to <b>{next.name}</b></p>
+            : rewards.length ? <p className="pts-next is-all">Every reward on the road is yours to take.</p> : null}
         </div>
       </div>
+
+      {rewards.length > 0 && (
+        <>
+          {/* the road: the line fills up to "you", each checkpoint a reward to look at */}
+          <div className="pts-road" style={{ '--n': rewards.length }}>
+            <div className="pts-line"><i style={{ width: `${grown ? at : 0}%` }} /></div>
+            <span className="pts-you" style={{ left: `${grown ? at : 0}%` }} aria-hidden="true"><b>You</b></span>
+            <span className="pts-start" aria-hidden="true">0</span>
+            <ol className="pts-stops" aria-label="Rewards on the way">
+              {rewards.map((r, i) => (
+                <li key={r.id} style={{ left: `${((i + 1) / rewards.length) * 100}%` }}>
+                  <button type="button" className={`pts-stop ${r.can ? 'is-reached' : ''} ${chosen && chosen.id === r.id ? 'is-on' : ''}`} onClick={() => setPick(r.id)} aria-pressed={Boolean(chosen && chosen.id === r.id)} aria-label={`${r.name}: ${r.cost} ${name}${r.can ? ', yours to take' : `, ${r.cost - balance} more`}`}>
+                    <span className="pts-stop-dot">{r.can ? '★' : r.kind === 'discount' ? '%' : '🎁'}</span>
+                    <span className="pts-stop-cost">{r.cost}</span>
+                    <span className="pts-stop-name">{r.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* the checkpoint looked at: what it is, and Redeem or how far */}
+          {chosen && (
+            <div className={`pts-pick ${chosen.can ? 'is-open' : ''}`} key={chosen.id}>
+              <div className="pts-pick-tag">{chosen.kind === 'discount' ? `${chosen.percent}% off` : 'A gift'}</div>
+              <div className="pts-pick-words">
+                <h4>{chosen.name}</h4>
+                {chosen.text && <p>{chosen.text}</p>}
+                <small>{chosen.cost} {name}{chosen.kind === 'discount' ? ` · a code good for ${chosen.days} days` : ' · Milton arranges it with you'}</small>
+              </div>
+              <div className="pts-pick-do">
+                {chosen.can
+                  ? <button type="button" className="btn" disabled={Boolean(busy)} onClick={() => onRedeem(chosen.id)}>{busy === chosen.id ? 'One moment…' : `Redeem for ${chosen.cost}`}</button>
+                  : (
+                    <>
+                      <div className="pts-gap"><b>{left}</b> {name} to go</div>
+                      {euros > 0 && <small>about {money(euros, true)} of orders</small>}
+                      <Link className="btn ghost sm" to="/shop">Find a piece <span className="arrow">→</span></Link>
+                    </>
+                  )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      {said && <p className="acc-welcome" role="status">{said}</p>}
+
+      {/* the ways to earn: done, or one tap away */}
+      <div className="pts-ways">
+        <h4>Earn more</h4>
+        <ul>
+          {ways.map((w) => (
+            <li key={w.key} className={w.done ? 'is-done' : ''}>
+              <span className="pts-way-pts">{w.pts}</span>
+              <span className="pts-way-text">{w.text}</span>
+              {w.done ? <span className="pts-way-done" aria-label="Done">✓</span>
+                : w.wait ? <span className="pts-way-wait">{w.wait}</span>
+                : w.to ? <Link className="pts-way-go" to={w.to}>{w.go} →</Link>
+                  : <button type="button" className="pts-way-go" disabled={doing === w.key || sent === w.key} onClick={() => act(w.key, async () => { await w.run(); if (w.after) setSent(w.key) })}>{doing === w.key ? '…' : sent === w.key ? w.after : `${w.go} →`}</button>}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {claims.length > 0 && (
+        <div className="pts-tickets">
+          <h4>Yours</h4>
+          <ul>{claims.map((c) => (
+            <li key={c.id} className={`pts-ticket ${c.kind === 'discount' ? 'is-code' : ''}`}>
+              <span className="pts-ticket-cost">−{c.cost}</span>
+              <span className="pts-ticket-words"><b>{c.name}</b><small>{day(c.at)}</small></span>
+              {c.kind === 'discount'
+                ? (c.code ? <button type="button" className="pts-ticket-code" onClick={() => copy(c.code.code)} title="Copy the code">{copied === c.code.code ? 'Copied ✓' : c.code.code}</button> : <small>code on its way</small>)
+                : <span className={`pts-ticket-state ${c.status === 'sent' ? 'is-sent' : ''}`}>{c.status === 'sent' ? 'Sent' : 'Milton will be in touch'}</span>}
+            </li>
+          ))}</ul>
+        </div>
+      )}
+
+      {log.length > 0 && (
+        <div className="pts-log">
+          <button type="button" className="acc-link" aria-expanded={more} onClick={() => setMore(!more)}>{more ? 'Hide the history' : 'See the history'}</button>
+          {more && <ul>{log.map((x, i) => <li key={i}><span>{day(x.at)}</span><span>{WHY[x.why] || x.why}{x.ref ? ` · ${x.ref}` : ''}</span><b className={x.delta < 0 ? 'is-minus' : ''}>{x.delta > 0 ? '+' : ''}{x.delta}</b></li>)}</ul>}
+        </div>
+      )}
     </section>
   )
 }

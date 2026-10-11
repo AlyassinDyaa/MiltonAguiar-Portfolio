@@ -6,6 +6,7 @@ import { accountsMode } from './_buyer.js'
 import { countedMatch } from './_commissions.js'
 import { adminOk } from './_session.js'
 import { mailingAction, unsubscribe } from './_mailings.js'
+import { adjustPoints, catchUpPoints, claimSent, fieldPoints, newsPoints, pointsRules, pointsView, redeemPoints, signupPoints } from './_points.js'
 import { randomBytes } from 'node:crypto'
 import {
   EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
@@ -26,6 +27,7 @@ import {
         { action: 'resend' }                              a new confirmation email
         { action: 'password', current, password }         change it (other devices are logged out)
         { action: 'news', on }                            yes or no to news emails, from the question on the overview
+        { action: 'redeem', id }                          points spent on a reward of the ladder (api/_points.js)
         { action: 'profile', name, phone, marketing, avatar, card }
              card: '' (the site's own design) or the id of a membership card design they have earned
              avatar: '' (initials), 'icon:<picture>' (one of the free pictures set in the admin),
@@ -83,6 +85,20 @@ const freePictures = () => {
    earning it (one use, for the days set on the reward), that only their account can use; it is
    listed in the admin's Discounts screen too. */
 const slug = (t) => String(t || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+// a phone number as the form sends it: "+351 912345678" (a country code, then 4 to 14 digits, 15 at most in all); '' for none, null when it is not one
+const phoneOf = (v) => {
+  const s = String(v ?? '').trim()
+  if (!s) return ''
+  const m = s.match(/^\+(\d{1,4})\s?(\d{4,14})$/)
+  return m && m[1].length + m[2].length <= 15 ? `+${m[1]} ${m[2]}` : null
+}
+/* A new password must not be one this account has used: not the current one, nor any of the last
+   five (kept as hashes in oldPasswords). After a change the old one joins that list. */
+const usedBefore = async (user, password) => {
+  for (const h of [user.password, ...(Array.isArray(user.oldPasswords) ? user.oldPasswords : [])]) if (h && (await checkPassword(password, h))) return true
+  return false
+}
+const passwordSet = async (user, password) => ({ password: await hashPassword(password), oldPasswords: [...(Array.isArray(user.oldPasswords) ? user.oldPasswords : []), user.password].filter(Boolean).slice(-5) })
 const rewardsList = () => {
   const page = readJson('content/pages/rewards.json') || {}
   const of = (key, kind) => (Array.isArray(page[key]) ? page[key] : []).map((r) => ({ ...r, kind }))
@@ -235,6 +251,7 @@ const sendVerify = async (req, user) => {
 
 /* ---------- the admin's side: members and gifted rewards
    { action: 'adminMembers' }                           every account: { members, rewards }
+   { action: 'adminDeleteMember', email }                deletes the account (orders stay, without an owner)
    { action: 'adminGift', email, reward, note, tell }   gives a reward; tell (on unless false) emails them, and then
                                                          it waits (pending) until they accept it from the email;
                                                          not emailed, it is theirs at once
@@ -259,6 +276,10 @@ const memberOf = (u) => ({
   email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
   news: u.marketing === true, // said yes to news emails
   card: typeof u.card === 'string' ? u.card : '', // the card design on their collector card ('' is the site's own)
+  points: Math.round(Number(u.points) || 0), // their balance (api/_points.js)
+  pointsEarned: Math.max(Math.round(Number(u.pointsEarned) || 0), Math.round(Number(u.points) || 0)), // everything earned, ever
+  claims: (Array.isArray(u.claims) ? u.claims : []).slice(-20).reverse(), // rewards they spent points on, newest first
+  pointsLog: (Array.isArray(u.pointsLog) ? u.pointsLog : []).slice(-10).reverse(),
   gifts: (Array.isArray(u.gifts) ? u.gifts : []).filter((g) => g && g.id).map((g) => ({ id: g.id, at: g.at, note: g.note || '', pending: Boolean(g.pending) })), // pending: emailed, not accepted yet
   newGifts: Array.isArray(u.newGifts) ? u.newGifts : [], // given and not seen by them yet
   picture: pictureOf(typeof u.avatar === 'string' ? u.avatar : ''),
@@ -266,7 +287,12 @@ const memberOf = (u) => ({
 const adminAction = async (req, d, users, action, body) => {
   const rewards = rewardsList()
   if (action === 'adminMembers') {
-    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, marketing: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1, card: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    // every account caught up on its points first (a few at a time: those not looked at for a while), so the balances are right
+    if (pointsRules().on) {
+      const due = await users.find({ $or: [{ pointsCheckedAt: { $exists: false } }, { pointsCheckedAt: { $lt: Date.now() - 5 * 60000 } }] }).limit(100).toArray()
+      for (const u of due) { try { await catchUpPoints(d, u) } catch (e) { console.error('points not caught up:', e.message) } }
+    }
+    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, marketing: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1, card: 1, points: 1, claims: 1, pointsLog: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
     const members = all.map(memberOf)
     // a piece taken off the site since: the picture its order kept
     const lost = all.filter((u, n) => !members[n].picture && /^[a-z0-9-]{1,80}$/.test(String(u.avatar || '')))
@@ -285,6 +311,23 @@ const adminAction = async (req, d, users, action, body) => {
   }
   const user = await users.findOne({ email: tidyEmail(body.email) })
   if (!user) return [404, { message: 'There is no account with that email.' }]
+  // the account deleted: logins and links gone, the orders kept for the shop's records (as when they delete it themselves)
+  if (action === 'adminDeleteMember') {
+    await d.collection('sessions').deleteMany({ userId: user._id })
+    await d.collection('tokens').deleteMany({ userId: user._id })
+    await d.collection('orders').updateMany({ userId: user._id }, { $set: { userId: null } })
+    await users.deleteOne({ _id: user._id })
+    return [200, { ok: true, deleted: true }]
+  }
+  // points by hand, and a claimed gift marked as sent (no reward of the lists involved)
+  if (action === 'adminPoints') {
+    const [status, answer] = await adjustPoints(d, user, body.delta, body.note)
+    return status === 200 ? [200, { ok: true, member: memberOf(await users.findOne({ _id: user._id })) }] : [status, answer]
+  }
+  if (action === 'adminClaimSent') {
+    const [status, answer] = await claimSent(d, user, body.claim)
+    return status === 200 ? [200, { ok: true, member: memberOf(await users.findOne({ _id: user._id })) }] : [status, answer]
+  }
   if (action === 'adminUngift') {
     // also a reward taken off the Rewards list since it was given
     const id = clean(body.reward, 80)
@@ -373,6 +416,8 @@ export default async function handler(req, res) {
       // a picture that is no longer theirs to use (an old choice, or a free picture taken out) goes back to initials
       if (me && me.avatar && !(await pictureAllowed(d, me, me.avatar))) { await users.updateOne({ _id: me._id }, { $set: { avatar: '' } }); me = { ...me, avatar: '' } }
       if (me && me.card && !(await cardAllowed(d, me, me.card))) { await users.updateOne({ _id: me._id }, { $set: { card: '' } }); me = { ...me, card: '' } }
+      // points owed under the rules now (an account from before points, or points switched back on)
+      if (me) { try { if (await catchUpPoints(d, me)) me = { ...me, ...(await users.findOne({ _id: me._id }, { projection: { points: 1, pointsEarned: 1 } })) } } catch (e) { console.error('points not caught up:', e.message) } }
       return say(res, 200, { enabled: true, user: publicUser(me) })
     }
     if (req.method !== 'POST') return say(res, 405, { message: 'Use GET or POST.' })
@@ -394,12 +439,14 @@ export default async function handler(req, res) {
       const email = tidyEmail(body.email)
       const name = clean(body.name, 80)
       if (!EMAIL.test(email)) return say(res, 400, { message: 'That email address does not look right.', field: 'email' })
+      const phone = phoneOf(body.phone)
+      if (phone === null) return say(res, 400, { message: 'That phone number does not look right: the country, then the number, digits only.', field: 'phone' })
       const weak = passwordProblem(body.password)
       if (weak) return say(res, 400, { message: weak, field: 'password' })
       if (await tooMany(`signup:${ip}`, 10, 60)) return say(res, 429, { message: 'Too many new accounts from here. Try again in an hour.' })
       await noteTry(`signup:${ip}`)
       if (await users.findOne({ email })) return say(res, 409, { message: 'There is already an account with that email. Log in, or reset the password.', field: 'email' })
-      const user = { _id: newId('u'), memberNo: 0, email, name, phone: '', password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date() }
+      const user = { _id: newId('u'), memberNo: 0, email, name, phone, password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date() }
       // the next member number; should someone else sign up in the same instant and take it, the one after
       for (let tries = 0; ; tries++) {
         user.memberNo = await nextMemberNo(d)
@@ -410,8 +457,9 @@ export default async function handler(req, res) {
         }
       }
       await startSession(req, res, user._id)
+      try { await fieldPoints(d, user) } catch (e) { console.error('detail points:', e.message) }
       const mailed = await sendVerify(req, user)
-      return say(res, 200, { user: publicUser(user), mailed })
+      return say(res, 200, { user: publicUser((await users.findOne({ _id: user._id })) || user), mailed })
     }
 
     if (action === 'login') {
@@ -465,15 +513,16 @@ export default async function handler(req, res) {
       const seen = await peekToken(body.token, 'reset')
       if (!seen) return say(res, 400, { message: 'This link has run out or has been used. Ask for a new one.' })
       const was = await users.findOne({ _id: seen.userId })
-      if (was && (await checkPassword(body.password, was.password))) return say(res, 400, { message: 'That is the same as your old password. Choose a new one.', field: 'password' })
+      if (was && (await usedBefore(was, body.password))) return say(res, 400, { message: 'You have used that password before. Choose one you have not used.', field: 'password' })
       const token = await spendToken(body.token, 'reset')
       if (!token) return say(res, 400, { message: 'This link has run out or has been used. Ask for a new one.' })
       const user = await users.findOne({ _id: token.userId })
       if (!user) return say(res, 400, { message: 'This account no longer exists.' })
       // a reset link reached the inbox, so the address is confirmed too; every other login ends
-      await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password), verified: true } })
+      await users.updateOne({ _id: user._id }, { $set: { ...(await passwordSet(user, body.password)), verified: true } })
       const given = user.verified ? { avatar: user.avatar } : await giveReward(users, { ...user, verified: true })
       await claimHeld(d, user)
+      if (!user.verified) { try { await signupPoints(d, { ...user, verified: true }) } catch (e) { console.error('sign-up points not given:', e.message) } }
       user.avatar = given.avatar
       await d.collection('sessions').deleteMany({ userId: user._id })
       await forgetTries(`login:${user.email}`)
@@ -485,8 +534,10 @@ export default async function handler(req, res) {
     if (action === 'verify') {
       const token = await spendToken(body.token, 'verify')
       if (!token) return say(res, 400, { message: 'This link has run out or has been used. Log in and ask for a new one.' })
+      const was = await users.findOne({ _id: token.userId })
       await users.updateOne({ _id: token.userId }, { $set: { verified: true } })
       await claimHeld(d, await users.findOne({ _id: token.userId }))
+      if (was && !was.verified) { try { await signupPoints(d, { ...was, verified: true }) } catch (e) { console.error('sign-up points not given:', e.message) } }
       const { rewards } = await giveReward(users, await users.findOne({ _id: token.userId }))
       const user = await currentUser(req)
       return say(res, 200, { verified: true, rewards, user: publicUser(user) })
@@ -512,6 +563,8 @@ export default async function handler(req, res) {
       if (await tooMany(`unsub-ip:${ip}`, 30, 15)) return say(res, 429, { message: 'Too many tries. Wait a few minutes.' })
       const [status, answer] = await unsubscribe(d, body)
       if (status !== 200) { await noteTry(`unsub-ip:${ip}`); return say(res, status, answer) }
+      // the news points go with the news
+      try { const gone = await users.findOne({ _id: clean(body.u, 80) }); if (gone) await newsPoints(d, gone, false) } catch (e) { console.error('news points not taken:', e.message) }
       // the same person logged in on this browser: their page shows the change at once
       const me = await currentUser(req)
       return say(res, 200, me && me._id === clean(body.u, 80) ? { ...answer, user: publicUser({ ...me, marketing: false }) } : answer)
@@ -522,6 +575,8 @@ export default async function handler(req, res) {
     if (!user) { forgetCookie(req, res); return say(res, 401, { message: 'Log in first.', user: null }) }
 
     if (action === 'rewards') {
+      // everything owed under the rules now, before the numbers are shown
+      try { await catchUpPoints(d, user, { force: true }) } catch (e) { console.error('points not caught up:', e.message) }
       // every reward, whether it is earned, and how far they have come; discounts earned get their code
       const p = await progressOf(d, user)
       const list = []
@@ -554,7 +609,14 @@ export default async function handler(req, res) {
         if (state === 'ready' && g.until && g.until < Date.now()) state = 'ended'
         giftCodes.push({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, state, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })
       }
-      return say(res, 200, { progress: p, rewards: list, giftCodes, archived: Array.isArray(user.archivedGifts) ? user.archivedGifts : [], deleted: Array.isArray(user.deletedGifts) ? user.deletedGifts : [] })
+      return say(res, 200, { progress: p, rewards: list, giftCodes, archived: Array.isArray(user.archivedGifts) ? user.archivedGifts : [], deleted: Array.isArray(user.deletedGifts) ? user.deletedGifts : [], points: pointsView((await users.findOne({ _id: user._id })) || user) })
+    }
+
+    if (action === 'redeem') {
+      const [status, answer] = await redeemPoints(d, user, body.id, { makeCode: (r) => rewardCode(d, user, r), site: siteUrl(req) })
+      if (status !== 200) return say(res, status, answer)
+      const fresh = await users.findOne({ _id: user._id })
+      return say(res, 200, { ...answer, user: publicUser(fresh), points: pointsView(fresh) })
     }
 
     if (action === 'giftShelf') {
@@ -589,8 +651,8 @@ export default async function handler(req, res) {
       if (!(await checkPassword(body.current, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The current password is not right.', field: 'current' }) }
       const weak = passwordProblem(body.password)
       if (weak) return say(res, 400, { message: weak, field: 'password' })
-      if (await checkPassword(body.password, user.password)) return say(res, 400, { message: 'That is the same as your current password. Choose a new one.', field: 'password' })
-      await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password) } })
+      if (await usedBefore(user, body.password)) return say(res, 400, { message: (await checkPassword(body.password, user.password)) ? 'That is your current password. Choose a new one.' : 'You have used that password before. Choose one you have not used.', field: 'password' })
+      await users.updateOne({ _id: user._id }, { $set: await passwordSet(user, body.password) })
       await d.collection('sessions').deleteMany({ userId: user._id, hash: { $ne: user.session } })
       await tellPasswordChanged(req, user, 'change')
       return say(res, 200, { user: publicUser(user), changed: true })
@@ -600,11 +662,14 @@ export default async function handler(req, res) {
     if (action === 'news') {
       const set = body.on ? { marketing: true, newsAt: new Date() } : { marketing: false, newsAskedAt: new Date() }
       await users.updateOne({ _id: user._id }, { $set: set })
-      return say(res, 200, { user: publicUser({ ...user, ...set }) })
+      try { await newsPoints(d, user, Boolean(body.on)) } catch (e) { console.error('news points:', e.message) }
+      return say(res, 200, { user: publicUser(await users.findOne({ _id: user._id })) })
     }
 
     if (action === 'profile') {
-      const set = { name: clean(body.name, 80), phone: clean(body.phone, 30), marketing: Boolean(body.marketing) }
+      const phone = phoneOf(body.phone)
+      if (phone === null) return say(res, 400, { message: 'That phone number does not look right: the country, then the number, digits only.', field: 'phone' })
+      const set = { name: clean(body.name, 80), phone, marketing: Boolean(body.marketing) }
       if (body.card !== undefined) {
         const card = clean(body.card, 80)
         if (!(await cardAllowed(d, user, card))) return say(res, 400, { message: 'That card design is not one you have earned yet.', field: 'card' })
@@ -616,7 +681,9 @@ export default async function handler(req, res) {
         set.avatar = avatar
       }
       await users.updateOne({ _id: user._id }, { $set: set })
-      return say(res, 200, { user: publicUser({ ...user, ...set }) })
+      if (set.marketing !== Boolean(user.marketing)) { try { await newsPoints(d, user, set.marketing) } catch (e) { console.error('news points:', e.message) } }
+      try { await fieldPoints(d, { ...user, ...set }) } catch (e) { console.error('detail points:', e.message) }
+      return say(res, 200, { user: publicUser(await users.findOne({ _id: user._id })) })
     }
 
     if (action === 'cart') {
@@ -688,7 +755,10 @@ export default async function handler(req, res) {
     }
 
     if (action === 'delete') {
-      if (!(await checkPassword(body.password, user.password))) return say(res, 400, { message: 'The password is not right.', field: 'password' })
+      // the password twice, the same both times, and right
+      if (String(body.password || '') !== String(body.again ?? body.password ?? '')) return say(res, 400, { message: 'The two passwords are not the same.', field: 'again' })
+      if (await tooMany(`login:${user.email}`, 8, 15)) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
+      if (!(await checkPassword(body.password, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The password is not right.', field: 'password' }) }
       await d.collection('sessions').deleteMany({ userId: user._id })
       await d.collection('tokens').deleteMany({ userId: user._id })
       await d.collection('orders').updateMany({ userId: user._id }, { $set: { userId: null } }) // the shop keeps its records of sales

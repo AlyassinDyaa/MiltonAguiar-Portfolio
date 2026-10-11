@@ -151,6 +151,9 @@ function assemble(content) {
       const by = r.earnedBy === 'firstOrder' ? 'orders' : ['verify', 'orders', 'pieces', 'commissions'].includes(r.earnedBy) ? r.earnedBy : 'verify'
       return { id: slug(r.name) || slug(r.picture), name: r.name || '', kind: ['card', 'discount'].includes(r.kind) ? r.kind : 'picture', earnedBy: by, count: by === 'verify' ? 0 : Math.max(1, Math.round(Number(r.count) || Number(r.pieces) || 1)), percent: Number(r.percent) || 0, days: Number(r.days) || 60, picture: r.picture || '', face: parseFace(r.face), cardLook: r.cardLook || 'art', cardArt: r.cardArt || '', cardCrop: parseFace(r.cardCrop, 25), cardBack: r.cardBack || '', cardBackCrop: parseFace(r.cardBackCrop, 25) }
     })
+  // points (Rewards → Points): the rules the account page can say before the balance arrives
+  const pt = rw.points || {}
+  accountPage.points = { on: pt.on !== false, name: String(pt.name || 'points').trim() || 'points', signup: Math.max(0, Math.round(Number(pt.signup ?? 50) || 0)), news: Math.max(0, Math.round(Number(pt.news ?? 25) || 0)), field: Math.max(0, Math.round(Number(pt.field ?? 10) || 0)) }
   // the pictures given on confirming the email (the confirmation page and email show these)
   accountPage.verifiedIcons = accountPage.rewards.filter((r) => r.kind === 'picture' && r.earnedBy === 'verify')
   pages = {

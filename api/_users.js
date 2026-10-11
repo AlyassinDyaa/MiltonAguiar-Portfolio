@@ -126,13 +126,14 @@ const siteName = () => brandInfo().name || 'Milton Aguiar'
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 /* Where the pictures in an email are fetched from: the live site (an inbox cannot reach this
    computer), so they show once the site is deployed. */
-const LIVE = 'https://miltonaguiar.vercel.app'
-const assetHost = () => {
-  const s = String(process.env.SITE_URL || '').replace(/\/$/, '')
-  if (/^https:\/\//.test(s)) return s
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  return LIVE
+const LIVE = 'https://miltonaguiar.com'
+/* SITE_URL, when it is a real address of the site: https, and not one of Vercel's own *.vercel.app
+   names (the old address, which no longer reaches the site) */
+const envSite = () => {
+  const s = String(process.env.SITE_URL || '').trim().replace(/\/$/, '')
+  try { const u = new URL(s); return u.protocol === 'https:' && !/\.vercel\.app$/i.test(u.hostname) ? s : '' } catch { return '' }
 }
+const assetHost = () => envSite() || LIVE // the site's own address, unless SITE_URL names another
 const pictureUrl = (path) => (/^https?:\/\//.test(path) ? path : `${assetHost()}${path.startsWith('/') ? '' : '/'}${path}`)
 
 /* Every email in the site's comic style, on the red circuit picture (across the top, running into its dark red): the name on black (the second
@@ -250,7 +251,8 @@ export const emailHtml = ({ subject, kicker, title, lines = [], button, picture,
    highlight: { label, title, lines } (a box for an event), unsubscribe (a link in the footer), list: { unsubscribe }
    (the List-Unsubscribe header), after, replyTo, attachments: [{ filename, content (a Buffer),
    contentType }] (files sent with it: a finished commission) }. */
-export const siteUrl = (req) => (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.VERCEL ? '' : `http://${req.headers.host}`)).replace(/\/$/, '')
+// the address links in emails are built on: SITE_URL, else the site's own address once deployed, else this computer
+export const siteUrl = (req) => (envSite() || (process.env.VERCEL ? LIVE : `http://${req.headers.host}`)).replace(/\/$/, '')
 // the artist's own inbox, as for the Contact form: CONTACT_TO, else the contact email in the admin
 // (Site → Name, colour and contact), else the address the site sends from
 /* Emails to the artist can be switched off, each kind on its own (Shop → Settings and payments →
@@ -334,6 +336,8 @@ export const publicUser = (u) => (u ? {
   // discount codes the admin gave them (Sales → Discounts)
   giftCodes: Array.isArray(u.giftCodes) ? u.giftCodes.filter((g) => g && g.id).map((g) => ({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })) : [],
   memberNo: Number(u.memberNo) || null, // the order they signed up in: the first customer is 1
+  points: Math.max(0, Math.round(Number(u.points) || 0)), // their points (api/_points.js)
+  pointsEarned: Math.max(Math.round(Number(u.pointsEarned) || 0), Math.round(Number(u.points) || 0)), // everything earned, ever
   saved: Array.isArray(u.saved) ? u.saved : [],
   cart: Array.isArray(u.cart) ? u.cart : [],
 } : null)

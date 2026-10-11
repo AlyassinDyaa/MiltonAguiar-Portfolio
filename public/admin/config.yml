@@ -783,6 +783,41 @@ collections:
                   - { label: 'A number of commissions', value: commissions }
               - { name: count, label: How many, widget: number, value_type: int, min: 1, default: 3, required: false, hint: 'The orders, pieces or commissions it takes: 1 for their first, 3, 6, 10... A commission counts once it is paid. Refunded, cancelled and deleted ones do not count, and commissions never count as shop orders or pieces.' }
               - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
+          - name: points
+            label: Points
+            widget: object
+            collapsed: false
+            hint: 'Every paid order and commission earns points for what was paid; confirming the email and saying yes to news earn a one-off bonus; points are spent on the ladder below. The account page shows the balance, how far to the next reward, and the ladder.'
+            fields:
+              - { name: on, label: Points are running, widget: boolean, default: true, required: false, hint: 'Off: points leave the site entirely (the account page, the card, the sign-up), and nothing is earned or spent. The balances are kept. Switched on again, every account is caught up on what it would have earned meanwhile: its orders, commissions and bonuses.' }
+              - { name: perUnit, label: Points for each euro paid, widget: number, value_type: float, min: 0, default: 1, required: false, hint: '1: a €40 order earns 40 points. Whole points, on what was actually paid, once per order; taken back if the payment is refunded.' }
+              - { name: signup, label: Points for confirming the email, widget: number, value_type: int, min: 0, default: 50, required: false, hint: 'Once, when the address is confirmed.' }
+              - { name: field, label: Points for each detail filled in, widget: number, value_type: int, min: 0, default: 10, required: false, hint: 'The name, the phone number, the email and the password (which counts as two: typed and confirmed), once each, the moment they are there.' }
+              - { name: news, label: Points for saying yes to news, widget: number, value_type: int, min: 0, default: 25, required: false, hint: 'Once ever: taken back if they unsubscribe, and not given a second time.' }
+              - { name: name, label: What they are called, widget: string, default: points, required: false, hint: 'For example "points" or "stars".' }
+              - { name: intro, label: A line about them, widget: string, required: false, hint: 'Shown over the ladder in the account, for example "Every order earns points. Spend them on prints and discounts."' }
+              - name: rewards
+                label: The ladder (what points buy)
+                label_singular: reward
+                widget: list
+                collapsed: false
+                required: false
+                summary: '{{fields.name}} — {{fields.cost}}'
+                hint: 'A discount makes a code of their own (like the earned discounts, through Stripe). A gift is something you arrange and send (a free print, a sketch): they claim it, you are emailed, and you mark it as sent in their window under Customers.'
+                fields:
+                  - { name: name, label: Name, widget: string, hint: 'Shown to customers, for example "A free A4 print". Keep it once claimed: the name is how the site knows it.' }
+                  - { name: cost, label: Points it takes, widget: number, value_type: int, min: 1, default: 500 }
+                  - name: kind
+                    label: What it is
+                    widget: select
+                    default: gift
+                    options:
+                      - { label: 'A gift you send (a print, a sketch...)', value: gift }
+                      - { label: 'A discount code', value: discount }
+                  - { name: percent, label: Percent off (discounts), widget: number, value_type: int, min: 1, max: 100, default: 10, required: false }
+                  - { name: days, label: Days the code lasts (discounts), widget: number, value_type: int, min: 1, default: 60, required: false }
+                  - { name: text, label: A few words about it, widget: string, required: false, hint: 'For example "Any print up to A4, posted to you."' }
+                  - { name: hidden, label: Hide (not offered for now), widget: boolean, default: false, required: false }
       - name: sales
         label: Price cuts
         file: content/site/sales.json

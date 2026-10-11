@@ -1863,3 +1863,22 @@ div.sl-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 [class*='ControlContainer'] > div:has(> [class*='ToggleContainer'][aria-checked='true'])::before { content: 'Yes'; color: var(--fg); }
 [class*='ControlContainer'] > div:has(> [id^='hidden-field'])::before { content: 'Shown'; color: var(--ok); }
 [class*='ControlContainer'] > div:has(> [id^='hidden-field'][aria-checked='true'])::before { content: 'Hidden'; color: var(--dim); }
+
+/* a member's points in their window */
+.sl-points { display: grid; gap: 12px; }
+.sl-points-balance { margin: 0; }
+.sl-points-balance strong { font-family: var(--display); font-size: 1.7rem; font-weight: 900; font-style: italic; color: var(--fg); }
+.sl-points-balance span { font-family: var(--display); font-size: 0.74rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.sl-claims li { display: flex; align-items: center; gap: 10px; }
+.sl-claims li > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.sl-claim-btn { padding: 6px 10px !important; font-size: 0.7rem !important; }
+.sl-points-log { margin: 0; font-size: 0.82rem; }
+.sl-points-adjust { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 599px) {
+  .sl-points-adjust { grid-template-columns: minmax(0, 1fr); }
+  /* a redeemed reward on a phone: its name on one line, the tag and the button under it */
+  .sl-claims li { flex-wrap: wrap; }
+  .sl-claims li > span { flex: 1 1 100%; }
+  .sl-claims li > .sl-badge { flex: 0 0 auto; width: auto; }
+  .sl-claim-btn { margin-left: auto; }
+}

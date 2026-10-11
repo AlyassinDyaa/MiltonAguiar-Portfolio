@@ -16,7 +16,7 @@ export default function Gallery() {
   const { label, title, intro } = pages.gallery
   return (
     <Page title="Gallery">
-      <PageTitle label={label} title={title} lead={intro} art={gallery[2]?.src || gallery[0]?.src}>
+      <PageTitle tone="red" label={label} title={title} lead={intro} art={gallery[2]?.src || gallery[0]?.src}>
         <div className="filters-row">
           {gallerySections.length > 1 && (
             <div className="filters" role="group" aria-label="Show">

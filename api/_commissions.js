@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
 import { SITE, codeUsed, shapeAddress } from './_orders.js'
 import { artistInbox, clean, emailsToArtist, sendMail } from './_users.js'
+import { awardCommissionPoints, takeCommissionPoints } from './_points.js'
 
 /* Commissions: a customer asks for a piece, talks it over with the artist, gets a quote, pays it,
    and follows the piece from sketch to delivery (the leading underscore keeps Vercel from serving
@@ -294,6 +295,7 @@ export const markPaid = async (id, payment, address, site) => {
     { returnDocument: 'after' },
   ))
   if (!got) return null // already paid (Stripe says so more than once)
+  try { await awardCommissionPoints(got) } catch (e) { console.error('points not given:', e.message) }
   // a discount code: a reward or a gift shows as used in their account; a PayPal use is counted here (Stripe counts its own)
   if (payment.code) { try { await codeUsed({ code: payment.code, promoId: payment.promoId, viaPaypal: payment.provider === 'paypal', userId: got.userId, ref: payment.ref }) } catch (e) { console.error('code use not noted:', e.message) } }
   const base = quoteBox(got)
@@ -342,6 +344,7 @@ export const refundedByStripe = async (pi) => {
   const found = await c.findOne({ 'payment.pi': pi })
   if (!found || found.payment.refunded) return
   await c.updateOne({ _id: found._id }, { $set: { 'payment.refunded': true, updatedAt: new Date() }, $push: { messages: message('system', 'The payment was refunded.') }, $inc: { 'unread.customer': 1 } })
+  try { await takeCommissionPoints(found._id) } catch (e) { console.error('points not taken back:', e.message) }
 }
 
 /* ---------- PayPal (the same keys and sandbox switch as api/paypal.js) ---------- */

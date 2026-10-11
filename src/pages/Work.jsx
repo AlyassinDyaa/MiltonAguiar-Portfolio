@@ -22,7 +22,7 @@ export default function Work() {
   const paged = usePaged(shown, 'work', filter) // a page at a time: 10 to 50, as the visitor picks
   return (
     <Page title="Work">
-      <PageTitle label={pages.work.label} title={pages.work.title} lead={pages.work.intro} slides={work}>
+      <PageTitle tone="red" label={pages.work.label} title={pages.work.title} lead={pages.work.intro} slides={work}>
         {categories.length > 1 && (
           <div className="filters" role="group" aria-label="Show">
             {['All', ...categories].map((c) => (

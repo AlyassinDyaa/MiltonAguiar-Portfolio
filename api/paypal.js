@@ -3,6 +3,7 @@ import { buyer } from './_buyer.js'
 import { db, dbReady } from './_db.js'
 import { boughtOf, codeUsed, numberOrder, piecesNow, readBought, recordOrder, shapeAddress, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
 import { siteUrl } from './_users.js'
+import { awardOrderPoints } from './_points.js'
 
 /* Paying with PayPal. Two steps, both POST:
    - the cart (see _cart.js): works out what it costs from the site's own content, asks PayPal for
@@ -47,6 +48,7 @@ const savePaid = async (id, said, site = '') => {
   const code = before && before.code
   if (code) { try { await codeUsed({ code, promoId: before.promoId, viaPaypal: true, userId: before.userId, ref: `pp_${id}` }) } catch (e) { console.error('code use not noted:', e.message) } }
   try { await numberOrder(`pp_${id}`) } catch (e) { console.error('order not numbered:', e.message) }
+  try { await awardOrderPoints(`pp_${id}`) } catch (e) { console.error('points not given:', e.message) }
   try { await tellAdmin(`pp_${id}`, site) } catch (e) { console.error('order email not sent:', e.message) }
   try { await tellBuyer(`pp_${id}`, site) } catch (e) { console.error('buyer email not sent:', e.message) }
 }

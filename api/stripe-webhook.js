@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db, dbReady } from './_db.js'
+import { awardOrderPoints, takeOrderPoints } from './_points.js'
 import { codeUsed, numberOrder, ours, paidWithOf, piecesNow, readBought, recordOrder, shapeAddress, stripeCodes, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
 import { siteUrl } from './_users.js'
 import { ofStripe, paidByStripe, refundedByStripe } from './_commissions.js'
@@ -100,6 +101,7 @@ export default async function handler(req, res) {
       // its order number (a member's carries their member number), then the artist and the buyer
       // hear of it by email (once each, however often Stripe sends this)
       try { await numberOrder(o.id) } catch (e) { console.error('order not numbered:', e.message) }
+      try { await awardOrderPoints(o.id) } catch (e) { console.error('points not given:', e.message) }
       try { await tellAdmin(o.id, siteUrl(req)) } catch (e) { console.error('order email not sent:', e.message) }
       try { await tellBuyer(o.id, siteUrl(req)) } catch (e) { console.error('buyer email not sent:', e.message) }
       // paid: what was bought leaves the buyer's saved cart, even if they never come back to the site
@@ -109,6 +111,7 @@ export default async function handler(req, res) {
     }
     if (event.type === 'charge.refunded' && o && o.payment_intent && o.refunded) {
       await (await db()).collection('orders').updateOne({ pi: o.payment_intent }, { $set: { status: 'refunded', updatedAt: new Date() } })
+      try { await takeOrderPoints({ pi: o.payment_intent }) } catch (e) { console.error('points not taken back:', e.message) }
       await refundedByStripe(o.payment_intent)
     }
     return res.status(200).json({ received: true })

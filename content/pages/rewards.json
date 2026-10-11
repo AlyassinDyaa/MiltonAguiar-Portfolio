@@ -80,7 +80,7 @@
   ],
   "points": {
     "on": true,
-    "perUnit": 1,
+    "perUnit": 5,
     "signup": 50,
     "field": 10,
     "news": 25,

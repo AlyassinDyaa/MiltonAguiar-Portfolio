@@ -84,6 +84,18 @@
     "signup": 50,
     "field": 10,
     "news": 25,
-    "name": "points"
+    "name": "points",
+    "intro": "Every order earns points. Spend them on prints and discounts.",
+    "rewards": [
+      {
+        "cost": 500,
+        "kind": "gift",
+        "percent": 10,
+        "days": 60,
+        "hidden": false,
+        "name": "A free print!",
+        "text": "Any print of your choice."
+      }
+    ]
   }
 }

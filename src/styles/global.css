@@ -78,6 +78,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-x: clip; /* clip, not a scroll box: "position: sticky" (the account tabs) keeps working */
   transition: background 0.35s, color 0.35s;
 }
 img, svg, video { display: block; max-width: 100%; }

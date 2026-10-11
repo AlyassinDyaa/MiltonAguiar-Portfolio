@@ -28,10 +28,10 @@ const shortOf = (s) => (s.cover ? 'Cover' : s.spread ? `${s.from}–${s.to}` : S
    left-hand pages and odd ones right-hand pages. A spread fills a whole pair; a left-hand page left
    without its partner just before one stands alone. On a narrow screen, one picture at a time. Each
    view is a list of sheet indexes. */
-/* On a narrow screen one page at a time, and a spread is read as its two pages, its left half then
-   its right half (the right half is the sheet's index plus 0.5); a phone on its side shows it whole. */
+/* On a narrow screen one picture at a time; a spread is shown whole, as one splash picture (never cut
+   down its middle), and a double tap zooms in on it. */
 const viewsOf = (sheets, wide) => {
-  if (!wide) return sheets.flatMap((s, i) => (s.spread ? [[i], [i + 0.5]] : [[i]]))
+  if (!wide) return sheets.map((s, i) => [i])
   const views = [[0]]
   let left = null // a left-hand (even) page waiting for the right-hand page beside it
   sheets.forEach((s, i) => {
@@ -112,18 +112,15 @@ function Reader({ comic, onClose }) {
   const lastTap = useRef(null)
   const tapTimer = useRef(0)
 
-  // the view a sheet is in: exactly, or (a half of a spread read on a phone, then the phone turned) the one holding its sheet
+  // the view a sheet is in: exactly, or the one holding it (a page read alone on a phone, then the phone turned)
   const viewOf = (x) => { const k = views.findIndex((list) => list.includes(x)); return k >= 0 ? k : views.findIndex((list) => list.some((y) => Math.floor(y) === Math.floor(x))) }
   const settled = Math.max(0, viewOf(at))
   const v = flip && !flip.drag && !flip.cancel ? flip.to : settled // where the reader is going (the label, the strip and the keys follow it)
   const view = views[v]
   const shown = view.map((i) => sheets[Math.floor(i)])
-  // a spread read on a phone shows one of its halves: which one, and so which page number
-  const partOf = (x) => (wide || !sheets[Math.floor(x)].spread ? 'whole' : x % 1 ? 'right' : 'left')
   const inside = shown.filter((s) => !s.cover)
-  const part = partOf(view[0])
-  const lo = inside.length ? (part === 'right' ? inside[0].to : inside[0].from) : 0
-  const hi = inside.length ? (part === 'left' ? inside[0].from : inside[inside.length - 1].to) : 0
+  const lo = inside.length ? inside[0].from : 0
+  const hi = inside.length ? inside[inside.length - 1].to : 0
   const where = !inside.length ? 'Cover' : `${lo === hi ? `Page ${lo}` : `Pages ${lo}–${hi}`} of ${comic.count}`
   const stripShown = stripOpen ?? tall
   const first = v === 0, last = v === views.length - 1
@@ -133,9 +130,8 @@ function Reader({ comic, onClose }) {
     const next = Math.min(views.length - 1, Math.max(0, to))
     if (next === v) return
     setZoom(null)
-    // to or from a spread on a wide screen the spread simply appears, whole (a page turning over it
-    // would draw a line down its middle); with reduced motion every page simply changes
-    if (still || spreadStep(v, next)) { setFlip(null); setAt(views[next][0]); setFade((f) => f + 1); return }
+    // with reduced motion every page simply changes
+    if (still) { setFlip(null); setAt(views[next][0]); setFade((f) => f + 1); return }
     const dir = next > v ? 1 : -1
     setAt(views[v][0])
     const n = Date.now()
@@ -149,7 +145,6 @@ function Reader({ comic, onClose }) {
     }))
   }
   // the turn is over: on the next view, or (a drag let go too early) back where it was
-  const spreadStep = (a, b) => wide && [a, b].some((k) => views[k] && views[k].some((x) => sheets[Math.floor(x)].spread))
   const landed = () => { const f = flipping.current; if (!f || f.drag || f.starting) return; if (!f.cancel) setAt(views[f.to][0]); setFlip(null) }
   const jump = (i) => { const to = viewOf(i); if (to >= 0) go(to) }
   // should the animation's end never be heard (a hidden tab), the page lands anyway
@@ -248,7 +243,7 @@ function Reader({ comic, onClose }) {
     if (!d.turning) {
       const dir = mx < 0 ? 1 : -1
       const to = v + dir
-      if (still || flipping.current || to < 0 || to >= views.length || spreadStep(v, to)) { setDx(mx * 0.2); d.plain = true; return }
+      if (still || flipping.current || to < 0 || to >= views.length) { setDx(mx * 0.2); d.plain = true; return }
       const w = bookRef.current ? bookRef.current.getBoundingClientRect().width / (wide ? 2 : 1) : 300
       d.turning = { dir, w }
       setAt(views[v][0])
@@ -275,7 +270,7 @@ function Reader({ comic, onClose }) {
       return
     }
     if (d.moved) {
-      // with reduced motion (or to or from a spread), a sideways swipe turns the page at once
+      // with reduced motion, a sideways swipe turns the page at once
       if (!zoom && Math.abs(mx) > 50 && Math.abs(mx) > Math.abs(my)) go(v + (mx < 0 ? 1 : -1))
       return
     }
@@ -297,7 +292,7 @@ function Reader({ comic, onClose }) {
 
   // one page box's picture: a whole page, a half of a spread, or nothing
   const face = (c, cls = '') => (
-    <div className={`reader-face ${cls} ${c ? '' : 'is-blank'} ${c && c.part !== 'whole' ? 'is-half' : ''}`}>
+    <div className={`reader-face ${cls} ${c ? '' : 'is-blank'} ${c && c.part !== 'whole' ? `is-half is-${c.part}-half` : ''}`}>
       {c && <img src={asset(c.src)} className={`is-${c.part}`} alt={c.part === 'right' ? '' : `${comic.title}, ${c.name.toLowerCase()}`} draggable="false" />}
     </div>
   )
@@ -325,13 +320,12 @@ function Reader({ comic, onClose }) {
       {leafEl}
     </div>
   )
-  // one page on a phone: a whole page, or one half of a spread (a page the shape of the others)
+  // one picture on a phone: a page, or a spread whole (twice as wide)
   const one = (x, leafEl) => {
     const sh = sheets[Math.floor(x)]
-    const pt = partOf(x)
     return (
-      <div className={`reader-book is-one ${turning}`} {...bookProps(pt === 'whole' && sh.spread ? 2 * ratio : ratio)}>
-        <div className={`reader-cell ${leafEl ? 'is-under' : ''}`}>{face(half(sh, pt))}</div>
+      <div className={`reader-book is-one ${turning} ${sh.spread ? 'is-spread' : ''}`} {...bookProps(sh.spread ? 2 * ratio : ratio)}>
+        <div className={`reader-cell ${leafEl ? 'is-under' : ''}`}>{face(half(sh, 'whole'))}</div>
         {leafEl}
       </div>
     )
@@ -353,10 +347,10 @@ function Reader({ comic, onClose }) {
   } else if (!flip) book = one(view[0])
   else {
     const a = views[flip.from][0], b = views[flip.to][0]
-    const pageAt = (x) => half(sheets[Math.floor(x)], partOf(x))
+    const pageAt = (x) => half(sheets[Math.floor(x)], 'whole')
     book = flip.dir > 0 ? one(b, leaf('is-peel', pageAt(a), null)) : one(a, leaf('is-unpeel', pageAt(b), null))
   }
-  const spreadOnPhone = false // a spread is read page by page on a phone now
+  const spreadOnPhone = !wide && !flip && shown[0].spread // a spread on a phone: whole, small; a double tap brings it closer
   const look = zoom ? { transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${ZOOM})` } : dx ? { transform: `translateX(${dx}px)` } : undefined
 
   return (
@@ -365,10 +359,10 @@ function Reader({ comic, onClose }) {
       <div ref={stage} className={`reader-stage ${zoom ? 'is-zoomed' : ''} ${panning ? 'is-panning' : ''}`}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
         <div className="reader-zoom" style={look}>
-          {/* a page that appears without turning (a spread) fades in */}
+          {/* with reduced motion a page appears (fading in) instead of turning */}
           <div key={fade} className={`reader-show ${fade ? 'is-fading' : ''}`}>{book}</div>
         </div>
-        {spreadOnPhone && !zoom && <p className="reader-note">A two-page spread: turn the phone sideways, or double-tap to zoom in</p>}
+        {spreadOnPhone && !zoom && <p className="reader-note">Two-page spread · double-tap to zoom, or turn the phone sideways</p>}
       </div>
 
       <button type="button" className="reader-x" onClick={onClose} aria-label="Close the comic">×</button>

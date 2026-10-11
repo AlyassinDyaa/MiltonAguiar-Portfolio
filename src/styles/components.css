@@ -424,9 +424,10 @@ a.pj-book:hover, a.pj-book:focus-visible { rotate: 0deg; scale: 1.03; outline: 0
 @media (max-width: 699px) {
   .reader-stage { padding: 72px 8px 10px; }
   .reader-x { top: 10px; right: 10px; width: 48px; height: 48px; }
-  .reader-nav { width: 42px; height: 54px; margin-top: -40px; font-size: 1.15rem; background: rgba(39, 39, 44, 0.78); }
-  .reader-nav.prev { left: 0; }
-  .reader-nav.next { right: 0; }
+  /* the arrows sit in the strip above the page, beside the ×, so none of the art is under them */
+  .reader-nav { top: 10px; width: 48px; height: 48px; margin-top: 0; font-size: 1.15rem; }
+  .reader-nav.prev { left: 10px; }
+  .reader-nav.next { left: 64px; right: auto; }
   .reader-hint { display: none; }
   .reader-title { flex: 1 1 100%; font-size: 1.1rem; }
   .reader-toggle { margin-left: auto; }
@@ -2079,6 +2080,11 @@ button.hp.cm-step.is-loud.on { background: var(--accent); }
 /* a spread turning in or out: no shading on its halves at all (the turning page's light and the
    shadow it casts would draw a crease down the spread's middle) */
 .reader-face.is-half::before { content: none !important; }
+/* and no seam where they meet: each half draws one pixel past the spine into the other (the same art
+   there), so a turning half's soft edge never lets the dark behind show through as a line */
+.reader-face.is-half { overflow: visible; }
+.reader-face.is-left-half { clip-path: inset(0 -1px 0 0); }
+.reader-face.is-right-half { clip-path: inset(0 0 0 -1px); }
 .reader-show { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .reader-show.is-fading { animation: reader-show 0.35s ease-out; }
 @keyframes reader-show { from { opacity: 0; } }
@@ -2583,3 +2589,55 @@ form.lined .acc-phone-number input { padding-right: 0; }
 @container (max-width: 330px) {
   .acc-card3d-foot span:last-child { display: none; } /* the smallest card: Collected is on the back */
 }
+
+/* ---------- Rewards on a phone: everything tighter, nothing wasted ---------- */
+@media (max-width: 599px) {
+  /* the numbers: three to a row, the figure over its word, all the same size */
+  .acct-progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .acct-progress span { display: grid; justify-items: center; gap: 2px; padding: 10px 6px 9px; text-align: center; font-size: 0.6rem; letter-spacing: 0.1em; line-height: 1.2; }
+  .acct-progress b { font-size: 1.25rem; }
+  /* the points: the burst beside the title, the ways to earn two to a row */
+  .pts { gap: 16px; padding: 16px 14px; margin-bottom: 26px; }
+  .pts-head { grid-template-columns: auto minmax(0, 1fr); justify-items: stretch; gap: 14px; }
+  .pts-burst { width: 86px; }
+  .pts-burst b { font-size: 1.45rem; }
+  .pts-burst small { font-size: 0.52rem; }
+  .pts-head-words h3 { font-size: 1.45rem; }
+  .pts-head-words p { font-size: 0.86rem; line-height: 1.4; }
+  .pts-next { font-size: 0.8rem; padding: 5px 10px; }
+  .pts-road { margin-inline: 20px 26px; }
+  .pts-pick { padding: 14px; gap: 10px; }
+  .pts-pick-words h4 { font-size: 1rem; }
+  .pts-ways ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .pts-ways li { grid-template-columns: minmax(0, 1fr); align-content: start; gap: 3px; padding: 10px; }
+  .pts-way-pts { grid-row: auto; font-size: 1rem; }
+  .pts-way-text { font-size: 0.8rem; line-height: 1.35; }
+  .pts-way-go, .pts-way-done { font-size: 0.64rem; margin-top: 2px; }
+  .pts-ticket { padding: 10px 14px; gap: 10px; }
+  /* gifts and rewards: a smaller picture beside the words, less padding */
+  .acct-reward-list { gap: 10px; }
+  .acct-reward { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px; }
+  .acct-reward-art .acct-pick-pic { width: 58px; height: 58px; }
+  .acct-reward-art .acct-card-mini { width: 64px; }
+  .acct-reward-off { width: 60px; height: 60px; border-width: 2px; }
+  .acct-reward-off b { font-size: 1.1rem; }
+  .acct-reward-off small { font-size: 0.6rem; }
+  .acct-reward-body strong { font-size: 1rem; }
+  .acct-reward-how { font-size: 0.82rem; }
+  .acct-group-head h3 { font-size: 1.3rem; }
+  .acct-group-head p { font-size: 0.86rem; }
+}
+
+/* Rewards on a phone: three parts behind a bar that stays in view (Points · Gifts · Rewards), one at a time */
+.acct-parts { position: sticky; top: calc(var(--nav) + 46px); /* under the account tabs, which stick too */ z-index: 20; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; margin: 0 0 16px; padding: 4px; border: 2px solid #0b0b0c; background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 4px 4px 0 #0b0b0c; }
+.acct-parts button { all: unset; box-sizing: border-box; position: relative; display: grid; justify-items: center; gap: 1px; padding: 8px 4px 7px; cursor: pointer; text-align: center; transition: background 0.2s, color 0.2s; }
+.acct-parts button span { font-family: var(--display); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-mute); }
+.acct-parts button b { font-family: var(--display); font-size: 1.1rem; font-weight: 900; font-style: italic; line-height: 1; color: var(--fg); }
+.acct-parts button.on { background: var(--accent); }
+.acct-parts button.on span, .acct-parts button.on b { color: #fff; }
+.acct-parts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acct-parts button i { position: absolute; top: 6px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #0b0b0c; }
+.acct-rewards.is-parted > :not(.acct-parts):not(.acct-keep) { animation: parts-in 0.3s var(--ease-out) both; }
+@keyframes parts-in { from { opacity: 0; transform: translateY(6px); } }
+.acct-rewards.is-parted .acct-reward-group > .acct-group-head h3, .acct-rewards.is-parted .pts-head-words h3 { display: none; } /* the bar already names the part */
+@media (prefers-reduced-motion: reduce) { .acct-rewards.is-parted > * { animation: none; } }

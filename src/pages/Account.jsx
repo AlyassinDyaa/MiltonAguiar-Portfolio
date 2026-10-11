@@ -8,6 +8,7 @@ import Wordmark from '../components/Wordmark'
 import PhoneField from '../components/PhoneField'
 import { useAccount } from '../hooks/useAccount'
 import { useCart } from '../hooks/useCart'
+import { useMedia } from '../hooks/useMedia'
 import AccountCommissions, { useCommissionList } from '../components/AccountCommissions'
 
 /* Customer accounts: log in, make an account, forgotten and new passwords, confirming the email
@@ -1321,6 +1322,9 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
   const [keeping, setKeeping] = useState(false)
   const [keepProblem, setKeepProblem] = useState('')
   const [kept, setKept] = useState('')
+  // on a phone the tab is in three parts, one shown at a time: points, gifts, rewards
+  const phone = useMedia('(max-width: 699px)')
+  const [part, setPart] = useState('')
   const [tick, setTick] = useState(0) // asked again after points are spent
   const [redeeming, setRedeeming] = useState('')
   const [redeemSaid, setRedeemSaid] = useState('')
@@ -1503,18 +1507,36 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
     </button>
   )
   const giftCount = shown.length
+  // the parts there are, each with its count; the one open (the one chosen, else gifts when something is new, else points)
+  const unlocked = earnable.filter((r) => r.earned).length
+  const parts = [
+    pointsOn && { key: 'points', label: data.points.name[0].toUpperCase() + data.points.name.slice(1), count: String(data.points.balance) },
+    (giftCount > 0 || putAway.length > 0) && { key: 'gifts', label: 'Gifts', count: String(giftCount), dot: shown.some((x) => fresh.includes(x.key)) },
+    earnable.length > 0 && { key: 'rewards', label: 'Rewards', count: `${unlocked}/${earnable.length}` },
+  ].filter(Boolean)
+  const open = parts.some((x) => x.key === part) ? part : (parts.find((x) => x.key === 'gifts' && x.dot) || parts[0] || {}).key
+  const showing = (k) => !phone || parts.length < 2 || open === k
   return (
-    <div className="acct-rewards">
-      <div className="acct-progress">
+    <div className={`acct-rewards ${phone && parts.length > 1 ? 'is-parted' : ''}`}>
+      {phone && parts.length > 1 && (
+        <nav className="acct-parts" role="tablist" aria-label="Rewards">
+          {parts.map((x) => (
+            <button key={x.key} type="button" role="tab" aria-selected={open === x.key} className={open === x.key ? 'on' : ''} onClick={() => { setPart(x.key); window.scrollTo({ top: Math.min(window.scrollY, (document.querySelector('.acct-rewards')?.getBoundingClientRect().top || 0) + window.scrollY - 90), behavior: 'smooth' }) }}>
+              <span>{x.label}</span><b>{x.count}</b>{x.dot && <i aria-label="new" />}
+            </button>
+          ))}
+        </nav>
+      )}
+      {showing('rewards') && <div className="acct-progress">
         <span><b>{p.orders}</b> {p.orders === 1 ? 'order' : 'orders'}</span>
         <span><b>{p.pieces}</b> {p.pieces === 1 ? 'piece' : 'pieces'}</span>
         <span><b>{p.commissions || 0}</b> {p.commissions === 1 ? 'commission' : 'commissions'}</span>
         <span><b>{p.verified ? '✓' : '–'}</b> email {p.verified ? 'confirmed' : 'not confirmed'}</span>
         {giftCount > 0 && <span><b>{giftCount}</b> {giftCount === 1 ? 'gift' : 'gifts'}</span>}
-      </div>
+      </div>}
       {kept && <p className="acc-welcome" role="status">{kept}</p>}
-      {pointsOn && <PointsPanel points={data.points} onRedeem={redeem} busy={redeeming} said={redeemSaid} onRefresh={() => setTick((t) => t + 1)} />}
-      {giftCount > 0 && (
+      {pointsOn && showing('points') && <PointsPanel points={data.points} onRedeem={redeem} busy={redeeming} said={redeemSaid} onRefresh={() => setTick((t) => t + 1)} />}
+      {giftCount > 0 && showing('gifts') && (
         <section className="acct-reward-group is-gifts">
           <header className="acct-group-head">
             <h3>Gifts</h3>
@@ -1523,7 +1545,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
           <div className="acct-reward-list">{shown.map((x) => x.card(archiveBtn(x)))}</div>
         </section>
       )}
-      {putAway.length > 0 && (
+      {putAway.length > 0 && showing('gifts') && (
         <div className="acct-shelf">
           <button type="button" className="acct-shelf-toggle" aria-expanded={shelfOpen} onClick={() => setShelfOpen(!shelfOpen)}>
             Archived <small>{putAway.length}</small>
@@ -1544,7 +1566,7 @@ function Rewards({ fresh = [], onPreview = () => {}, prints = '' }) {
         </div>
       )}
       <DeleteGifts items={dropping} onClose={stopDropping} onYes={(list) => shelf(list.map((x) => x.key), 'delete')} />
-      {earnable.length > 0 && (
+      {earnable.length > 0 && showing('rewards') && (
         <section className="acct-reward-group">
           <header className="acct-group-head">
             <h3>Rewards</h3>

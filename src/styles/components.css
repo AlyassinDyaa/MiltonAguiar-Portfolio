@@ -2697,9 +2697,10 @@ form.lined .acc-phone-number input { padding-right: 0; }
 .mc { display: flex; flex-direction: column; gap: 12px; height: 100%; }
 .mc-open { position: relative; display: block; width: 100%; padding: 6px; cursor: pointer; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.5)); transform: rotate(var(--tilt, 0deg)); transition: transform 0.35s var(--ease-out), filter 0.35s; }
 .mc-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.mc-sticker { --peel: 14px; position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 9%; background: #fff; border-radius: 16px;
+.mc-sticker { --peel: 14px; position: relative; display: block; aspect-ratio: 4 / 5; min-height: 0; overflow: hidden; background: #fff; border-radius: 16px;
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--peel)), calc(100% - var(--peel)) 100%, 0 100%); transition: --peel 0.35s var(--ease-out); }
-.mc-sticker img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
+/* the picture sits inside the white edge whatever its shape (a photo strip, a round sticker): the card keeps one shape */
+.mc-sticker img { position: absolute; top: 8%; left: 8%; width: 84%; height: 84%; object-fit: contain; border-radius: 6px; }
 /* the corner, folded back: its underside */
 .mc-sticker::after { content: ''; position: absolute; right: 0; bottom: 0; width: var(--peel); height: var(--peel); background: linear-gradient(135deg, #f1efe9 0%, #cfcbc2 50%, transparent 50%); box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.18); }
 .mc:hover .mc-open, .mc-open:focus-visible { transform: rotate(0deg) translateY(-6px) scale(1.03); filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.55)); }

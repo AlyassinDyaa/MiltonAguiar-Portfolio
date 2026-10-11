@@ -7,7 +7,7 @@
   },
   "art": {
     "comicsWatermark": false,
-    "watermark": true
+    "watermark": false
   },
   "pages": {
     "work": true,

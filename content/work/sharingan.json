@@ -1,0 +1,25 @@
+{
+  "shopOnly": true,
+  "src": "/uploads/sasuke.webp",
+  "universe": "Other",
+  "hidden": false,
+  "date": "2025-03-29",
+  "sizes": [
+    {
+      "size": "A3",
+      "price": 20
+    },
+    {
+      "size": "A4",
+      "price": 10
+    }
+  ],
+  "status": "none",
+  "title": "Sharingan",
+  "type": "Prints",
+  "inShop": true,
+  "hover": "/uploads/sasuke-frame.png",
+  "face": "39,25,287",
+  "category": "Fan Art",
+  "look": "default"
+}

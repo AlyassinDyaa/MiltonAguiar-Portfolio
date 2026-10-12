@@ -105,7 +105,7 @@ export async function priceCart(body, user = null) {
     ship = shippingFor(rules, country, lines.reduce((n, l) => n + l.qty, 0), cents - off)
     if (ship.none) return no(409, 'The shop does not post there yet. Get in touch for a quote.')
   }
-  // the payment fee, when the admin adds one: on the pieces after any discount, and the shipping
+  // the transaction fee, when the admin adds one: on the pieces after any discount, and the shipping
   const way = b.way === 'paypal' ? 'paypal' : 'card'
   const fee = feeFor(rules, way, cents - off + ship.cents)
   return {

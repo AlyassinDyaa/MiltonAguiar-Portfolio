@@ -44,7 +44,7 @@ export default function CartDrawer() {
   const { open, lines } = cart
   const setOpen = (v) => { if (!v) setNote(''); cart.setOpen(v) }
   // the points this order earns (Rewards → Points): for what the pieces come to after any code, as the
-  // account is paid them once it is paid (not the shipping, nor a payment fee); a visitor is asked to log in for them
+  // account is paid them once it is paid (not the shipping, nor a transaction fee); a visitor is asked to log in for them
   const pts = accountPage.points || {}
   const earns = account.on && pts.on && pts.perUnit > 0 ? Math.floor(cart.total * pts.perUnit) : 0
   const pointsLine = earns > 0 && (account.user
@@ -187,7 +187,7 @@ export default function CartDrawer() {
                           <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b></div>
                         )}
                         {cart.fees.on && (ways.card || ways.paypal) && (
-                          <div className="cart-sum-row is-fee"><span>Payment fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
+                          <div className="cart-sum-row is-fee"><span>Transaction fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
                         )}
                         {!cart.discount && (codeOpen ? (
                           <form className="cart-code" onSubmit={apply}>
@@ -211,7 +211,7 @@ export default function CartDrawer() {
                           <span className="buy-btn-icon" aria-hidden="true">→</span>
                         </Link>
                       ) : <>
-                      {/* each way to pay with what it comes to, the payment fee for it included */}
+                      {/* each way to pay with what it comes to, the transaction fee for it included */}
                       {ways.card && (
                         <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'} disabled={cart.shipping.none}>
                           <span>{busy === 'card' ? 'Opening secure checkout' : `Pay ${money(cart.grand + (cart.fees.on ? cart.fees.card : 0), true)} by card`}</span>

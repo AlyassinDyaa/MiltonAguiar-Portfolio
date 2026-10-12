@@ -70,7 +70,7 @@
     'site/welcome': { groups: { on: 'What it tells', title: 'Your own message', often: 'How often' }, half: ['button', 'url', 'code', 'codeText'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
     'site/shop': {
-      groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', fees: 'Payment fee', emails: 'Emails to you' },
+      groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', fees: 'Transaction fee', emails: 'Emails to you' },
       half: ['currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra'],
       inner: ['first', 'extra', 'freeOver', 'cardPercent', 'cardFixed', 'paypalPercent', 'paypalFixed'],
     },

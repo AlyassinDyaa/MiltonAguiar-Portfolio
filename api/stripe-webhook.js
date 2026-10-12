@@ -88,8 +88,8 @@ export default async function handler(req, res) {
         phone: who.phone || '',
         address: ship && ship.address ? shapeAddress(ship.address, ship.name) : null,
         // each line at its price before any discount (the discount is its own line), with its piece kept on it
-        // (the card payment fee is its own line on Stripe's page: kept as the fee below, not as a piece)
-        items: lines && Array.isArray(lines.data) ? (() => { const pieces = piecesNow(); return lines.data.filter((l) => l.description !== 'Card payment fee').map((l) => withPiece({ name: l.description, qty: l.quantity || 1, amount: (l.amount_subtotal ?? l.amount_total ?? 0) / 100 }, pieces)) })() : [],
+        // (the card transaction fee is its own line on Stripe's page: kept as the fee below, not as a piece)
+        items: lines && Array.isArray(lines.data) ? (() => { const pieces = piecesNow(); return lines.data.filter((l) => !['Card transaction fee', 'Card payment fee'].includes(l.description)).map((l) => withPiece({ name: l.description, qty: l.quantity || 1, amount: (l.amount_subtotal ?? l.amount_total ?? 0) / 100 }, pieces)) })() : [],
         amount: (o.amount_total || 0) / 100,
         shipping: ((o.total_details && o.total_details.amount_shipping) || 0) / 100,
         fee: (Number(o.metadata && o.metadata.fee) || 0) / 100,

@@ -1,4 +1,4 @@
-/* Shipping from Portugal, and the payment fee (Shop → Settings & payments). The one place the rule
+/* Shipping from Portugal, and the transaction fee (Shop → Settings & payments). The one place the rule
    lives: the cart shows its estimate with it (CartDrawer, Buy) and the checkout charges with it
    (api/_cart.js), so what the buyer sees is what they pay. Plain JavaScript with no imports, so
    both can load it. Amounts in the shop's currency, worked in cents.
@@ -8,7 +8,7 @@
    first zone naming the country counts; "*" catches the rest. Off ("Charge for delivery" off, or
    delivery off altogether): nothing is added.
 
-   The payment fee: off unless the admin switches it on; then a percentage and a fixed amount for
+   The transaction fee: off unless the admin switches it on; then a percentage and a fixed amount for
    each way to pay (card through Stripe, PayPal), on what is paid for the pieces and the shipping. */
 
 const num = (v, d = 0) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : d }
@@ -67,7 +67,7 @@ export function shippingFor(rules, country, qty, paid) {
   return { cents: zone.first + zone.extra * Math.max(0, Math.round(num(qty, 1)) - 1), zone }
 }
 
-/* The payment fee for a way to pay ('card' or 'paypal') on an amount in cents: 0 while switched off. */
+/* The transaction fee for a way to pay ('card' or 'paypal') on an amount in cents: 0 while switched off. */
 export function feeFor(rules, way, base) {
   if (!rules.fees.on || !(base > 0)) return 0
   const f = way === 'paypal' ? rules.fees.paypal : rules.fees.card

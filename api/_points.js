@@ -55,7 +55,7 @@ const awardOrder = async (d, ref, userId, rules) => {
   const got = await d.collection('orders').findOneAndUpdate({ ref, status: 'paid', pointsGiven: { $exists: false } }, { $set: { pointsGiven: true, pointsTo: userId } }, { returnDocument: 'after' })
   const o = got && (got.value !== undefined ? got.value : got)
   if (!o) return 0
-  // points for what was paid for the pieces: not the shipping, nor a payment fee
+  // points for what was paid for the pieces: not the shipping, nor a transaction fee
   const n = Math.floor(Math.max(0, (Number(o.amount) || 0) - (Number(o.shipping) || 0) - (Number(o.fee) || 0)) * rules.perUnit)
   if (n > 0) { await addPoints(d, userId, n, 'order', o.orderNo || ref); await d.collection('orders').updateOne({ ref }, { $set: { points: n } }) }
   return n

@@ -682,13 +682,13 @@ collections:
               - { name: extra, label: Each piece after it, widget: number, value_type: float, min: 0, required: false }
               - { name: freeOver, label: Free over, widget: number, value_type: float, min: 0, required: false, hint: 'Empty: never free.' }
           - name: fees
-            label: Payment fee
+            label: Transaction fee
             widget: object
             collapsed: false
             required: false
             hint: 'Passes what Stripe or PayPal keeps on to the buyer, as a line at the checkout. Careful: in the EU (Portugal included) a fee for paying by most consumer cards is not allowed (the PSD2 surcharge ban), and PayPal''s own rules on fees differ by country, so check before switching it on.'
             fields:
-              - { name: 'on', label: Add a payment fee, widget: boolean, default: false, required: false }
+              - { name: 'on', label: Add a transaction fee, widget: boolean, default: false, required: false }
               - { name: cardPercent, label: Card (Stripe) percent, widget: number, value_type: float, min: 0, required: false, default: 1.5 }
               - { name: cardFixed, label: Card (Stripe) fixed, widget: number, value_type: float, min: 0, required: false, default: 0.25 }
               - { name: paypalPercent, label: PayPal percent, widget: number, value_type: float, min: 0, required: false, default: 3.49 }

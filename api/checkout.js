@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     if (what(l)) ask.set(`${at}[price_data][product_data][description]`, String(what(l)).slice(0, 500))
     if (typeof l.piece.src === 'string' && l.piece.src.startsWith('/')) ask.set(`${at}[price_data][product_data][images][0]`, origin + l.piece.src)
   })
-  // the payment fee, when the admin adds one, as its own line. A discount code comes off every line
+  // the transaction fee, when the admin adds one, as its own line. A discount code comes off every line
   // on Stripe's page, the fee's too, so with a code the line is raised just enough that, once the
   // code has come off, it is the fee the cart showed
   if (fee > 0) {
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     ask.set(`${at}[quantity]`, '1')
     ask.set(`${at}[price_data][currency]`, String(shop.currency || 'eur').toLowerCase())
     ask.set(`${at}[price_data][unit_amount]`, String(feeLine))
-    ask.set(`${at}[price_data][product_data][name]`, 'Card payment fee')
+    ask.set(`${at}[price_data][product_data][name]`, 'Card transaction fee')
     ask.set('metadata[fee]', String(fee))
   }
   ask.set('metadata[order]', summary.slice(0, 500))

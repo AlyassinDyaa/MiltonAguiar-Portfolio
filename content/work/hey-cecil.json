@@ -2,17 +2,17 @@
   "shopOnly": true,
   "src": "/uploads/invincible.webp",
   "universe": "Image",
-  "price": 20,
+  "price": "",
   "hidden": false,
   "date": "2026-04-20",
   "sizes": [
     {
       "size": "A3",
-      "price": 20
+      "price": 15
     },
     {
       "size": "A4",
-      "price": 10
+      "price": 8
     }
   ],
   "status": "none",
@@ -21,6 +21,6 @@
   "inShop": true,
   "hover": "/uploads/invincible-frame.png",
   "face": "41,22,322",
-  "category": "Fan art",
+  "category": "Fan Art",
   "look": "default"
 }

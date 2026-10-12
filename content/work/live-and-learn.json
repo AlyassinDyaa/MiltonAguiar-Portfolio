@@ -7,11 +7,11 @@
   "sizes": [
     {
       "size": "A3",
-      "price": 20
+      "price": 15
     },
     {
       "size": "A4",
-      "price": 10
+      "price": 8
     }
   ],
   "status": "none",
@@ -20,6 +20,6 @@
   "inShop": true,
   "hover": "/uploads/sonic-frame.webp",
   "face": "51,50,191",
-  "category": "Fan art",
+  "category": "Fan Art",
   "look": "default"
 }

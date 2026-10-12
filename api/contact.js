@@ -1,5 +1,5 @@
-import { dbReady } from './_db.js'
-import { EMAIL, artistInbox, clean, clientIp, fromThisSite, mailReady, noteTry, sendMail, tooMany } from './_users.js'
+import { db, dbReady } from './_db.js'
+import { EMAIL, artistInbox, clean, clientIp, fromThisSite, mailReady, noteTry, sendMail } from './_users.js'
 
 /* The Contact and Commission forms, sent straight to the artist's inbox: the visitor presses Send
    and that is it, no mail app. The email comes from the site's own address (the SMTP_* or Resend
@@ -15,20 +15,28 @@ import { EMAIL, artistInbox, clean, clientIp, fromThisSite, mailReady, noteTry, 
    503 and the page offers Instagram or the email address instead. No copy goes to the visitor, so
    nobody can use the form to send emails to other people. */
 
-// without the database, a count kept by this function while it stays warm
-const recent = new Map()
-const limited = async (ip) => {
+/* How often: up to 3 messages an hour from one email address (and, against a flood from one place,
+   10 an hour from one connection). Only messages that went out count. Without the database, a count
+   kept by this function while it stays warm. */
+const HOUR = 3600e3
+const PER_EMAIL = 3
+const PER_IP = 10
+const memory = new Map()
+// the times (ms) of this key's messages in the last hour, oldest first
+const sentLately = async (key) => {
+  const since = Date.now() - HOUR
   if (dbReady()) {
-    if (await tooMany(`contact:${ip}`, 5, 60)) return true
-    await noteTry(`contact:${ip}`)
-    return false
+    const d = await db()
+    return (await d.collection('attempts').find({ key, at: { $gt: new Date(since) } }, { projection: { at: 1 } }).sort({ at: 1 }).toArray()).map((x) => +x.at)
   }
-  const now = Date.now()
-  const list = (recent.get(ip) || []).filter((t) => now - t < 3600e3)
-  if (list.length >= 5) return true
-  recent.set(ip, [...list, now])
-  return false
+  return (memory.get(key) || []).filter((t) => t > since)
 }
+const noteSent = async (key) => {
+  if (dbReady()) return noteTry(key)
+  memory.set(key, [...(memory.get(key) || []).filter((t) => t > Date.now() - HOUR), Date.now()])
+}
+// minutes until another may be sent: 0 when one can go now
+const minutesLeft = (times, max) => (times.length < max ? 0 : Math.max(1, Math.ceil((times[times.length - max] + HOUR - Date.now()) / 60000)))
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
@@ -53,7 +61,9 @@ export default async function handler(req, res) {
 
   const to = artistInbox() // the artist's own inbox (see api/_users.js: not the forwarding address, which Gmail would keep in Sent only)
   if (!mailReady() || !to) return say(503, { fallback: true, message: 'Messages cannot be sent from the site right now.' })
-  if (await limited(clientIp(req))) return say(429, { message: 'A few messages have been sent from here already. Try again in an hour, or write on Instagram.' })
+  const keys = [`contact-email:${email}`, `contact-ip:${clientIp(req)}`]
+  const wait = Math.max(minutesLeft(await sentLately(keys[0]), PER_EMAIL), minutesLeft(await sentLately(keys[1]), PER_IP))
+  if (wait) return say(429, { message: `You can send up to ${PER_EMAIL} messages an hour. Try again in ${wait} minute${wait === 1 ? '' : 's'}, or write on Instagram.` })
 
   const paras = message.split(/\n{2,}/).map((p) => p.replace(/\n/g, ' ').trim()).filter(Boolean)
   const kind = text(b.kind, 80)
@@ -71,7 +81,8 @@ export default async function handler(req, res) {
       title: `A message from ${name}`,
       lines: [`From ${name} (${email})`, ...paras],
     }
-  const sent = await sendMail({ ...mail, to, fromName: name, replyTo: `${name.replace(/[<>"]/g, '')} <${email}>`, after: `Sent from the ${commission ? 'Commissions' : 'Contact'} page. Reply to this email to answer ${name} directly.` })
+  const sent = await sendMail({ ...mail, to, fromLabel: email, replyTo: `${name.replace(/[<>"]/g, '')} <${email}>`, after: `Sent from the ${commission ? 'Commissions' : 'Contact'} page. Reply to this email to answer ${name} directly.` })
   if (!sent) return say(502, { fallback: true, message: 'The message could not be sent just now.' })
+  for (const k of keys) { try { await noteSent(k) } catch { /* not counted this time */ } }
   return say(200, { ok: true })
 }

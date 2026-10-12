@@ -67,15 +67,17 @@
     },
     'pages/about': { groups: { title: 'Top of the page', story: 'Origin story', facts: 'The artist file' }, half: [] },
     'pages/contact': { groups: { label: 'Top of the page', topics: 'Form' }, half: ['label', 'title'] },
+    'site/welcome': { groups: { on: 'What it tells', title: 'Your own message', often: 'How often' }, half: ['button', 'url', 'code', 'codeText'] },
     'site/brand': { groups: { name: 'Name', hue: 'Look', email: 'Contact details', social: 'Social links', footerLine: 'Footer' }, half: ['name', 'artist', 'email', 'location'] },
     'site/shop': {
-      groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', emails: 'Emails to you' },
+      groups: { enabled: 'Selling online', currency: 'Prices and the cart', look: 'What you sell', signedChoice: 'Signed pieces', shipping: 'Delivery', fees: 'Payment fee', emails: 'Emails to you' },
       half: ['currency', 'buttonLabel', 'pricePlace', 'tagPlace', 'signedChoice', 'signedExtra'],
+      inner: ['first', 'extra', 'freeOver', 'cardPercent', 'cardFixed', 'paypalPercent', 'paypalFixed'],
     },
     'pages/shop': { groups: { label: 'At the top', listLabel: 'The list', merchLabel: 'Stickers & more (under your art)', emptyTitle: 'While nothing is for sale', thanksTitle: 'After a purchase' }, half: ['label', 'title', 'listLabel', 'nothingText', 'merchLabel', 'merchCaption', 'emptyTitle', 'emptyText', 'thanksTitle', 'thanksText'] },
     'site/account': { groups: { accounts: 'Accounts', cardLabel: 'On their page', icons: 'Free profile pictures' }, half: ['noteTitle', 'signature', 'collectionTitle', 'savedTitle'] },
     'site/rewards': { groups: { rewardText: 'Before they confirm', pictures: 'Profile pictures', cards: 'Membership card designs', discounts: 'Discounts', points: 'Points' }, half: [], inner: ['earnedBy', 'count', 'percent', 'days', 'cardLook', 'cost', 'kind', 'perUnit', 'signup', 'field', 'news'] },
-    'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on'] },
+    'site/sales': { groups: {}, half: [], inner: ['percent', 'appliesTo', 'category', 'subcategory', 'type', 'starts', 'ends', 'on', 'announce'] },
     'site/visibility': { groups: {}, half: [], inner: ['work', 'shop', 'gallery', 'category', 'subcategory', 'type', 'merch', 'extras', 'testOrders', 'testCustomers', 'testCodes', 'commissions', 'about', 'contact', 'dark', 'light', 'watermark', 'comicsWatermark', 'ticker', 'project', 'latest', 'redraws', 'events', 'offers', 'process', 'request', 'notes', 'filters', 'samples', 'story', 'facts', 'credits', 'form', 'email', 'hire', 'follow', 'end', 'brand', 'pages', 'steps', 'banners'] },
   }
 
@@ -85,13 +87,13 @@
   const NAV = [
     { label: 'Orders & customers', lead: 'Who bought what, commissions, members and their rewards, and writing to your customers.', items: ['sales:orders', 'sales:customers', 'site/account', 'site/rewards', 'sales:emails'] },
     { label: 'Your art', lead: 'What you add to over time.', items: ['work', 'comics', 'gallery_sections', 'events'] },
-    { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'merch', 'site/sales', 'sales:discounts', 'site/categories', 'site/shop'] },
+    { label: 'Shop', lead: 'What you sell, what it costs, and how buyers pay.', items: ['shop', 'merch', 'site/sales', 'sales:discounts', 'site/welcome', 'site/categories', 'site/shop'] },
     { label: 'Page text', lead: 'Headings, introductions and buttons, one form per page.', items: ['pages/home', 'pages/shop', 'pages/lists', 'pages/commissions', 'pages/about', 'pages/contact'] },
     { label: 'Site', lead: 'Your name and colour, what is switched on, and every picture.', items: ['site/brand', 'site/visibility', 'media'] },
   ]
   /* Names in the navigation (narrow). Tiles and form headings use the label in config.yml,
      which says the same thing in full ("Home page" for "Home"). */
-  const SHORT = { 'pages/home': 'Home', 'pages/shop': 'Shop', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', shop: 'Art for sale', merch: 'Stickers & more', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
+  const SHORT = { 'pages/home': 'Home', 'pages/shop': 'Shop', 'pages/lists': 'Work & Gallery', 'pages/commissions': 'Commissions', 'pages/about': 'About', 'pages/contact': 'Contact', 'site/brand': 'Brand & contact', 'site/welcome': 'Welcome card', shop: 'Art for sale', merch: 'Stickers & more', 'site/shop': 'Settings & payments', 'site/categories': 'Categories & sizes', 'site/account': 'Member settings', 'site/rewards': 'Rewards', 'site/sales': 'Price cuts', 'site/visibility': 'Show / hide' }
   /* One line about each part: its tile on the Overview, and the line under its heading. */
   const ABOUT = {
     'sales:orders': 'Shop orders and commissions: mark them packed and shipped, answer messages, send quotes.',
@@ -112,6 +114,7 @@
     'pages/about': 'Who you are: the heading, your story a panel at a time, and the artist file.',
     'pages/contact': 'The heading, the introduction and what visitors can say their message is about.',
     'site/brand': 'Site name, tagline, brand colour, logo, email, social links and the footer.',
+    'site/welcome': 'A card that greets visitors as they open the site: a sale on now, a discount code, a convention, or a message of your own.',
     'site/shop': 'Shop on or off, how buyers pay, currency, what you sell, signed pieces, delivery, emails to you.',
     'site/categories': 'Categories, sub categories, print sizes and the kinds of stickers & more: add, rename, reorder or hide them.',
     'site/visibility': 'Switch pages, parts of the home and Commissions pages, dark or light mode, the watermark and test data on or off.',
@@ -132,6 +135,7 @@
     'site/account': 'M12 12.200a4.200 4.200 0 1 0 0-8.400 4.200 4.200 0 0 0 0 8.400z M4 20.500c.800-3.600 4-5.800 8-5.800s7.200 2.200 8 5.800',
     'site/rewards': 'M8 4h8v5a4 4 0 0 1-8 0z M8 6H5a3 3 0 0 0 3 4 M16 6h3a3 3 0 0 1-3 4 M12 13v4 M8 20h8 M9.500 17h5v3h-5z',
     'site/sales': 'M20.600 13.400l-7.200 7.200a2 2 0 0 1-2.800 0L3 13V3h10l7.600 7.600a2 2 0 0 1 0 2.800z M7.500 7.500h.010 M9.500 15.500l6-6 M10.500 10.500h.010 M14.500 14.500h.010',
+    'site/welcome': 'M4 10v4h3l6 4V6L7 10z M16 9a4 4 0 0 1 0 6 M18.500 6.500a8 8 0 0 1 0 11',
     'site/visibility': 'M2.500 12s3.500-6.500 9.500-6.500 9.500 6.500 9.500 6.500-3.500 6.500-9.500 6.500S2.500 12 2.500 12z M12 9.500a2.500 2.500 0 1 0 0 5 2.500 2.500 0 0 0 0-5z',
   })
   ICONS.adminhome = 'M4 4h7v7H4z M13 4h7v4h-7z M13 10h7v10h-7z M4 13h7v7H4z'

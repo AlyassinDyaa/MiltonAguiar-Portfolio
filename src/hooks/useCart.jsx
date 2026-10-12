@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { canBuy, everything, priceOf, shop, signable, sizeOf, sizesOf } from '../data/site'
 import { useAccount } from './useAccount'
+import { SHIP_KEY, feeFor, postsTo, shipToGuess, shippingFor, shippingRules } from '../data/shipping'
 
 /* The cart. What a visitor has added is kept in their browser (so it survives a reload), as
    { slug, size, signed, qty } lines (size: the print size, for a piece sold in sizes). Every time it is read it is checked against the site's content:
@@ -106,7 +107,21 @@ export function CartProvider({ children }) {
   const dropCode = useCallback(() => setDiscount(null), [])
   const off = discount ? Math.round(Math.round(subtotal * 100) * discount.percent / 100) / 100 : 0
   const total = Math.round((subtotal - off) * 100) / 100
-  const value = { lines, count, subtotal, off, total, discount, applyCode, dropCode, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw }
+  /* Where it ships to (picked in the cart, kept in this browser) and what that costs from Portugal,
+     an estimate by the admin's zones (Shop → Settings & payments → Shipping costs), and the payment
+     fee for each way to pay when the admin adds one: worked out by the same rule as the checkout
+     (data/shipping.js), so the cart shows what is charged. `grand` is everything but the fee. */
+  const rules = useMemo(() => shippingRules(shop), [])
+  const countries = useMemo(() => (shop.shipping !== false ? postsTo(shop) : []), [])
+  const [shipTo, setShipToState] = useState(() => shipToGuess(countries))
+  const setShipTo = useCallback((c) => { setShipToState(c); try { localStorage.setItem(SHIP_KEY, c) } catch { /* only for this visit */ } }, [])
+  const totalCents = Math.round(total * 100)
+  const ship = countries.length ? shippingFor(rules, shipTo, count, totalCents) : { cents: 0, zone: null }
+  const shipCents = ship.none ? 0 : ship.cents
+  const fees = { on: rules.fees.on, card: feeFor(rules, 'card', totalCents + shipCents) / 100, paypal: feeFor(rules, 'paypal', totalCents + shipCents) / 100 }
+  const shipping = { charged: rules.charge, none: Boolean(ship.none), cents: shipCents, free: Boolean(ship.free), zone: ship.zone ? ship.zone.name : '' }
+  const grand = (totalCents + shipCents) / 100
+  const value = { lines, count, subtotal, off, total, grand, discount, applyCode, dropCode, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw, countries, shipTo, setShipTo, shipping, fees }
   return <Cart.Provider value={value}>{children}</Cart.Provider>
 }
 

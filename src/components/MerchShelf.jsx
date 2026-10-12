@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { asset, badge, canBuy, fromPrice, fullPrice, merchKinds, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
+import { asset, badge, canBuy, fullPrice, merchKinds, money, nowPrice, onSale, shop, sizesOf, soldOut, topSize } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Runner from './Runner'
 import ScrollRow from './ScrollRow'
@@ -105,7 +105,7 @@ function MerchCard({ p, tilt, onOpen }) {
           <span className="mc-price">
             {gone ? <b className="is-out">Sold out</b>
               : quick ? <><b className={sale ? 'is-sale' : ''}>{money(nowPrice(p, opt), true)}</b>{sale && <s>{money(fullPrice(p, opt), true)}</s>}</>
-                : <><i>from</i> <b>{money(fromPrice(p), true)}</b></>}
+                : <b>{money(nowPrice(p, topSize(p)), true)}</b>}
           </span>
           {canBuy(p) && (
             <button type="button" className={`mc-add ${added ? 'is-added' : ''}`} onClick={add} aria-label={quick ? `Add ${p.title}${opt ? `, ${opt}` : ''} to the cart` : `Choose an option of ${p.title}`}>

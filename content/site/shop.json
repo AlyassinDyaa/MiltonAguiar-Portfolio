@@ -47,5 +47,51 @@
   "emptyText": "Prints and originals are on their way. Follow along on Instagram to hear first.",
   "signedChoice": true,
   "pricePlace": "corner",
-  "look": "poster"
+  "look": "poster",
+  "shipCharge": false,
+  "zones": [
+    {
+      "name": "Portugal",
+      "countries": "PT",
+      "first": 5,
+      "extra": 1
+    },
+    {
+      "name": "Spain",
+      "countries": "ES",
+      "first": 8,
+      "extra": 1.5
+    },
+    {
+      "name": "Europe",
+      "countries": "FR, DE, IT, NL, BE, IE, LU, AT, DK, SE, FI, PL, CZ, SK, SI, HR, HU, RO, BG, GR, CY, MT, EE, LV, LT, CH, NO",
+      "first": 12,
+      "extra": 2
+    },
+    {
+      "name": "United Kingdom",
+      "countries": "GB",
+      "first": 14,
+      "extra": 2
+    },
+    {
+      "name": "USA and Canada",
+      "countries": "US, CA",
+      "first": 18,
+      "extra": 3
+    },
+    {
+      "name": "Rest of the world",
+      "countries": "*",
+      "first": 22,
+      "extra": 3
+    }
+  ],
+  "fees": {
+    "on": false,
+    "cardPercent": 1.5,
+    "cardFixed": 0.25,
+    "paypalPercent": 3.49,
+    "paypalFixed": 0.35
+  }
 }

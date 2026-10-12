@@ -9,6 +9,7 @@ import Preloader from './components/Preloader'
 import Nav from './components/Nav'
 import Footer from './components/Footer'
 import CartDrawer from './components/CartDrawer'
+import WelcomeCard from './components/WelcomeCard'
 import { CartProvider } from './hooks/useCart'
 import { AccountProvider, accountsWanted } from './hooks/useAccount'
 import Account from './pages/Account'
@@ -64,6 +65,8 @@ export default function App() {
       </AnimatePresence>
       <Footer />
       <CartDrawer />
+      {/* a sale on now, a discount code, a convention, a message: greets a visitor once the opening has played (Shop → Welcome card) */}
+      <WelcomeCard ready={ready} />
       {previewing && <div className="fresh-note" role="status">Admin view: showing your latest saved changes. Visitors see them in about a minute.</div>}
     </CartProvider>
     </AccountProvider>

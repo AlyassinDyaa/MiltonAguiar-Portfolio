@@ -93,9 +93,10 @@ export default async function handler(req, res) {
   // step one: an order for the cart
   // the logged-in customer first: a reward code in the cart works only for them
   const { user, mustLogIn } = await buyer(req)
-  const cart = await priceCart(body, user)
+  const cart = await priceCart({ ...body, way: 'paypal' }, user)
   if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message, ...(cart.error.code ? { code: true } : {}) })
-  const { shop, lines, name, what, summary, cents, off, deal } = cart
+  const { shop, lines, name, what, summary, cents, off, deal, fee, shipCents } = cart
+  const total = cents - off + shipCents + fee // the pieces after any discount, the shipping, and the PayPal fee when the admin adds one
   if (!takes(shop, 'paypal')) return res.status(403).json({ message: 'PayPal is switched off. Pay by card instead.' })
   if (mustLogIn) return res.status(401).json({ login: true, message: 'Log in, or make an account, to buy.' })
   const currency = String(shop.currency || 'eur').toUpperCase()
@@ -108,7 +109,7 @@ export default async function handler(req, res) {
       reference_id: 'shop',
       custom_id: summary.slice(0, 127),
       description: `${brand} shop`.slice(0, 127),
-      amount: { ...amount(cents - off), breakdown: { item_total: amount(cents), ...(off ? { discount: amount(off) } : {}) } },
+      amount: { ...amount(total), breakdown: { item_total: amount(cents), ...(off ? { discount: amount(off) } : {}), ...(shipCents ? { shipping: amount(shipCents) } : {}), ...(fee ? { handling: amount(fee) } : {}) } },
       items: lines.map((l) => ({ name: name(l).slice(0, 127), quantity: String(l.qty), unit_amount: amount(l.cents), category: shop.shipping !== false ? 'PHYSICAL_GOODS' : 'DIGITAL_GOODS', sku: l.slug.slice(0, 127), ...(what(l) ? { description: String(what(l)).slice(0, 127) } : {}) })),
     }],
     payment_source: { paypal: { experience_context: {
@@ -123,7 +124,7 @@ export default async function handler(req, res) {
     if (!go) throw new Error('paypal: no approval link')
     // kept as waiting until the buyer comes back and the payment is taken (each line with its piece kept on it)
     try {
-      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: (() => { const pieces = piecesNow(); return lines.map((l) => withPiece({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 }, pieces)) })(), bought: boughtOf(lines), amount: (cents - off) / 100, discount: off / 100, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
+      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: (() => { const pieces = piecesNow(); return lines.map((l) => withPiece({ name: name(l), qty: l.qty, amount: (l.cents * l.qty) / 100 }, pieces)) })(), bought: boughtOf(lines), amount: total / 100, discount: off / 100, shipping: shipCents / 100, fee: fee / 100, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
     } catch (e) { console.error('paypal order not saved:', e.message) }
     return res.status(200).json({ url: go.href })
   } catch (e) {

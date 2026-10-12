@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { checkCode, discountCents } from './_orders.js'
 import { priceWith, readSales, saleFor } from '../src/data/sales.js'
+import { feeFor, postsTo, shippingFor, shippingRules } from '../src/data/shipping.js'
 
 /* What a cart costs, worked out on the server from the site's own content (a leading underscore
    keeps Vercel from serving this file). Shared by the two ways to pay, Stripe (checkout.js) and
@@ -93,9 +94,23 @@ export async function priceCart(body, user = null) {
     deal = { code: c.code, percent: c.percent, label: c.label, promoId: c.promoId }
   }
   const cents = lines.reduce((t, l) => t + l.cents * l.qty, 0)
+  const off = deal ? discountCents(cents, deal.percent) : 0
+  // posting it: the country it goes to (one the shop posts to), and what that costs from Portugal
+  const rules = shippingRules(shop)
+  let country = '', ship = { cents: 0, zone: null }
+  if (shop.shipping !== false) {
+    const allowed = postsTo(shop)
+    country = String(b.country || '').trim().toUpperCase()
+    if (!allowed.includes(country)) return no(400, 'Pick the country it ships to, in the cart, and try again.')
+    ship = shippingFor(rules, country, lines.reduce((n, l) => n + l.qty, 0), cents - off)
+    if (ship.none) return no(409, 'The shop does not post there yet. Get in touch for a quote.')
+  }
+  // the payment fee, when the admin adds one: on the pieces after any discount, and the shipping
+  const way = b.way === 'paypal' ? 'paypal' : 'card'
+  const fee = feeFor(rules, way, cents - off + ship.cents)
   return {
-    shop, lines, deal, choice, cents,
-    off: deal ? discountCents(cents, deal.percent) : 0,
+    shop, lines, deal, choice, cents, off, country, way, fee,
+    shipCents: ship.cents, shipName: ship.zone ? ship.zone.name : '',
     name: (l) => `${String(l.piece.title || l.slug).slice(0, 90)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${l.signed == null ? '' : l.signed ? ' (signed)' : ' (unsigned)'}`,
     // what the buyer gets, and the shop sale on it ("Black Friday: 10% off"); the name above stays
     // as it is, since an order's pieces are read back from it (api/_orders.js describeItem)

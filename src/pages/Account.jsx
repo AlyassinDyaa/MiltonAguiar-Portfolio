@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Page from '../components/Page'
-import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, sizesOf, soldOut } from '../data/site'
+import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fullPrice, money, nowPrice, onSale, soldOut, topSize } from '../data/site'
 import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
 import PhoneField from '../components/PhoneField'
@@ -620,7 +620,7 @@ function Avatar({ user, size = 'md', owned = [] }) {
 /* a small piece card: picture, title, price; a heart to keep it for later */
 function PieceCard({ p }) {
   const { isSaved, toggleSaved } = useAccount()
-  const one = sizesOf(p)[0]?.name // the size whose price shows when there is only one price
+  const one = topSize(p) // the price shown: the dearest size's, as on the Shop's cards
   const saved = isSaved(p.slug)
   return (
     <div className="acct-piece">
@@ -632,7 +632,7 @@ function PieceCard({ p }) {
       </button>
       <div className="acct-piece-cap">
         <strong>{p.title}</strong>
-        <small>{soldOut(p) ? 'Sold out' : canBuy(p) ? (manyPrices(p) ? `From ${money(fromPrice(p), true)}` : <>{onSale(p, one) && <s>{money(fullPrice(p, one), true)}</s>} {money(nowPrice(p, one), true)}</>) : p.type || ''}</small>
+        <small>{soldOut(p) ? 'Sold out' : canBuy(p) ? <>{onSale(p, one) && <s>{money(fullPrice(p, one), true)}</s>} {money(nowPrice(p, one), true)}</> : p.type || ''}</small>
       </div>
     </div>
   )

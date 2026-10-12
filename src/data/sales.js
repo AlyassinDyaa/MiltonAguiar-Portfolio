@@ -42,6 +42,7 @@ export function readSales(file) {
       ends: when(s.ends, true),
       on: s.on !== false,
       banner: clean(s.banner),
+      announce: s.announce === true, // told in the welcome card as visitors arrive (Shop → Welcome card); on for a new price cut, as the form shows it
     }
   }).filter((s) => s.percent > 0 && (s.appliesTo === 'all' || s.value))
 }

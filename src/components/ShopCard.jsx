@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { asset, badge, brand, canBuy, filedUnder, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
+import { asset, badge, brand, canBuy, filedUnder, fullPrice, money, nowPrice, onSale, shop, sizesOf, soldOut, topSize } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import Poster from './Poster'
 import CartIcon from './CartIcon'
@@ -30,9 +30,8 @@ export default function ShopCard({ p, onOpen, eager = false }) {
     if (choose) return onOpen()
     cart.add(p.slug, false, sizes[0]?.name || ''); setAdded(true); setTimeout(() => cart.setOpen(true), 300)
   }
-  const from = manyPrices(p)
-  const one = sizes[0]?.name // the size whose price shows when there is only one price
-  const sale = !from && onSale(p, one)
+  const one = topSize(p) // the price shown: the dearest size's (its full price struck through when it is on sale)
+  const sale = onSale(p, one)
   const what = [p.type, filedUnder(p), sizes.length > 1 ? `${sizes.length} ${sizeWord[1]}` : sizes[0]?.name].filter(Boolean).join(' · ')
   const look = p.src ? p.look || 'poster' : 'plain'
   return (
@@ -57,7 +56,7 @@ export default function ShopCard({ p, onOpen, eager = false }) {
         <span className="pc-row">
           <strong className="pc-title">{p.title}</strong>
           <span className="pc-price">
-            {gone ? <b className="is-out">Sold out</b> : from ? <><i>from</i><b>{money(fromPrice(p), true)}</b></> : <><b className={sale ? 'is-sale' : ''}>{money(nowPrice(p, one), true)}</b>{sale && <s>{money(fullPrice(p, one), true)}</s>}</>}
+            {gone ? <b className="is-out">Sold out</b> : <><b className={sale ? 'is-sale' : ''}>{money(nowPrice(p, one), true)}</b>{sale && <s>{money(fullPrice(p, one), true)}</s>}</>}
           </span>
         </span>
         {(what || (tag && shop.tagPlace === 'below')) && (

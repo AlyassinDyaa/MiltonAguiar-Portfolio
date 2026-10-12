@@ -1,6 +1,6 @@
 import { priceCart, takes } from './_cart.js'
 import { buyer } from './_buyer.js'
-import { SITE, boughtOf } from './_orders.js'
+import { SITE, boughtOf, discountCents } from './_orders.js'
 
 /* Paying by card, through Stripe. The site sends the cart (see _cart.js); this works out what it
    costs from the site's own content, asks Stripe for one checkout page with a line per piece, and
@@ -25,9 +25,9 @@ export default async function handler(req, res) {
   const key = process.env.STRIPE_SECRET_KEY
   // the logged-in customer first: a reward code in the cart works only for them
   const { user, mustLogIn } = await buyer(req)
-  const cart = await priceCart(req.body, user)
+  const cart = await priceCart({ ...(req.body && typeof req.body === 'object' ? req.body : {}), way: 'card' }, user)
   if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message, ...(cart.error.code ? { code: true } : {}) })
-  const { shop, lines, deal, name, what, summary } = cart
+  const { shop, lines, deal, name, what, summary, cents, off, country, fee, shipCents, shipName } = cart
   if (!takes(shop, 'stripe')) return res.status(403).json({ message: 'Card payment is switched off. Pay with PayPal instead.' })
   if (!key) return res.status(503).json({ message: 'Card payment is not set up yet. Get in touch to buy a piece.' })
   if (mustLogIn) return res.status(401).json({ login: true, message: 'Log in, or make an account, to buy.' })
@@ -47,6 +47,19 @@ export default async function handler(req, res) {
     if (what(l)) ask.set(`${at}[price_data][product_data][description]`, String(what(l)).slice(0, 500))
     if (typeof l.piece.src === 'string' && l.piece.src.startsWith('/')) ask.set(`${at}[price_data][product_data][images][0]`, origin + l.piece.src)
   })
+  // the payment fee, when the admin adds one, as its own line. A discount code comes off every line
+  // on Stripe's page, the fee's too, so with a code the line is raised just enough that, once the
+  // code has come off, it is the fee the cart showed
+  if (fee > 0) {
+    let feeLine = fee
+    if (deal) for (let a = fee; a < fee * 3 + 200; a++) { if (a - discountCents(cents + a, deal.percent) + off === fee) { feeLine = a; break } }
+    const at = `line_items[${lines.length}]`
+    ask.set(`${at}[quantity]`, '1')
+    ask.set(`${at}[price_data][currency]`, String(shop.currency || 'eur').toLowerCase())
+    ask.set(`${at}[price_data][unit_amount]`, String(feeLine))
+    ask.set(`${at}[price_data][product_data][name]`, 'Card payment fee')
+    ask.set('metadata[fee]', String(fee))
+  }
   ask.set('metadata[order]', summary.slice(0, 500))
   ask.set('metadata[site]', SITE) // this site's checkout (see api/_orders.js)
   // the code from the cart, applied on Stripe's page; the webhook (api/stripe-webhook.js) and the
@@ -64,9 +77,18 @@ export default async function handler(req, res) {
     const bought = JSON.stringify(boughtOf(lines))
     if (bought.length <= 500) ask.set('metadata[bought]', bought)
   }
+  // posted: the address must be in the country the cart priced the shipping for, and the shipping
+  // is its own line (a discount code never comes off it)
   if (shop.shipping !== false) {
-    const countries = (Array.isArray(shop.countries) ? shop.countries : []).map((c) => String(c).trim().toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c))
-    ;(countries.length ? countries : ['PT']).forEach((c, i) => ask.set(`shipping_address_collection[allowed_countries][${i}]`, c))
+    ask.set('shipping_address_collection[allowed_countries][0]', country)
+    ask.set('metadata[country]', country)
+    if (shipName) {
+      ask.set('shipping_options[0][shipping_rate_data][type]', 'fixed_amount')
+      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(shipCents))
+      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][currency]', String(shop.currency || 'eur').toLowerCase())
+      ask.set('shipping_options[0][shipping_rate_data][display_name]', (shipCents ? `Shipping to ${shipName}` : `Free shipping to ${shipName}`).slice(0, 100))
+      ask.set('metadata[shipping]', String(shipCents))
+    }
   }
 
   try {

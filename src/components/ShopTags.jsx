@@ -1,4 +1,4 @@
-import { badge, buyable, fromPrice, fullPrice, manyPrices, money, nowPrice, onSale, shop, sizesOf, soldOut } from '../data/site'
+import { badge, buyable, fullPrice, money, nowPrice, onSale, shop, soldOut, topSize } from '../data/site'
 
 /* A card's price and its New / Sale / Sold out tag. Where each sits is set in the admin (Shop and
    payments): on the top corners of the picture, or in the caption with the title. Given a piece
@@ -9,10 +9,8 @@ export default function ShopTags({ p, place }) {
   const price = buyable(p) && !soldOut(p)
   const priceUp = shop.pricePlace !== 'below'
   const tagUp = shop.tagPlace !== 'below'
-  const one = sizesOf(p)[0]?.name // a piece sold in one size (or none) shows that price; in sizes that cost different amounts, "from" the lowest
-  const amount = manyPrices(p)
-    ? <><small>From</small>{money(fromPrice(p), true)}</>
-    : <>{onSale(p, one) && <s>{money(fullPrice(p, one), true)}</s>}{money(nowPrice(p, one), true)}</>
+  const one = topSize(p) // the price shown: the dearest size's, as on the Shop's cards
+  const amount = <>{onSale(p, one) && <s>{money(fullPrice(p, one), true)}</s>}{money(nowPrice(p, one), true)}</>
   if (place === 'art') {
     return (
       <>

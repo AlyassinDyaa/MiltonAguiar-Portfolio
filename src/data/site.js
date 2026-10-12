@@ -67,6 +67,10 @@ export let redraws
    after the cover, a spread counting as two. */
 export let comics
 export let events
+/* The welcome card (Shop → Welcome card): whether it is on, whether it tells of a sale on now, a
+   discount code for everyone (and what it gives), the convention it announces (its slug) and until
+   when, a message of the admin's own, and how often a visitor sees it (components/WelcomeCard.jsx). */
+export let welcome
 /* Shop sales (Shop → Sales): every sale the admin has set, live or not (see data/sales.js). Which
    are running is worked out in the browser each time, so a sale starts and ends by itself
    without the site being rebuilt. */
@@ -290,6 +294,7 @@ function assemble(content) {
     .map((r) => ({ ...r, stages: (r.stages || []).filter((s) => s && s.year) }))
     .filter((r) => r.stages.length > 1)
   events = live(folder('events')).filter((e) => e.name).sort(byOrder)
+  welcome = { on: true, sale: true, code: '', codeText: '', event: '', until: '', title: '', text: '', button: '', url: '', often: 'once', ...given(site('welcome')) }
   // the comics with a cover, lowest order first (then by title); pages without a picture left out
   const rank = (c) => (c.order === '' || c.order == null ? 99 : Number(c.order))
   comics = live(folder('comics'))
@@ -370,6 +375,9 @@ export const fullPrice = (piece, size) => priceOf(piece, size).price
 export const nowPrice = (piece, size) => priceOf(piece, size).now
 /* The lowest price it can be had for, and whether there is more than one ("from €20"). */
 export const fromPrice = (piece) => { const all = sizesOf(piece); return all.length ? Math.min(...all.map((r) => r.now)) : nowPrice(piece) }
+/* The size (or option) that costs the most, by its price now: the price a card shows, and the size
+   a piece opens on, so the two agree (the cheaper sizes are a pick away). */
+export const topSize = (piece) => { const all = sizesOf(piece); return all.length ? all.reduce((a, r) => (r.now > a.now ? r : a)).name : undefined }
 export const manyPrices = (piece) => new Set(sizesOf(piece).map((r) => r.now)).size > 1
 /* It can go into a checkout: it shows a price and is not sold out. */
 export const canBuy = (piece) => buyable(piece) && !soldOut(piece)

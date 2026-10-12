@@ -3,7 +3,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, signable, sizeNotes, sizesOf, soldOut } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, signable, sizeNotes, sizesOf, soldOut, topSize } from '../data/site'
+import { shippingFor, shippingRules } from '../data/shipping'
+
+const regionNames = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }) } catch { return null } })()
+const shipName = (c) => { try { return (regionNames && regionNames.of(c)) || c } catch { return c } }
 import Dropdown from './Dropdown'
 import { checkout, payLine } from '../data/checkout'
 import { QuoteGo } from './QuoteLink'
@@ -48,7 +52,7 @@ export default function Buy({ piece }) {
   const [note, setNote] = useState('')
   const [signed, setSigned] = useState(false) // a signature, when the admin offers one: off to start with
   const [added, setAdded] = useState(false)
-  const [size, setSize] = useState(() => sizesOf(piece)[0]?.name || '') // the print size: the first to start with
+  const [size, setSize] = useState(() => topSize(piece) || '') // the print size: the dearest to start with, the price its card shows
   useEffect(() => { if (!added) return; const t = setTimeout(() => setAdded(false), 1800); return () => clearTimeout(t) }, [added])
   if (!buyable(piece)) return null
   const choice = signable(piece) // signed or not: art only, while the admin offers it
@@ -65,7 +69,7 @@ export default function Buy({ piece }) {
   const buyNow = async (way) => {
     if (busy || out) return
     setBusy(way); setNote('')
-    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}) }, way)
+    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}) }, way)
     if (problem) { setNote(problem); setBusy(false) } // otherwise it stays "busy" while the page changes
   }
   return (
@@ -114,6 +118,11 @@ export default function Buy({ piece }) {
             {ways.card && !mustLogIn && <button type="button" className={`buy-now ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => buyNow('card')} aria-busy={busy === 'card'}>{busy === 'card' ? 'Opening secure checkout…' : `${shop.buttonLabel} now${ways.paypal ? ' by card' : ''}`} <span aria-hidden="true">→</span></button>}
             {inCart > 0 && <button type="button" className="buy-incart" onClick={() => cart.setOpen(true)}>{inCart} in your cart</button>}
           </div>
+          {/* buying it alone: the shipping to the country picked in the cart (an estimate from Portugal) */}
+          {cart.shipping.charged && cart.countries.length > 0 && (() => {
+            const one = shippingFor(shippingRules(shop), cart.shipTo, 1, Math.round((now + extra) * 100))
+            return <p className="buy-ship">{one.none ? 'Shipping there: ask for a quote' : one.cents ? `+ ${money(one.cents / 100, true)} estimated shipping` : 'Free shipping'} to {shipName(cart.shipTo)} <button type="button" onClick={() => cart.setOpen(true)}>change</button></p>
+          })()}
           <p className="buy-secure"><Lock /><span>{payLine()}{where ? ` · Ships to ${where}` : ''}</span></p>
         </>
       )}

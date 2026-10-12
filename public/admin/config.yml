@@ -665,7 +665,34 @@ collections:
           - { name: signedChoice, label: Buyers can add a signature, widget: boolean, default: false, required: false, hint: 'On: every piece has a "Signed by …" switch beside its price, off to start with; the order says signed or unsigned. Off: no switch.' }
           - { name: signedExtra, label: Extra for a signed piece, widget: number, value_type: float, min: 0, default: 0, required: false, hint: 'Added to the price when the buyer switches the signature on. 0 for no extra cost.' }
           - { name: shipping, label: Ask for a delivery address, widget: boolean, default: true, required: false, hint: 'On for anything you post. Off for downloads.' }
-          - { name: countries, label: Countries you post to, widget: list, required: false, hint: 'Two-letter country codes, separated by commas: PT, ES, FR, GB, US.' }
+          - { name: countries, label: Countries you post to, widget: list, required: false, hint: 'Two-letter country codes, separated by commas: PT, ES, FR, GB, US. Buyers pick one of these in the cart.' }
+          - { name: shipCharge, label: Charge for delivery, widget: boolean, default: false, required: false, hint: 'On: the cart asks where it ships to and adds the shipping below for that country (an estimate, from Portugal), and the checkout charges it. Off: no shipping is charged.' }
+          - name: zones
+            label: Shipping costs
+            label_singular: zone
+            widget: list
+            collapsed: true
+            required: false
+            summary: '{{fields.name}} — {{fields.first}}'
+            hint: 'One row per place you post to. The first row naming the buyer''s country counts; * catches everywhere else. Shipping is the first piece''s price, plus the extra for each piece after it, and nothing when the order (after any discount) reaches "free over".'
+            fields:
+              - { name: name, label: Name, widget: string, hint: 'What the buyer sees, for example "Europe".' }
+              - { name: countries, label: Countries, widget: string, hint: 'Two-letter codes, separated by commas (PT, ES), or * for everywhere else.' }
+              - { name: first, label: First piece, widget: number, value_type: float, min: 0 }
+              - { name: extra, label: Each piece after it, widget: number, value_type: float, min: 0, required: false }
+              - { name: freeOver, label: Free over, widget: number, value_type: float, min: 0, required: false, hint: 'Empty: never free.' }
+          - name: fees
+            label: Payment fee
+            widget: object
+            collapsed: false
+            required: false
+            hint: 'Passes what Stripe or PayPal keeps on to the buyer, as a line at the checkout. Careful: in the EU (Portugal included) a fee for paying by most consumer cards is not allowed (the PSD2 surcharge ban), and PayPal''s own rules on fees differ by country, so check before switching it on.'
+            fields:
+              - { name: 'on', label: Add a payment fee, widget: boolean, default: false, required: false }
+              - { name: cardPercent, label: Card (Stripe) percent, widget: number, value_type: float, min: 0, required: false, default: 1.5 }
+              - { name: cardFixed, label: Card (Stripe) fixed, widget: number, value_type: float, min: 0, required: false, default: 0.25 }
+              - { name: paypalPercent, label: PayPal percent, widget: number, value_type: float, min: 0, required: false, default: 3.49 }
+              - { name: paypalFixed, label: PayPal fixed, widget: number, value_type: float, min: 0, required: false, default: 0.35 }
           - name: emails
             label: Emails to you
             widget: object
@@ -913,6 +940,30 @@ collections:
               - { name: ends, label: Ends, widget: datetime, required: false, hint: 'Empty: until you switch it off.' }
               - { name: 'on', label: 'On', widget: boolean, default: true, required: false }
               - { name: banner, label: Line on the Shop page, widget: string, required: false, hint: 'Shown after the name, in a red band above the pieces while it runs. Empty: made for you, e.g. "10% off everything until 31 Oct" or "15% off Fan art".' }
+              - { name: announce, label: In the welcome card, widget: boolean, default: true, required: false, hint: 'While it runs, the card that greets visitors as they open the site tells them about it (Shop → Welcome card).' }
+      - name: welcome
+        label: Welcome card
+        file: content/site/welcome.json
+        fields:
+          - { name: 'on', label: Welcome card, widget: boolean, default: true, hint: 'A card that greets visitors as they open the site, once the opening has played, when there is something to tell: a sale running, a discount code, a convention coming up, or a message of your own. With nothing to tell, it does not show.' }
+          - { name: sale, label: A sale on now, widget: boolean, default: true, hint: 'While a price cut is running (Shop → Price cuts) and its "In the welcome card" is on, the card says so: its name, what it takes off and until when, and a button to the Shop. It starts and stops with the price cut.' }
+          - { name: code, label: A discount code, widget: string, required: false, hint: 'A code for everyone, made under Shop → Discount codes (for example WELCOME10). The card shows it with a button that puts it straight in the visitor''s cart, and one to copy it. Empty: no code.' }
+          - { name: codeText, label: What the code gives, widget: string, required: false, hint: 'For example "10% off your first order". Empty: "A discount on your order".' }
+          - { name: event, label: A convention, widget: relation, collection: events, value_field: '{{slug}}', search_fields: [name], display_fields: [name], required: false, hint: 'Pick one from Your art → Conventions to announce it: its picture, name, when and where, and its link. Empty: no convention.' }
+          - { name: until, label: 'Show the code, the convention and your message until', widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, required: false, hint: 'The last day they show (the sale stops by itself). Empty: until you take them off.' }
+          - { name: title, label: Heading, widget: string, required: false, hint: 'A message of your own, for example "Free shipping this week" or "New prints are in". With a heading it shows even without a sale or a convention.' }
+          - { name: text, label: Message, widget: text, required: false }
+          - { name: button, label: Button words, widget: string, required: false, hint: 'For example "See the prints". Empty: no button.' }
+          - { name: url, label: Button goes to, widget: string, required: false, hint: 'A page of the site (/shop, /commissions) or a full web address.' }
+          - name: often
+            label: How often a visitor sees it
+            widget: select
+            default: once
+            options:
+              - { label: 'The first time someone opens the site (once per browser)', value: once }
+              - { label: 'Once a day', value: day }
+              - { label: 'Once each visit', value: visit }
+            hint: 'Whatever is chosen, a new sale, code, convention or message shows again to everyone.'
       - name: visibility
         label: Show / hide
         file: content/site/visibility.json

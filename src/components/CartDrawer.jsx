@@ -14,6 +14,10 @@ const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
    it; each piece with its picture, signed or not, how many and what it comes to; a discount code
    (a link that opens the box for it); then the total and the buttons that pay for all of it on a
    single Stripe or PayPal page. */
+/* A country's name in English, from its two-letter code ("PT" → "Portugal"). */
+const names = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }) } catch { return null } })()
+const countryName = (c) => { try { return (names && names.of(c)) || c } catch { return c } }
+
 export default function CartDrawer() {
   const cart = useCart()
   const account = useAccount()
@@ -51,7 +55,7 @@ export default function CartDrawer() {
   const pay = async (way) => {
     if (busy || !lines.length) return
     setBusy(way); setNote('')
-    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(cart.discount ? { code: cart.discount.code } : {}) }, way, cart.dropCode)
+    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(cart.discount ? { code: cart.discount.code } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}) }, way, cart.dropCode)
     if (problem) { setNote(problem); setBusy(false) }
   }
 
@@ -146,7 +150,22 @@ export default function CartDrawer() {
                     <button type="button" className="cart-code-open" onClick={() => setCodeOpen(true)}>Have a discount code?</button>
                   )}
                   {cart.discount && <div className="cart-total is-sub"><span>Before the discount</span><s>{money(cart.subtotal, true)}</s></div>}
-                  <div className="cart-total"><span>Total</span><strong>{money(cart.total)}</strong></div>
+                  {/* where it ships to, and (when the admin charges for delivery) what that costs from Portugal */}
+                  {cart.countries.length > 0 && (
+                    <div className="cart-ship">
+                      <label>
+                        <span>Ship to</span>
+                        <select value={cart.shipTo} onChange={(e) => cart.setShipTo(e.target.value)} aria-label="Country it ships to">
+                          {cart.countries.map((c) => <option key={c} value={c}>{countryName(c)}</option>)}
+                        </select>
+                      </label>
+                      {cart.shipping.charged && <strong>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</strong>}
+                    </div>
+                  )}
+                  {cart.shipping.charged && !cart.shipping.none && <p className="cart-small">{cart.shipping.free ? 'Free shipping on this order' : 'Shipping is an estimate'}, posted from Portugal.</p>}
+                  <div className="cart-total"><span>Total</span><strong>{money(cart.grand)}</strong></div>
+                  {/* the payment fee, when the admin adds one: it depends on the way to pay */}
+                  {cart.fees.on && (ways.card || ways.paypal) && <p className="cart-small">A payment fee is added at the checkout: {[ways.card && `${money(cart.fees.card, true)} by card`, ways.paypal && `${money(cart.fees.paypal, true)} with PayPal`].filter(Boolean).join(' · ')}.</p>}
                   {shop.shipping !== false && <p className="cart-small">You enter your delivery address on the next page.</p>}
                   {mustLogIn ? (
                     <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>

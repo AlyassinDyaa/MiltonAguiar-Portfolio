@@ -308,7 +308,13 @@ export const sendMail = async (mail) => {
     return false
   }
   const html = emailHtml(mail)
-  const from = process.env.MAIL_FROM || `${brand} <${process.env.SMTP_USER}>`
+  // the address the site sends from; a message from a visitor (the Contact and Commission forms)
+  // carries their name as the sender's name, "Dyaa Alyassin via Milton Aguiar", on that same address
+  // (no site can send from the visitor's own address: inboxes would turn it away as forged)
+  const base = process.env.MAIL_FROM || `${brand} <${process.env.SMTP_USER}>`
+  const address = (base.match(/<([^>]+)>/) || [])[1] || base.trim()
+  const plain = (v) => String(v).replace(/["<>\r\n]/g, '')
+  const from = mail.fromName ? `"${plain(mail.fromName).slice(0, 60)} via ${plain(brand)}" <${address}>` : base
   const replyTo = mail.replyTo || process.env.MAIL_REPLY_TO || undefined // a contact message: replies go to the visitor
   // a mailing to many: mail apps show their own Unsubscribe button from this header
   const list = mail.list && mail.list.unsubscribe ? { unsubscribe: mail.list.unsubscribe } : null

@@ -8,11 +8,11 @@
   "sizes": [
     {
       "size": "A3",
-      "price": 20
+      "price": 15
     },
     {
       "size": "A4",
-      "price": 10
+      "price": 8
     }
   ],
   "status": "none",
@@ -21,6 +21,6 @@
   "inShop": true,
   "hover": "/uploads/superman-frame.png",
   "face": "47,17,299",
-  "category": "Fan art",
+  "category": "Fan Art",
   "look": "default"
 }

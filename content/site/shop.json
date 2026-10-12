@@ -43,7 +43,7 @@
   "intro": "Prints and original art, straight from the drawing board. Open any piece to buy it.",
   "tagPlace": "corner",
   "fees": {
-    "on": true,
+    "on": false,
     "cardPercent": 1.5,
     "cardFixed": 0.25,
     "paypalPercent": 3.49,

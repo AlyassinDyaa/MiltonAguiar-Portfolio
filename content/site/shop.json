@@ -52,7 +52,7 @@
   "payments": "both",
   "shipping": true,
   "thanksTitle": "Thank you.",
-  "shipCharge": false,
+  "shipCharge": true,
   "currency": "eur",
   "note": "",
   "signedExtra": 5,

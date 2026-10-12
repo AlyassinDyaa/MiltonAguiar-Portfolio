@@ -2817,3 +2817,38 @@ form.lined .acc-phone-number input { padding-right: 0; }
 .cart-ship strong { font-family: var(--display); font-size: 1.05rem; font-style: italic; white-space: nowrap; }
 .buy-ship { margin: 10px 0 0; font-size: 0.86rem; color: var(--fg-dim); }
 .buy-ship button { padding: 0; margin-left: 4px; color: var(--fg); background: none; border: 0; border-bottom: 1px solid var(--accent); cursor: pointer; font: inherit; }
+
+/* ---------- the cart, tidied: the pieces, the little extras and the order's sums scroll together,
+   the total and the ways to pay stay at the foot ---------- */
+.cart-panel { overflow: hidden; }
+.cart-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 6px; }
+.cart-body .cart-lines { flex: none; min-height: 0; overflow: visible; padding: 4px 18px 14px; gap: 10px; }
+.cart-body .cart-lines li { grid-template-columns: 60px minmax(0, 1fr); gap: 12px; padding: 10px 36px 10px 10px; }
+.cart-body .cart-thumb { width: 60px; }
+.cart-body .cart-info strong { font-size: 1.05rem; }
+.cart-body .cart-row { margin-top: 6px; }
+.cart-body .cart-qty button { width: 30px; height: 30px; }
+.cart-body .cart-price { font-size: 1.15rem; }
+.cart-body .cart-extras { padding: 2px 0 14px; }
+.cart-body .cart-extras h3 { margin: 0 18px 8px; }
+.cart-body .cart-extras ul { padding: 0 18px 4px; }
+.cart-sum { display: grid; gap: 10px; margin: 0 18px; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line-strong); }
+.cart-sum-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; font-size: 0.92rem; color: var(--fg-dim); }
+.cart-sum-row b { font-family: var(--display); font-size: 1.1rem; font-weight: 800; font-style: italic; white-space: nowrap; color: var(--fg); }
+.cart-sum-row.is-off span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.cart-sum-row.is-off em { padding: 2px 8px; font-family: var(--display); font-style: normal; font-weight: 800; letter-spacing: 0.08em; border: 1px dashed var(--gold); color: var(--fg); }
+.cart-sum-row.is-off b { color: var(--gold-ink); }
+.cart-sum-row.is-off .cart-discount-x { width: 24px; height: 24px; }
+.cart-sum-row.is-ship label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cart-sum-row.is-ship select { min-width: 0; max-width: 170px; padding: 5px 6px; font: inherit; font-size: 0.86rem; color: var(--fg); background: var(--page); border: 1px solid var(--line-strong); }
+.cart-sum-row.is-fee b { font-family: inherit; font-size: 0.86rem; font-weight: 700; font-style: normal; color: var(--fg-dim); }
+.cart-sum .cart-code-open, .cart-sum .cart-code { margin: 2px 0 0; }
+.cart-sum .cart-small { margin: 0; padding-top: 8px; border-top: 1px dashed var(--line); }
+.cart-after { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 18px 10px; }
+.cart-after .cart-account { margin: 0; text-align: left; font-size: 0.82rem; }
+.cart-after .cart-clear { margin: 0; flex: none; }
+.cart-pay { flex: 0 0 auto; padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); background: var(--panel); border-top: var(--rule) solid var(--accent); box-shadow: 0 -14px 30px rgba(0, 0, 0, 0.25); }
+.cart-pay .cart-total strong { font-size: 2rem; }
+.cart-pay .buy-btn { margin-top: 10px; }
+.cart-pay .pp-btn { margin-top: 8px; }
+.cart-pay .buy-secure { margin: 10px 0 0; justify-content: center; }

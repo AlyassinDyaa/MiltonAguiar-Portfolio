@@ -7,11 +7,11 @@
   "sizes": [
     {
       "size": "A3",
-      "price": 20
+      "price": 15
     },
     {
       "size": "A4",
-      "price": 10
+      "price": 8
     }
   ],
   "status": "new",

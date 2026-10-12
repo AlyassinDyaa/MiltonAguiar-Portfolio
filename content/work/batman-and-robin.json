@@ -10,7 +10,7 @@
   "sizes": [
     {
       "size": "A3",
-      "price": 1,
+      "price": 15,
       "salePrice": ""
     },
     {
@@ -22,7 +22,7 @@
   "note": "Drawn for Batman Day. Batman is the character that made me want to draw comics.",
   "status": "none",
   "title": "Dynamic Duo",
-  "type": "Original art",
+  "type": "Prints",
   "link": "https://www.instagram.com/p/DdegDM4DkCz/",
   "inShop": true,
   "hover": "/uploads/batman-and-robin-frame.webp",

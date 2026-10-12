@@ -7,18 +7,19 @@
   "sizes": [
     {
       "size": "A3",
-      "price": 20
+      "price": 15
     },
     {
       "size": "A4",
-      "price": 10
+      "price": 8
     }
   ],
   "status": "none",
   "title": "Wanda Maximoff",
+  "type": "Prints",
   "inShop": true,
   "hover": "/uploads/scarlet-witch-frame.png",
   "face": "65,13,309",
-  "category": "Fan art",
+  "category": "Fan Art",
   "look": "default"
 }

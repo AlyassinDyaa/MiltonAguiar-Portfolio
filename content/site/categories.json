@@ -68,15 +68,18 @@
   "merchKinds": [
     {
       "hidden": false,
-      "name": "Stickers"
+      "name": "Stickers",
+      "extras": true
     },
     {
       "hidden": false,
-      "name": "Photo Cards"
+      "name": "Photo Cards",
+      "extras": false
     },
     {
       "hidden": false,
-      "name": "Bookmark"
+      "name": "Bookmark",
+      "extras": false
     }
   ]
 }

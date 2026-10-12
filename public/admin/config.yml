@@ -747,10 +747,11 @@ collections:
             collapsed: false
             required: false
             summary: '{{fields.name}}'
-            hint: 'Stickers, Bookmarks, Pins, Patches... What each item under Stickers & more is. The Shop page can be filtered by it, in this order. Beside each, what the buyer gets (shown when an item is opened). Hide: left out of the drop-down, but its items stay in the Shop.'
+            hint: 'Stickers, Bookmarks, Pins, Patches... What each item under Stickers & more is. The Shop page can be filtered by it, in this order. Beside each, what the buyer gets (shown when an item is opened), and whether its items are offered in the cart as little extras. Hide: left out of the drop-down, but its items stay in the Shop.'
             fields:
               - { name: name, label: Name, widget: string }
               - { name: note, label: What the buyer gets, widget: string, required: false, hint: 'For example "Vinyl, waterproof, about 7 cm".' }
+              - { name: extras, label: "In the cart's little extras", widget: boolean, default: false, required: false, hint: 'On: items of this kind are offered in the cart, one tap each, when it holds a piece of art.' }
               - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
 
       - name: account

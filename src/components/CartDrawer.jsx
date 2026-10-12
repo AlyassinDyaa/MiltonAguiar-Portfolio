@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { asset, canBuy, merchForSale, money, nowPrice, payWays, shop, shows, signable, sizesOf } from '../data/site'
+import { accountPage, asset, canBuy, extrasKinds, merchForSale, money, nowPrice, payWays, shop, shows, signable, sizesOf } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
 import { checkout, payLine } from '../data/checkout'
 import { Elsewhere, Lock, PaypalButton } from './Buy'
+import Dropdown from './Dropdown'
+import ScrollRow from './ScrollRow'
 
 const EASE = [0.16, 1, 0.3, 1]
 const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
@@ -40,6 +43,13 @@ export default function CartDrawer() {
   }
   const { open, lines } = cart
   const setOpen = (v) => { if (!v) setNote(''); cart.setOpen(v) }
+  // the points this order earns (Rewards → Points): for what the pieces come to after any code, as the
+  // account is paid them once it is paid (not the shipping, nor a payment fee); a visitor is asked to log in for them
+  const pts = accountPage.points || {}
+  const earns = account.on && pts.on && pts.perUnit > 0 ? Math.floor(cart.total * pts.perUnit) : 0
+  const pointsLine = earns > 0 && (account.user
+    ? <p className="cart-points"><b>+{earns} {pts.name}</b> with this order</p>
+    : <p className="cart-points"><Link to="/account/login?next=/shop" onClick={() => cart.setOpen(false)}>Log in</Link> to earn <b>{earns} {pts.name}</b> with this order</p>)
   // two steps: the cart, then checkout (shipping, totals, the ways to pay); it opens on the cart
   const [step, setStep] = useState('cart')
   useEffect(() => { if (open) setStep('cart') }, [open])
@@ -63,7 +73,9 @@ export default function CartDrawer() {
     if (problem) { setNote(problem); setBusy(false) }
   }
 
-  return (
+  // drawn at the top of the page, so it opens over a piece's window too (Add to cart in it)
+  if (typeof document === 'undefined') return null
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div className="cart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} onClick={() => setOpen(false)} data-lenis-prevent>
@@ -72,6 +84,8 @@ export default function CartDrawer() {
               <div>
                 <div className="cart-kicker">{lines.length ? (step === 'pay' ? 'Step 2 of 2 · Checkout' : 'Step 1 of 2 · Your cart') : 'Your cart'}</div>
                 <h2 className="cart-title">{!cart.count ? 'Empty for now' : step === 'pay' ? 'Checkout' : things(cart.count)}</h2>
+                {/* emptying it: under the count, out of the way of the pieces */}
+                {lines.length > 0 && step === 'cart' && <button type="button" className="cart-clear is-head" onClick={cart.clear}>Empty the cart</button>}
               </div>
               <button type="button" className="cart-x" onClick={() => setOpen(false)} aria-label="Close the cart">×</button>
             </header>
@@ -115,15 +129,17 @@ export default function CartDrawer() {
                       </AnimatePresence>
                     </ul>
 
-                    {/* little extras: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option) */}
+
+                    </div>
+                    {/* little extras, kept at the foot of the cart above the subtotal: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option); a row that swipes, with arrows */}
                     {(() => {
                       if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
-                      const extras = merchForSale.filter((p) => canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8)
+                      const extras = merchForSale.filter((p) => extrasKinds.has(String(p.type || '').trim()) && canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8) // only the kinds ticked "In the cart's little extras"
                       if (!extras.length) return null
                       return (
                         <div className="cart-extras">
                           <h3>{shop.extrasTitle}</h3>
-                          <ul data-lenis-prevent>
+                          <ScrollRow as="ul" className="cart-extras-row" label={shop.extrasTitle}>
                             {extras.map((p) => {
                               const opt = sizesOf(p)[0]?.name || ''
                               return (
@@ -134,18 +150,44 @@ export default function CartDrawer() {
                                 </li>
                               )
                             })}
-                          </ul>
+                          </ScrollRow>
                         </div>
                       )
                     })()}
-
-                      <section className="cart-sum" aria-label="Your cart">
+                    <footer className="cart-pay">
+                      <div className="cart-total"><span>Subtotal</span><strong>{money(cart.total)}</strong></div>
+                      {pointsLine}
+                      <button type="button" className="btn buy-btn" onClick={() => setStep('pay')}>
+                        <span>{shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
+                        <span className="buy-btn-icon" aria-hidden="true">→</span>
+                      </button>
+                      <p className="cart-small is-center">{shop.shipping !== false ? 'Shipping and the way to pay come next.' : 'The way to pay comes next.'}</p>
+                    </footer>
+                  </>
+                ) : (
+                  <>
+                    {/* step 2, checkout: back to edit the cart (its pieces are not listed again), where it goes and what that costs, the totals, and the ways to pay */}
+                    <div className="cart-body" data-lenis-prevent>
+                      <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to edit your cart</button>
+                      {/* where it ships to: the site's own drop-down */}
+                      {cart.countries.length > 0 && (
+                        <Dropdown className="cart-shipto" label="Ship to" value={cart.shipTo} onChange={cart.setShipTo}
+                          options={cart.countries.map((c) => ({ value: c, label: countryName(c) }))} />
+                      )}
+                      <section className="cart-sum is-order" aria-labelledby="cart-order-title">
+                        <h3 className="cart-sum-head" id="cart-order-title">Your order</h3>
                         <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
                         {cart.discount && (
                           <div className="cart-sum-row is-off">
                             <span><em>{cart.discount.code}</em> {cart.discount.percent}% off <button type="button" className="cart-discount-x" onClick={cart.dropCode} aria-label={`Remove the code ${cart.discount.code}`}>×</button></span>
                             <b>−{money(cart.off, true)}</b>
                           </div>
+                        )}
+                        {cart.countries.length > 0 && cart.shipping.charged && (
+                          <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b></div>
+                        )}
+                        {cart.fees.on && (ways.card || ways.paypal) && (
+                          <div className="cart-sum-row is-fee"><span>Payment fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
                         )}
                         {!cart.discount && (codeOpen ? (
                           <form className="cart-code" onSubmit={apply}>
@@ -157,59 +199,12 @@ export default function CartDrawer() {
                         ) : (
                           <button type="button" className="cart-code-open" onClick={() => setCodeOpen(true)}>Have a discount code?</button>
                         ))}
-                      </section>
-                      <div className="cart-after">
-                        {account.on && !account.user
-                          ? <p className="cart-account">{mustLogIn ? 'New here? ' : 'Keep this cart on every device: '}<Link to={mustLogIn ? '/account/signup?next=/shop' : '/account/login?next=/shop'} onClick={() => setOpen(false)}>{mustLogIn ? 'Make an account' : 'Log in'}</Link></p>
-                          : <span />}
-                        <button type="button" className="cart-clear" onClick={cart.clear}>Empty the cart</button>
-                      </div>
-                    </div>
-                    <footer className="cart-pay">
-                      <div className="cart-total"><span>Subtotal</span><strong>{money(cart.total)}</strong></div>
-                      <button type="button" className="btn buy-btn" onClick={() => setStep('pay')}>
-                        <span>{shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
-                        <span className="buy-btn-icon" aria-hidden="true">→</span>
-                      </button>
-                      <p className="cart-small is-center">{shop.shipping !== false ? 'Shipping and the way to pay come next.' : 'The way to pay comes next.'}</p>
-                    </footer>
-                  </>
-                ) : (
-                  <>
-                    {/* step 2, checkout: where it goes and what that costs, the totals, and the ways to pay */}
-                    <div className="cart-body" data-lenis-prevent>
-                      <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to the cart</button>
-                      <ul className="cart-brief" aria-label="In your cart">
-                        {lines.map((l) => (
-                          <li key={l.key}>
-                            <span className="cart-brief-pic">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
-                            <span className="cart-brief-name"><b>{l.piece.title}</b><small>{[l.size, l.qty > 1 ? `× ${l.qty}` : ''].filter(Boolean).join(' ')}</small></span>
-                            <span className="cart-brief-price">{money(l.each * l.qty, true)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {cart.countries.length > 0 && (
-                        <label className="cart-shipto">
-                          <span>Ship to</span>
-                          <select value={cart.shipTo} onChange={(e) => cart.setShipTo(e.target.value)}>
-                            {cart.countries.map((c) => <option key={c} value={c}>{countryName(c)}</option>)}
-                          </select>
-                        </label>
-                      )}
-                      <section className="cart-sum" aria-label="Your order">
-                        <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
-                        {cart.discount && <div className="cart-sum-row is-off"><span><em>{cart.discount.code}</em> {cart.discount.percent}% off</span><b>−{money(cart.off, true)}</b></div>}
-                        {cart.countries.length > 0 && cart.shipping.charged && (
-                          <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b></div>
-                        )}
-                        {cart.fees.on && (ways.card || ways.paypal) && (
-                          <div className="cart-sum-row is-fee"><span>Payment fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
-                        )}
                         {shop.shipping !== false && <p className="cart-small">{cart.shipping.charged && !cart.shipping.none ? 'Shipping is an estimate, posted from Portugal. ' : ''}You enter your address on the next page.</p>}
                       </section>
                     </div>
                     <footer className="cart-pay">
                       <div className="cart-total"><span>{cart.fees.on ? 'Total before fee' : 'Total'}</span><strong>{money(cart.grand)}</strong></div>
+                      {pointsLine}
                       {mustLogIn ? (
                         <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>
                           <span>Log in to buy</span>
@@ -243,5 +238,6 @@ export default function CartDrawer() {
         </motion.div>
       )}
     </AnimatePresence>
+    , document.body,
   )
 }

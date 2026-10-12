@@ -39,8 +39,9 @@ export let work
    holds. The Shop page is in two parts: `artForSale` and `merchForSale` (each item there has
    shelf: 'merch'). */
 export let shop, forSale, everything, artForSale, merchForSale
-/* The kinds of stickers & more in use (Stickers, Bookmarks...), in the admin's order. */
-export let merchKinds
+/* The kinds of stickers & more in use (Stickers, Bookmarks...), in the admin's order, and the kinds
+   whose items the cart offers as little extras (ticked "In the cart's little extras"). */
+export let merchKinds, extrasKinds
 /* The kinds of thing sold (Prints, Original art...), each with what the buyer gets, in the order
    the admin lists them; only the ones in use. */
 export let types
@@ -161,7 +162,7 @@ function assemble(content) {
     })
   // points (Rewards → Points): the rules the account page can say before the balance arrives
   const pt = rw.points || {}
-  accountPage.points = { on: pt.on !== false, name: String(pt.name || 'points').trim() || 'points', signup: Math.max(0, Math.round(Number(pt.signup ?? 50) || 0)), news: Math.max(0, Math.round(Number(pt.news ?? 25) || 0)), field: Math.max(0, Math.round(Number(pt.field ?? 10) || 0)) }
+  accountPage.points = { on: pt.on !== false, name: String(pt.name || 'points').trim() || 'points', signup: Math.max(0, Math.round(Number(pt.signup ?? 50) || 0)), news: Math.max(0, Math.round(Number(pt.news ?? 25) || 0)), field: Math.max(0, Math.round(Number(pt.field ?? 10) || 0)), perUnit: Number.isFinite(Number(pt.perUnit)) && Number(pt.perUnit) >= 0 ? Number(pt.perUnit) : 1 }
   // the pictures given on confirming the email (the confirmation page and email show these)
   accountPage.verifiedIcons = accountPage.rewards.filter((r) => r.kind === 'picture' && r.earnedBy === 'verify')
   pages = {
@@ -241,6 +242,7 @@ function assemble(content) {
   const hiddenKinds = new Set(smallKinds.filter((t) => t.hidden).map((t) => String(t.name).trim()))
   const kindsUsed = new Set(merchForSale.map((p) => String(p.type || '').trim()).filter((n) => n && !hiddenKinds.has(n)))
   merchKinds = [...smallKinds.map((t) => String(t.name).trim()).filter((n) => kindsUsed.has(n)), ...[...kindsUsed].filter((n) => !(n in smallNotes))]
+  extrasKinds = new Set(smallKinds.filter((t) => t.extras === true).map((t) => String(t.name).trim()))
   const named = (list) => (Array.isArray(list) ? list : []).map((x) => String((x && x.name) || '').trim()).filter(Boolean)
   // a category or sub category switched to "Hide" in the list: not offered as a filter, not named on cards
   const hiddenIn = (list) => new Set((Array.isArray(list) ? list : []).filter((x) => x && x.hidden).map((x) => String(x.name || '').trim()))

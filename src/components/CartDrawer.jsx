@@ -40,6 +40,10 @@ export default function CartDrawer() {
   }
   const { open, lines } = cart
   const setOpen = (v) => { if (!v) setNote(''); cart.setOpen(v) }
+  // two steps: the cart, then checkout (shipping, totals, the ways to pay); it opens on the cart
+  const [step, setStep] = useState('cart')
+  useEffect(() => { if (open) setStep('cart') }, [open])
+  useEffect(() => { if (!lines.length) setStep('cart') }, [lines.length])
 
   useEffect(() => {
     if (!open) return
@@ -66,8 +70,8 @@ export default function CartDrawer() {
           <motion.aside className="cart-panel" role="dialog" aria-modal="true" aria-label="Your cart" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.45, ease: EASE }} onClick={(e) => e.stopPropagation()}>
             <header className="cart-head">
               <div>
-                <div className="cart-kicker">Your cart</div>
-                <h2 className="cart-title">{cart.count ? things(cart.count) : 'Empty for now'}</h2>
+                <div className="cart-kicker">{lines.length ? (step === 'pay' ? 'Step 2 of 2 · Checkout' : 'Step 1 of 2 · Your cart') : 'Your cart'}</div>
+                <h2 className="cart-title">{!cart.count ? 'Empty for now' : step === 'pay' ? 'Checkout' : things(cart.count)}</h2>
               </div>
               <button type="button" className="cart-x" onClick={() => setOpen(false)} aria-label="Close the cart">×</button>
             </header>
@@ -83,131 +87,156 @@ export default function CartDrawer() {
               </div>
             ) : (
               <>
-                {/* the pieces, the little extras and the order's sums scroll together; the total and the
-                    ways to pay stay at the foot */}
-                <div className="cart-body" data-lenis-prevent>
-                  <ul className="cart-lines">
-                    <AnimatePresence initial={false}>
-                      {lines.map((l) => (
-                        <motion.li key={l.key} layout initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, paddingBlock: 0 }} transition={{ duration: 0.3, ease: EASE }}>
-                          <span className="cart-thumb">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
-                          <div className="cart-info">
-                            <strong>{l.piece.title}</strong>
-                            <small>{[l.size, signable(l.piece) ? (l.signed ? 'Signed' : 'Unsigned') : '', l.piece.type].filter(Boolean).join(' · ')}</small>
-                            {l.deal && <span className="cart-sale">{l.deal.name || 'Sale'} −{l.deal.percent}%</span>}
-                            <div className="cart-row">
-                              <div className="cart-qty" role="group" aria-label={`How many of ${l.piece.title}`}>
-                                <button type="button" onClick={() => (l.qty > 1 ? cart.setQty(l.slug, l.signed, l.qty - 1, l.size) : cart.remove(l.slug, l.signed, l.size))} aria-label="One fewer">−</button>
-                                <span aria-live="polite">{l.qty}</span>
-                                <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label="One more">+</button>
+                {step === 'cart' ? (
+                  <>
+                    {/* step 1, the cart: the pieces, the little extras, a code, and what it all comes to */}
+                    <div className="cart-body" data-lenis-prevent>
+                    <ul className="cart-lines">
+                      <AnimatePresence initial={false}>
+                        {lines.map((l) => (
+                          <motion.li key={l.key} layout initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, paddingBlock: 0 }} transition={{ duration: 0.3, ease: EASE }}>
+                            <span className="cart-thumb">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
+                            <div className="cart-info">
+                              <strong>{l.piece.title}</strong>
+                              <small>{[l.size, signable(l.piece) ? (l.signed ? 'Signed' : 'Unsigned') : '', l.piece.type].filter(Boolean).join(' · ')}</small>
+                              {l.deal && <span className="cart-sale">{l.deal.name || 'Sale'} −{l.deal.percent}%</span>}
+                              <div className="cart-row">
+                                <div className="cart-qty" role="group" aria-label={`How many of ${l.piece.title}`}>
+                                  <button type="button" onClick={() => (l.qty > 1 ? cart.setQty(l.slug, l.signed, l.qty - 1, l.size) : cart.remove(l.slug, l.signed, l.size))} aria-label="One fewer">−</button>
+                                  <span aria-live="polite">{l.qty}</span>
+                                  <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label="One more">+</button>
+                                </div>
+                                <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{money(l.each * l.qty, true)}</span>
                               </div>
-                              <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{money(l.each * l.qty, true)}</span>
                             </div>
+                            <button type="button" className="cart-remove" onClick={() => cart.remove(l.slug, l.signed, l.size)} aria-label={`Remove ${l.piece.title}`}>×</button>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+
+                    {/* little extras: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option) */}
+                    {(() => {
+                      if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
+                      const extras = merchForSale.filter((p) => canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8)
+                      if (!extras.length) return null
+                      return (
+                        <div className="cart-extras">
+                          <h3>{shop.extrasTitle}</h3>
+                          <ul data-lenis-prevent>
+                            {extras.map((p) => {
+                              const opt = sizesOf(p)[0]?.name || ''
+                              return (
+                                <li key={p.slug}>
+                                  <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
+                                  <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
+                                  <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )
+                    })()}
+
+                      <section className="cart-sum" aria-label="Your cart">
+                        <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
+                        {cart.discount && (
+                          <div className="cart-sum-row is-off">
+                            <span><em>{cart.discount.code}</em> {cart.discount.percent}% off <button type="button" className="cart-discount-x" onClick={cart.dropCode} aria-label={`Remove the code ${cart.discount.code}`}>×</button></span>
+                            <b>−{money(cart.off, true)}</b>
                           </div>
-                          <button type="button" className="cart-remove" onClick={() => cart.remove(l.slug, l.signed, l.size)} aria-label={`Remove ${l.piece.title}`}>×</button>
-                        </motion.li>
-                      ))}
-                    </AnimatePresence>
-                  </ul>
-
-                  {/* little extras: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option) */}
-                  {(() => {
-                    if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
-                    const extras = merchForSale.filter((p) => canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8)
-                    if (!extras.length) return null
-                    return (
-                      <div className="cart-extras">
-                        <h3>{shop.extrasTitle}</h3>
-                        <ul data-lenis-prevent>
-                          {extras.map((p) => {
-                            const opt = sizesOf(p)[0]?.name || ''
-                            return (
-                              <li key={p.slug}>
-                                <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
-                                <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
-                                <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
-                              </li>
-                            )
-                          })}
-                        </ul>
+                        )}
+                        {!cart.discount && (codeOpen ? (
+                          <form className="cart-code" onSubmit={apply}>
+                            <label className="sr-only" htmlFor="cart-code">Discount code</label>
+                            <input id="cart-code" type="text" value={typed} onChange={(e) => { setTyped(e.target.value.toUpperCase()); setCodeNote('') }} placeholder="Discount code" autoComplete="off" autoCapitalize="characters" spellCheck="false" maxLength={40} autoFocus />
+                            <button type="submit" className="btn sm" disabled={checking || !typed.trim()}>{checking ? 'Checking…' : 'Apply'}</button>
+                            {codeNote && <p className="cart-code-note" role="alert">{codeNote}</p>}
+                          </form>
+                        ) : (
+                          <button type="button" className="cart-code-open" onClick={() => setCodeOpen(true)}>Have a discount code?</button>
+                        ))}
+                      </section>
+                      <div className="cart-after">
+                        {account.on && !account.user
+                          ? <p className="cart-account">{mustLogIn ? 'New here? ' : 'Keep this cart on every device: '}<Link to={mustLogIn ? '/account/signup?next=/shop' : '/account/login?next=/shop'} onClick={() => setOpen(false)}>{mustLogIn ? 'Make an account' : 'Log in'}</Link></p>
+                          : <span />}
+                        <button type="button" className="cart-clear" onClick={cart.clear}>Empty the cart</button>
                       </div>
-                    )
-                  })()}
-
-                  {/* the order, a line each: what the pieces come to, the code, the shipping (to the country
-                      picked here, an estimate from Portugal) and the payment fee when there is one */}
-                  <section className="cart-sum" aria-label="Your order">
-                    <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
-                    {cart.discount && (
-                      <div className="cart-sum-row is-off">
-                        <span><em>{cart.discount.code}</em> {cart.discount.percent}% off <button type="button" className="cart-discount-x" onClick={cart.dropCode} aria-label={`Remove the code ${cart.discount.code}`}>×</button></span>
-                        <b>−{money(cart.off, true)}</b>
-                      </div>
-                    )}
-                    {cart.countries.length > 0 && (
-                      <div className="cart-sum-row is-ship">
-                        <label>
-                          <span>Shipping to</span>
-                          <select value={cart.shipTo} onChange={(e) => cart.setShipTo(e.target.value)} aria-label="Country it ships to">
+                    </div>
+                    <footer className="cart-pay">
+                      <div className="cart-total"><span>Subtotal</span><strong>{money(cart.total)}</strong></div>
+                      <button type="button" className="btn buy-btn" onClick={() => setStep('pay')}>
+                        <span>{shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
+                        <span className="buy-btn-icon" aria-hidden="true">→</span>
+                      </button>
+                      <p className="cart-small is-center">{shop.shipping !== false ? 'Shipping and the way to pay come next.' : 'The way to pay comes next.'}</p>
+                    </footer>
+                  </>
+                ) : (
+                  <>
+                    {/* step 2, checkout: where it goes and what that costs, the totals, and the ways to pay */}
+                    <div className="cart-body" data-lenis-prevent>
+                      <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to the cart</button>
+                      <ul className="cart-brief" aria-label="In your cart">
+                        {lines.map((l) => (
+                          <li key={l.key}>
+                            <span className="cart-brief-pic">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
+                            <span className="cart-brief-name"><b>{l.piece.title}</b><small>{[l.size, l.qty > 1 ? `× ${l.qty}` : ''].filter(Boolean).join(' ')}</small></span>
+                            <span className="cart-brief-price">{money(l.each * l.qty, true)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {cart.countries.length > 0 && (
+                        <label className="cart-shipto">
+                          <span>Ship to</span>
+                          <select value={cart.shipTo} onChange={(e) => cart.setShipTo(e.target.value)}>
                             {cart.countries.map((c) => <option key={c} value={c}>{countryName(c)}</option>)}
                           </select>
                         </label>
-                        {cart.shipping.charged && <b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b>}
-                      </div>
-                    )}
-                    {cart.fees.on && (ways.card || ways.paypal) && (
-                      <div className="cart-sum-row is-fee">
-                        <span>Payment fee</span>
-                        <b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b>
-                      </div>
-                    )}
-                    {!cart.discount && (codeOpen ? (
-                      <form className="cart-code" onSubmit={apply}>
-                        <label className="sr-only" htmlFor="cart-code">Discount code</label>
-                        <input id="cart-code" type="text" value={typed} onChange={(e) => { setTyped(e.target.value.toUpperCase()); setCodeNote('') }} placeholder="Discount code" autoComplete="off" autoCapitalize="characters" spellCheck="false" maxLength={40} autoFocus />
-                        <button type="submit" className="btn sm" disabled={checking || !typed.trim()}>{checking ? 'Checking…' : 'Apply'}</button>
-                        {codeNote && <p className="cart-code-note" role="alert">{codeNote}</p>}
-                      </form>
-                    ) : (
-                      <button type="button" className="cart-code-open" onClick={() => setCodeOpen(true)}>Have a discount code?</button>
-                    ))}
-                    {shop.shipping !== false && <p className="cart-small">{cart.shipping.charged && !cart.shipping.none ? 'Shipping is an estimate, posted from Portugal. ' : ''}You enter your address on the next page.</p>}
-                  </section>
-
-                  <div className="cart-after">
-                    {account.on && !account.user
-                      ? <p className="cart-account">{mustLogIn ? 'New here? ' : 'Keep this cart on every device: '}<Link to={mustLogIn ? '/account/signup?next=/shop' : '/account/login?next=/shop'} onClick={() => setOpen(false)}>{mustLogIn ? 'Make an account' : 'Log in'}</Link></p>
-                      : <span />}
-                    <button type="button" className="cart-clear" onClick={cart.clear}>Empty the cart</button>
-                  </div>
-                </div>
-
-                <footer className="cart-pay">
-                  <div className="cart-total"><span>Total{cart.fees.on ? ' + payment fee' : ''}</span><strong>{money(cart.grand)}</strong></div>
-                  {mustLogIn ? (
-                    <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>
-                      <span>Log in to buy</span>
-                      <span className="buy-btn-icon" aria-hidden="true">→</span>
-                    </Link>
-                  ) : <>
-                  {ways.card && (
-                    <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'}>
-                      <span>{busy === 'card' ? 'Opening secure checkout' : ways.paypal ? 'Pay by card' : 'Checkout'}</span>
-                      <span className="buy-btn-icon" aria-hidden="true">{busy === 'card' ? <i className="buy-spin" /> : '→'}</span>
-                    </button>
-                  )}
-                  {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => pay('paypal')} />}
-                  </>}
-                  <AnimatePresence>
-                    {note && (
-                      <motion.div className="buy-note" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                        <p>{note}</p>
-                        <Elsewhere subject="Buying from the shop" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <p className="buy-secure"><Lock /><span>{payLine()}</span></p>
-                </footer>
+                      )}
+                      <section className="cart-sum" aria-label="Your order">
+                        <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
+                        {cart.discount && <div className="cart-sum-row is-off"><span><em>{cart.discount.code}</em> {cart.discount.percent}% off</span><b>−{money(cart.off, true)}</b></div>}
+                        {cart.countries.length > 0 && cart.shipping.charged && (
+                          <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b></div>
+                        )}
+                        {cart.fees.on && (ways.card || ways.paypal) && (
+                          <div className="cart-sum-row is-fee"><span>Payment fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
+                        )}
+                        {shop.shipping !== false && <p className="cart-small">{cart.shipping.charged && !cart.shipping.none ? 'Shipping is an estimate, posted from Portugal. ' : ''}You enter your address on the next page.</p>}
+                      </section>
+                    </div>
+                    <footer className="cart-pay">
+                      <div className="cart-total"><span>{cart.fees.on ? 'Total before fee' : 'Total'}</span><strong>{money(cart.grand)}</strong></div>
+                      {mustLogIn ? (
+                        <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>
+                          <span>Log in to buy</span>
+                          <span className="buy-btn-icon" aria-hidden="true">→</span>
+                        </Link>
+                      ) : <>
+                      {/* each way to pay with what it comes to, the payment fee for it included */}
+                      {ways.card && (
+                        <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'} disabled={cart.shipping.none}>
+                          <span>{busy === 'card' ? 'Opening secure checkout' : `Pay ${money(cart.grand + (cart.fees.on ? cart.fees.card : 0), true)} by card`}</span>
+                          <span className="buy-btn-icon" aria-hidden="true">{busy === 'card' ? <i className="buy-spin" /> : '→'}</span>
+                        </button>
+                      )}
+                      {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => { if (!cart.shipping.none) pay('paypal') }} label={`Pay ${money(cart.grand + (cart.fees.on ? cart.fees.paypal : 0), true)} with`} />}
+                      </>}
+                      <AnimatePresence>
+                        {note && (
+                          <motion.div className="buy-note" role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                            <p>{note}</p>
+                            <Elsewhere subject="Buying from the shop" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <p className="buy-secure"><Lock /><span>{payLine()}</span></p>
+                    </footer>
+                  </>
+                )}
               </>
             )}
           </motion.aside>

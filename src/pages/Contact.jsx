@@ -6,6 +6,7 @@ import Magnetic from '../components/Magnetic'
 import Picker from '../components/Picker'
 import SocialIcon from '../components/SocialIcon'
 import { useSendForm } from '../data/contact'
+import { useAccount } from '../hooks/useAccount'
 import { Elsewhere } from '../components/Buy'
 
 /* The one page that is not panels: an open page with the heading, the form on the left and
@@ -16,6 +17,7 @@ import { Elsewhere } from '../components/Buy'
 export default function Contact() {
   const byService = Boolean(brand.contactAction)
   const { send, state, problem, fallback, again } = useSendForm('contact')
+  const { user } = useAccount() // logged in: their name and email are filled in for them (they can still change them)
   return (
     <Page title="Contact">
       {/* two columns from the top of the page: the heading and the form, and beside them where else to reach him */}
@@ -35,9 +37,9 @@ export default function Contact() {
                   <button type="button" className="btn ghost sm" onClick={again}>Send another</button>
                 </div>
               ) : (
-                <form className="lined" onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
-                  <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" maxLength={80} /><label htmlFor="name">Your name</label><span className="bar" /></div>
-                  <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" /><label htmlFor="email">Email</label><span className="bar" /></div>
+                <form key={user ? user._id : 'guest'} className="lined" onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined}>
+                  <div className="field"><input id="name" name="name" type="text" placeholder=" " required autoComplete="name" maxLength={80} defaultValue={user?.name || ''} /><label htmlFor="name">Your name</label><span className="bar" /></div>
+                  <div className="field"><input id="email" name="email" type="email" placeholder=" " required autoComplete="email" defaultValue={user?.email || ''} /><label htmlFor="email">Email</label><span className="bar" /></div>
                   {contact.topics.length > 0 && <Picker label="About" name="topic" options={contact.topics} />}
                   <div className="field"><textarea id="message" name="message" placeholder=" " required rows={5} maxLength={5000} /><label htmlFor="message">Message</label><span className="bar" /></div>
                   {/* left empty by people, filled in by bots */}

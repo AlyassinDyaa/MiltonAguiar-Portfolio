@@ -162,6 +162,7 @@ function AccountRequest({ options, kind, setKind, picked = false }) {
 /* Without customer accounts: the request is emailed to the artist (api/contact.js), as before. */
 function EmailRequest({ options, kind, setKind }) {
   const { send, state, problem, fallback, again } = useSendForm('commission')
+  const { user } = useAccount() // logged in: their name and email are filled in for them
   const byService = Boolean(brand.contactAction) // a form service set in the admin takes it instead
   if (state === 'sent') return (
     <div className="form-sent" role="status">
@@ -171,12 +172,12 @@ function EmailRequest({ options, kind, setKind }) {
     </div>
   )
   return (
-    <form className="cmr-form" onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined} aria-describedby={problem ? 'cmr-problem' : undefined}>
+    <form key={user ? user._id : 'guest'} className="cmr-form" onSubmit={byService ? undefined : send} action={brand.contactAction || undefined} method={byService ? 'post' : undefined} aria-describedby={problem ? 'cmr-problem' : undefined}>
       <fieldset className="cmr-group">
         <legend>You</legend>
         <div className="cmr-row is-two">
-          <Field id="c-name" name="name" label="Your name" required autoComplete="name" maxLength={80} />
-          <Field id="c-email" name="email" label="Email" type="email" required autoComplete="email" maxLength={254} />
+          <Field id="c-name" name="name" label="Your name" required autoComplete="name" maxLength={80} defaultValue={user?.name || ''} />
+          <Field id="c-email" name="email" label="Email" type="email" required autoComplete="email" maxLength={254} defaultValue={user?.email || ''} />
         </div>
       </fieldset>
       <KindPicker options={options} value={kind} onChange={setKind} />

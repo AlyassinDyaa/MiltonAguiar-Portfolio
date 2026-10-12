@@ -339,6 +339,7 @@ export const publicUser = (u) => (u ? {
   phone: u.phone || '',
   verified: Boolean(u.verified),
   marketing: Boolean(u.marketing),
+  currency: typeof u.currency === 'string' ? u.currency : '', // prices in this currency ('' the shop's own)
   newsAsked: Boolean(u.newsAskedAt || u.unsubscribedAt), // said no thanks to news (or unsubscribed): the account stops asking
   newsBonus: u.newsBonus === 'given' || u.newsBonus === 'taken' ? u.newsBonus : '', // the points for saying yes to news: had now, gone for good, or not yet (api/_points.js)
   createdAt: u.createdAt,

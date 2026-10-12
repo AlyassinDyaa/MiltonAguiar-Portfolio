@@ -3,13 +3,14 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLenis } from './hooks/useLenis'
 import { applyBrandHue } from './hooks/useHue'
-import { brand, previewing, shop, shows } from './data/site'
+import { brand, previewing, setView, shop, shows } from './data/site'
 import { useReducedMotion } from './hooks/useMedia'
 import Preloader from './components/Preloader'
 import Nav from './components/Nav'
 import Footer from './components/Footer'
 import CartDrawer from './components/CartDrawer'
 import WelcomeCard from './components/WelcomeCard'
+import CurrencySync from './components/CurrencySync'
 import { CartProvider } from './hooks/useCart'
 import { AccountProvider, accountsWanted } from './hooks/useAccount'
 import Account from './pages/Account'
@@ -28,6 +29,10 @@ export default function App() {
   const page = loc.pathname.startsWith('/account') ? '/account' : loc.pathname
   const reduced = useReducedMotion()
   const [ready, setReady] = useState(false)
+  // the currency prices are shown in (components/CurrencySync.jsx): set before anything below is
+  // drawn, so a change draws the whole site again in it
+  const [cur, setCur] = useState({ code: '', rate: 1 })
+  setView(cur.code, cur.rate)
   useLenis(!reduced)
   useEffect(applyBrandHue, [])
   // what search engines and link previews say about the site: the blurb from "Name, colour and contact" in the admin
@@ -35,6 +40,7 @@ export default function App() {
   return (
     <AccountProvider>
     <CartProvider>
+      <CurrencySync onChange={(c) => setCur((was) => (was.code === c.code && was.rate === c.rate ? was : c))} />
       <Preloader onDone={() => setReady(true)} />
       <Nav />
       {/* Between routes three panels rise across the screen, one after the other, and carry on

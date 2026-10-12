@@ -27,7 +27,10 @@ export default async function handler(req, res) {
   const { user, mustLogIn } = await buyer(req)
   const cart = await priceCart({ ...(req.body && typeof req.body === 'object' ? req.body : {}), way: 'card' }, user)
   if (cart.error) return res.status(cart.error.status).json({ message: cart.error.message, ...(cart.error.code ? { code: true } : {}) })
-  const { shop, lines, deal, name, what, summary, cents, off, country, fee, shipCents, shipName } = cart
+  const { shop, lines, deal, name, what, summary, country, shipName, currency, rate, pay, eurPieces } = cart
+  // everything below is in the currency it is paid in (the buyer's, or the shop's own): the same
+  // amounts the cart showed (src/data/currency.js)
+  const cur = currency.toLowerCase()
   if (!takes(shop, 'stripe')) return res.status(403).json({ message: 'Card payment is switched off. Pay with PayPal instead.' })
   if (!key) return res.status(503).json({ message: 'Card payment is not set up yet. Get in touch to buy a piece.' })
   if (mustLogIn) return res.status(401).json({ login: true, message: 'Log in, or make an account, to buy.' })
@@ -41,8 +44,8 @@ export default async function handler(req, res) {
   lines.forEach((l, i) => {
     const at = `line_items[${i}]`
     ask.set(`${at}[quantity]`, String(l.qty))
-    ask.set(`${at}[price_data][currency]`, String(shop.currency || 'eur').toLowerCase())
-    ask.set(`${at}[price_data][unit_amount]`, String(l.cents))
+    ask.set(`${at}[price_data][currency]`, cur)
+    ask.set(`${at}[price_data][unit_amount]`, String(l.pay))
     ask.set(`${at}[price_data][product_data][name]`, name(l))
     if (what(l)) ask.set(`${at}[price_data][product_data][description]`, String(what(l)).slice(0, 500))
     if (typeof l.piece.src === 'string' && l.piece.src.startsWith('/')) ask.set(`${at}[price_data][product_data][images][0]`, origin + l.piece.src)
@@ -50,16 +53,20 @@ export default async function handler(req, res) {
   // the transaction fee, when the admin adds one, as its own line. A discount code comes off every line
   // on Stripe's page, the fee's too, so with a code the line is raised just enough that, once the
   // code has come off, it is the fee the cart showed
-  if (fee > 0) {
-    let feeLine = fee
-    if (deal) for (let a = fee; a < fee * 3 + 200; a++) { if (a - discountCents(cents + a, deal.percent) + off === fee) { feeLine = a; break } }
+  if (pay.fee > 0) {
+    let feeLine = pay.fee
+    if (deal) for (let a = pay.fee; a < pay.fee * 3 + 200; a++) { if (a - discountCents(pay.items + a, deal.percent) + pay.off === pay.fee) { feeLine = a; break } }
     const at = `line_items[${lines.length}]`
     ask.set(`${at}[quantity]`, '1')
-    ask.set(`${at}[price_data][currency]`, String(shop.currency || 'eur').toLowerCase())
+    ask.set(`${at}[price_data][currency]`, cur)
     ask.set(`${at}[price_data][unit_amount]`, String(feeLine))
     ask.set(`${at}[price_data][product_data][name]`, 'Card transaction fee')
-    ask.set('metadata[fee]', String(fee))
+    ask.set('metadata[fee]', String(pay.fee))
   }
+  // the currency and rate it was paid at, and what the pieces came to in the shop's own currency (points)
+  ask.set('metadata[currency]', currency)
+  ask.set('metadata[rate]', String(rate))
+  ask.set('metadata[eur_pieces]', String(eurPieces))
   ask.set('metadata[order]', summary.slice(0, 500))
   ask.set('metadata[site]', SITE) // this site's checkout (see api/_orders.js)
   // the code from the cart, applied on Stripe's page; the webhook (api/stripe-webhook.js) and the
@@ -84,10 +91,10 @@ export default async function handler(req, res) {
     ask.set('metadata[country]', country)
     if (shipName) {
       ask.set('shipping_options[0][shipping_rate_data][type]', 'fixed_amount')
-      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(shipCents))
-      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][currency]', String(shop.currency || 'eur').toLowerCase())
-      ask.set('shipping_options[0][shipping_rate_data][display_name]', (shipCents ? `Shipping to ${shipName}` : `Free shipping to ${shipName}`).slice(0, 100))
-      ask.set('metadata[shipping]', String(shipCents))
+      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(pay.ship))
+      ask.set('shipping_options[0][shipping_rate_data][fixed_amount][currency]', cur)
+      ask.set('shipping_options[0][shipping_rate_data][display_name]', (pay.ship ? `Shipping to ${shipName}` : `Free shipping to ${shipName}`).slice(0, 100))
+      ask.set('metadata[shipping]', String(pay.ship))
     }
   }
 

@@ -3,6 +3,8 @@ import { join } from 'node:path'
 import { checkCode, discountCents } from './_orders.js'
 import { priceWith, readSales, saleFor } from '../src/data/sales.js'
 import { feeFor, postsTo, shippingFor, shippingRules } from '../src/data/shipping.js'
+import { inCurrency, payCurrency } from '../src/data/currency.js'
+import { getRates } from './_rates.js'
 
 /* What a cart costs, worked out on the server from the site's own content (a leading underscore
    keeps Vercel from serving this file). Shared by the two ways to pay, Stripe (checkout.js) and
@@ -108,9 +110,20 @@ export async function priceCart(body, user = null) {
   // the transaction fee, when the admin adds one: on the pieces after any discount, and the shipping
   const way = b.way === 'paypal' ? 'paypal' : 'card'
   const fee = feeFor(rules, way, cents - off + ship.cents)
+  // the currency it is paid in: the buyer's (b.currency) at the day's rate, else the shop's own; the
+  // whole order worked out in it by the same rule the cart shows it with (src/data/currency.js)
+  const base = String(shop.currency || 'eur').toUpperCase()
+  const wanted = String(b.currency || '').toUpperCase()
+  const { code, rate } = wanted && wanted !== base ? payCurrency(wanted, base, (await getRates()).rates, way) : { code: base, rate: 1 }
+  const pay = inCurrency({ lines: lines.map((l) => ({ cents: l.cents, qty: l.qty })), percent: deal ? deal.percent : 0, ship: ship.cents, fee }, rate)
+  pay.units.forEach((u, i) => { lines[i].pay = u })
   return {
     shop, lines, deal, choice, cents, off, country, way, fee,
     shipCents: ship.cents, shipName: ship.zone ? ship.zone.name : '',
+    // what is charged, in the currency it is paid in (cents); the shop's own amounts stay above
+    currency: code, rate, pay,
+    // what the pieces came to in the shop's own currency, after any code: points are earned on it
+    eurPieces: (cents - off) / 100,
     name: (l) => `${String(l.piece.title || l.slug).slice(0, 90)}${l.size ? ` — ${l.size.slice(0, 24)}` : ''}${l.signed == null ? '' : l.signed ? ' (signed)' : ' (unsigned)'}`,
     // what the buyer gets, and the shop sale on it ("Black Friday: 10% off"); the name above stays
     // as it is, since an order's pieces are read back from it (api/_orders.js describeItem)

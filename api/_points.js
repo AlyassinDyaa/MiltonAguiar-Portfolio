@@ -56,7 +56,9 @@ const awardOrder = async (d, ref, userId, rules) => {
   const o = got && (got.value !== undefined ? got.value : got)
   if (!o) return 0
   // points for what was paid for the pieces: not the shipping, nor a transaction fee
-  const n = Math.floor(Math.max(0, (Number(o.amount) || 0) - (Number(o.shipping) || 0) - (Number(o.fee) || 0)) * rules.perUnit)
+  // (in the shop's own currency: an order paid in another keeps what its pieces came to in it)
+  const pieces = o.eurPieces != null ? Number(o.eurPieces) || 0 : (Number(o.amount) || 0) - (Number(o.shipping) || 0) - (Number(o.fee) || 0)
+  const n = Math.floor(Math.max(0, pieces) * rules.perUnit)
   if (n > 0) { await addPoints(d, userId, n, 'order', o.orderNo || ref); await d.collection('orders').updateOne({ ref }, { $set: { points: n } }) }
   return n
 }

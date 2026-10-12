@@ -2913,3 +2913,10 @@ form.lined .acc-phone-number input { padding-right: 0; }
 .cart-extras-row .srow-arrow.is-next { right: 4px; }
 .cart-extras-row.srow::before { left: 0; width: 34px; background: linear-gradient(90deg, var(--page), transparent); }
 .cart-extras-row.srow::after { right: 0; width: 34px; background: linear-gradient(270deg, var(--page), transparent); }
+
+/* the currency a member sees prices and pays in, under Details */
+.acc-currency { display: grid; gap: 6px; margin: 4px 0 14px; }
+.acc-currency span { font-family: var(--display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-dim); }
+.acc-currency select { max-width: 320px; height: 46px; padding: 0 12px; font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line-strong); }
+.acc-currency select:focus { border-color: var(--accent); outline: 0; }
+.acc-currency small { font-size: 0.8rem; color: var(--fg-mute); }

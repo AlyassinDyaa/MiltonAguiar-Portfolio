@@ -93,6 +93,8 @@ export default async function handler(req, res) {
         amount: (o.amount_total || 0) / 100,
         shipping: ((o.total_details && o.total_details.amount_shipping) || 0) / 100,
         fee: (Number(o.metadata && o.metadata.fee) || 0) / 100,
+        // paid in another currency than the shop's: the rate, and what the pieces came to in the shop's own (points)
+        ...(o.metadata && o.metadata.eur_pieces ? { eurPieces: Number(o.metadata.eur_pieces) || 0, rate: Number(o.metadata.rate) || 1 } : {}),
         discount: ((o.total_details && o.total_details.amount_discount) || 0) / 100,
         currency: String(o.currency || '').toUpperCase(),
         summary: (o.metadata && o.metadata.order) || '',

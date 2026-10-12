@@ -401,7 +401,24 @@ export const badge = (piece) => {
 }
 /* 40 -> "€40 EUR", 12.5 -> "€12.50 EUR", in the shop's currency. `short` leaves the code off
    ("€40"), for an old price shown beside the new one. */
-export const money = (amount, short = false) => {
+/* Prices in the buyer's own currency (src/data/currency.js): the one shown, and the day's rate from
+   the shop's (set by the app, components/CurrencySync.jsx). Every price on the site is in the shop's
+   currency; `money` shows it in the one picked, each price turned on its own as the checkout does. */
+let view = { code: '', rate: 1 }
+export const setView = (code, rate) => { view = code && rate > 0 ? { code, rate } : { code: '', rate: 1 } }
+export const viewCurrency = () => view.code || String(shop?.currency || 'eur').toUpperCase()
+export const viewRate = () => view.rate
+export const inView = (amount) => Math.round(Number(amount) * 100 * view.rate) / 100
+/* An amount already in the currency shown (a cart's total worked out in it), as money. */
+export const showMoney = (amount, short = false, inCode = '') => {
+  const n = Number(amount)
+  const code = inCode || viewCurrency()
+  let figure = String(amount)
+  try { figure = new Intl.NumberFormat('en-GB', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol', minimumFractionDigits: Number.isInteger(n) ? 0 : 2 }).format(n) } catch { /* an unknown code: the bare number */ }
+  return short ? figure : `${figure} ${code}`
+}
+export const money = (amount, short = false) => showMoney(inView(amount), short)
+export const moneyBase = (amount, short = false) => {
   const n = Number(amount)
   const code = String(shop.currency || 'eur').toUpperCase()
   let figure = String(amount)

@@ -1,3 +1,5 @@
+import { getRates } from './_rates.js'
+import { CURRENCIES } from '../src/data/currency.js'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { db, dbReady } from './_db.js'
@@ -405,6 +407,13 @@ const tellPasswordChanged = async (req, user, how) => {
 }
 
 export default async function handler(req, res) {
+  // the day's exchange rates, for prices in the buyer's own currency (api/_rates.js): answered with or
+  // without accounts (kept here, as the site's functions are counted); the same ones the checkout uses
+  if (req.method === 'GET' && (req.query && req.query.rates !== undefined || /[?&]rates(=|&|$)/.test(String(req.url || '')))) {
+    const r = await getRates()
+    res.setHeader('Cache-Control', 'public, max-age=900')
+    return res.status(200).json({ base: r.base, date: r.date, rates: r.rates })
+  }
   res.setHeader('Cache-Control', 'no-store')
   if (!dbReady()) return say(res, req.method === 'GET' ? 200 : 503, req.method === 'GET' ? { enabled: false, user: null } : { message: 'Accounts are not set up yet.' })
   if (accountsMode() === 'off') return say(res, req.method === 'GET' ? 200 : 403, req.method === 'GET' ? { enabled: false, user: null } : { message: 'Accounts are switched off.' })
@@ -672,6 +681,8 @@ export default async function handler(req, res) {
       const phone = phoneOf(body.phone)
       if (phone === null) return say(res, 400, { message: 'That phone number does not look right: the country, then the number, digits only.', field: 'phone' })
       const set = { name: clean(body.name, 80), phone, marketing: Boolean(body.marketing) }
+      // the currency they see prices and pay in (src/data/currency.js); '' for the shop's own
+      if (body.currency !== undefined) set.currency = CURRENCIES.includes(String(body.currency).toUpperCase()) ? String(body.currency).toUpperCase() : ''
       if (body.card !== undefined) {
         const card = clean(body.card, 80)
         if (!(await cardAllowed(d, user, card))) return say(res, 400, { message: 'That card design is not one you have earned yet.', field: 'card' })

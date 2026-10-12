@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Page from '../components/Page'
+import { CURRENCIES, CURRENCY_NAMES } from '../data/currency'
 import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fullPrice, money, nowPrice, onSale, soldOut, topSize } from '../data/site'
 import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
@@ -963,7 +964,7 @@ function PanelStrip({ pieces }) {
 
 function Details({ owned = [], progress = null, onPreview = () => {} }) {
   const { user, call } = useAccount()
-  const f = useForm({ name: user.name, phone: user.phone, marketing: user.marketing, avatar: user.avatar || '', card: user.card || '' })
+  const f = useForm({ name: user.name, phone: user.phone, marketing: user.marketing, avatar: user.avatar || '', card: user.card || '', currency: user.currency || '' })
   const prog = { verified: Boolean(user.verified), orders: 0, pieces: 0, ...(progress || {}), gifts: user.gifts || [] }
   const rewardPics = accountPage.rewards.filter((r) => r.kind === 'picture')
   const designs = cardDesigns()
@@ -1004,6 +1005,14 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
         <Field label="Your name" autoComplete="name" value={f.values.name} onChange={f.set('name')} required={false} maxLength={80} />
         <PhoneField label="Phone (optional, for the courier)" value={f.values.phone} onChange={f.set('phone')} error={errorFor(f.problem, 'phone')} />
       </div>
+      {/* the currency prices show and are paid in: the shop's own, or theirs (src/data/currency.js) */}
+      <label className="acc-currency">
+        <span>Prices and payment in</span>
+        <select value={f.values.currency || String(shop.currency || 'eur').toUpperCase()} onChange={(e) => f.set('currency')(e.target.value === String(shop.currency || 'eur').toUpperCase() ? '' : e.target.value)}>
+          {[...new Set([String(shop.currency || 'eur').toUpperCase(), ...CURRENCIES])].map((c) => <option key={c} value={c}>{c} · {CURRENCY_NAMES[c] || c}</option>)}
+        </select>
+        <small>Prices are converted at the day's European Central Bank rate, and you pay in this currency.</small>
+      </label>
       <label className="acc-check">
         <input type="checkbox" checked={f.values.marketing} onChange={(e) => newsBox(e.target.checked)} />
         <span>Email me news: new pieces, prints, discounts and conventions. You can stop any time.{newsNote(user, f.values.marketing)}</span>

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
-import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, signable, sizeNotes, sizesOf, soldOut, topSize } from '../data/site'
+import { badge, brand, buyable, fullPrice, money, nowPrice, onSale, payWays, priceOf, quote, shop, signable, sizeNotes, sizesOf, soldOut, topSize, viewCurrency } from '../data/site'
 import { shippingFor, shippingRules } from '../data/shipping'
 
 const regionNames = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }) } catch { return null } })()
@@ -69,13 +69,13 @@ export default function Buy({ piece }) {
   const buyNow = async (way) => {
     if (busy || out) return
     setBusy(way); setNote('')
-    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}) }, way)
+    const problem = await checkout({ slug: piece.slug, ...(size ? { size } : {}), ...(choice ? { signed } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}), ...(viewCurrency() !== String(shop.currency || 'eur').toUpperCase() ? { currency: viewCurrency() } : {}) }, way)
     if (problem) { setNote(problem); setBusy(false) } // otherwise it stays "busy" while the page changes
   }
   return (
     <motion.div className="buy" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.45, ease: EASE }}>
       <div className="buy-head">
-        <span className={`buy-price ${out ? 'is-out' : ''} ${sale && !out ? 'is-sale' : ''}`}>{money(now + extra, true)}<small>{String(shop.currency || 'eur').toUpperCase()}</small></span>
+        <span className={`buy-price ${out ? 'is-out' : ''} ${sale && !out ? 'is-sale' : ''}`}>{money(now + extra, true)}<small>{viewCurrency()}</small></span>
         {sale && <s className="buy-was">{money(full + extra, true)}</s>}
         {tag && <span className={`tag-badge is-inline is-${tag.kind}`}>{tag.text}</span>}
         {/* keep it for later, in the customer's account (logged out: the heart leads to logging in) */}

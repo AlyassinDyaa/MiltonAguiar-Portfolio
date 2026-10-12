@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { canBuy, everything, priceOf, shop, signable, sizeOf, sizesOf } from '../data/site'
+import { canBuy, everything, priceOf, shop, signable, sizeOf, sizesOf, viewCurrency, viewRate } from '../data/site'
 import { useAccount } from './useAccount'
 import { SHIP_KEY, feeFor, postsTo, shipToGuess, shippingFor, shippingRules } from '../data/shipping'
+import { PAYPAL_CURRENCIES, inCurrency } from '../data/currency'
 
 /* The cart. What a visitor has added is kept in their browser (so it survives a reload), as
    { slug, size, signed, qty } lines (size: the print size, for a piece sold in sizes). Every time it is read it is checked against the site's content:
@@ -118,10 +119,21 @@ export function CartProvider({ children }) {
   const totalCents = Math.round(total * 100)
   const ship = countries.length ? shippingFor(rules, shipTo, count, totalCents) : { cents: 0, zone: null }
   const shipCents = ship.none ? 0 : ship.cents
-  const fees = { on: rules.fees.on, card: feeFor(rules, 'card', totalCents + shipCents) / 100, paypal: feeFor(rules, 'paypal', totalCents + shipCents) / 100 }
   const shipping = { charged: rules.charge, none: Boolean(ship.none), cents: shipCents, free: Boolean(ship.free), zone: ship.zone ? ship.zone.name : '' }
+  /* The order in the currency shown (data/currency.js), worked out exactly as the checkout charges it:
+     each piece turned on its own, the code's cut, the shipping, and each way to pay's fee. A PayPal
+     payment in a currency PayPal does not take is in the shop's own (`paypal.code`). All in cents. */
+  const base = String(shop.currency || 'eur').toUpperCase()
+  const code = viewCurrency(), rate = viewRate()
+  const order = { lines: lines.map((l) => ({ cents: Math.round(l.each * 100), qty: l.qty })), percent: discount ? discount.percent : 0, ship: shipCents }
+  const shown = inCurrency(order, rate)
+  const card = inCurrency({ ...order, fee: feeFor(rules, 'card', totalCents + shipCents) }, rate)
+  const ppOwn = code !== base && !PAYPAL_CURRENCIES.includes(code)
+  const pp = inCurrency({ ...order, fee: feeFor(rules, 'paypal', totalCents + shipCents) }, ppOwn ? 1 : rate)
+  const view = { code, units: shown.units, items: shown.items, off: shown.off, ship: shown.ship, total: shown.total, card: { fee: card.fee, total: card.total }, paypal: { code: ppOwn ? base : code, fee: pp.fee, total: pp.total } }
+  const fees = { on: rules.fees.on, card: card.fee / 100, paypal: pp.fee / 100 }
   const grand = (totalCents + shipCents) / 100
-  const value = { lines, count, subtotal, off, total, grand, discount, applyCode, dropCode, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw, countries, shipTo, setShipTo, shipping, fees }
+  const value = { lines, count, subtotal, off, total, grand, view, discount, applyCode, dropCode, add, setQty, remove, clear, settle, open, setOpen, max: MAX_QTY, stored: raw, countries, shipTo, setShipTo, shipping, fees }
   return <Cart.Provider value={value}>{children}</Cart.Provider>
 }
 

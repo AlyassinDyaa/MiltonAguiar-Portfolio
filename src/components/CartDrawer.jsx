@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { accountPage, asset, canBuy, extrasKinds, merchForSale, money, nowPrice, payWays, shop, shows, signable, sizesOf } from '../data/site'
+import { accountPage, asset, canBuy, extrasKinds, merchForSale, money, nowPrice, payWays, shop, showMoney, shows, signable, sizesOf } from '../data/site'
+import { CURRENCIES, CURRENCY_NAMES } from '../data/currency'
+import { chooseCurrency } from './CurrencySync'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
 import { checkout, payLine } from '../data/checkout'
@@ -69,7 +71,7 @@ export default function CartDrawer() {
   const pay = async (way) => {
     if (busy || !lines.length) return
     setBusy(way); setNote('')
-    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(cart.discount ? { code: cart.discount.code } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}) }, way, cart.dropCode)
+    const problem = await checkout({ items: lines.map((l) => ({ slug: l.slug, size: l.size, signed: l.signed, qty: l.qty })), ...(cart.discount ? { code: cart.discount.code } : {}), ...(cart.countries.length ? { country: cart.shipTo } : {}), ...(cart.view.code !== String(shop.currency || 'eur').toUpperCase() ? { currency: cart.view.code } : {}) }, way, cart.dropCode)
     if (problem) { setNote(problem); setBusy(false) }
   }
 
@@ -107,7 +109,7 @@ export default function CartDrawer() {
                     <div className="cart-body" data-lenis-prevent>
                     <ul className="cart-lines">
                       <AnimatePresence initial={false}>
-                        {lines.map((l) => (
+                        {lines.map((l, li) => (
                           <motion.li key={l.key} layout initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30, height: 0, marginBottom: 0, paddingBlock: 0 }} transition={{ duration: 0.3, ease: EASE }}>
                             <span className="cart-thumb">{l.piece.src && <img src={asset(l.piece.src)} alt="" />}</span>
                             <div className="cart-info">
@@ -120,7 +122,7 @@ export default function CartDrawer() {
                                   <span aria-live="polite">{l.qty}</span>
                                   <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label="One more">+</button>
                                 </div>
-                                <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{money(l.each * l.qty, true)}</span>
+                                <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{showMoney((cart.view.units[li] * l.qty) / 100, true)}</span>
                               </div>
                             </div>
                             <button type="button" className="cart-remove" onClick={() => cart.remove(l.slug, l.signed, l.size)} aria-label={`Remove ${l.piece.title}`}>×</button>
@@ -155,7 +157,7 @@ export default function CartDrawer() {
                       )
                     })()}
                     <footer className="cart-pay">
-                      <div className="cart-total"><span>Subtotal</span><strong>{money(cart.total)}</strong></div>
+                      <div className="cart-total"><span>Subtotal</span><strong>{showMoney((cart.view.items - cart.view.off) / 100)}</strong></div>
                       {pointsLine}
                       <button type="button" className="btn buy-btn" onClick={() => setStep('pay')}>
                         <span>{shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
@@ -169,6 +171,9 @@ export default function CartDrawer() {
                     {/* step 2, checkout: back to edit the cart (its pieces are not listed again), where it goes and what that costs, the totals, and the ways to pay */}
                     <div className="cart-body" data-lenis-prevent>
                       <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to edit your cart</button>
+                      {/* the currency it is paid in: the shop's own or the buyer's (kept in this browser; Account → Details keeps it on the account) */}
+                      <Dropdown className="cart-shipto" label="Pay in" value={cart.view.code} onChange={chooseCurrency}
+                        options={[...new Set([String(shop.currency || 'eur').toUpperCase(), ...CURRENCIES])].map((c) => ({ value: c, label: `${c} · ${CURRENCY_NAMES[c] || c}` }))} />
                       {/* where it ships to: the site's own drop-down */}
                       {cart.countries.length > 0 && (
                         <Dropdown className="cart-shipto" label="Ship to" value={cart.shipTo} onChange={cart.setShipTo}
@@ -176,18 +181,18 @@ export default function CartDrawer() {
                       )}
                       <section className="cart-sum is-order" aria-labelledby="cart-order-title">
                         <h3 className="cart-sum-head" id="cart-order-title">Your order</h3>
-                        <div className="cart-sum-row"><span>Subtotal</span><b>{money(cart.subtotal, true)}</b></div>
+                        <div className="cart-sum-row"><span>Subtotal</span><b>{showMoney(cart.view.items / 100, true)}</b></div>
                         {cart.discount && (
                           <div className="cart-sum-row is-off">
                             <span><em>{cart.discount.code}</em> {cart.discount.percent}% off <button type="button" className="cart-discount-x" onClick={cart.dropCode} aria-label={`Remove the code ${cart.discount.code}`}>×</button></span>
-                            <b>−{money(cart.off, true)}</b>
+                            <b>−{showMoney(cart.view.off / 100, true)}</b>
                           </div>
                         )}
                         {cart.countries.length > 0 && cart.shipping.charged && (
-                          <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? money(cart.shipping.cents / 100, true) : 'Free'}</b></div>
+                          <div className="cart-sum-row"><span>Shipping{cart.shipping.zone ? ` (${cart.shipping.zone})` : ''}</span><b>{cart.shipping.none ? 'Ask for a quote' : cart.shipping.cents ? showMoney(cart.view.ship / 100, true) : 'Free'}</b></div>
                         )}
                         {cart.fees.on && (ways.card || ways.paypal) && (
-                          <div className="cart-sum-row is-fee"><span>Transaction fee</span><b>{[ways.card && `${money(cart.fees.card, true)} card`, ways.paypal && `${money(cart.fees.paypal, true)} PayPal`].filter(Boolean).join(' · ')}</b></div>
+                          <div className="cart-sum-row is-fee"><span>Transaction fee</span><b>{[ways.card && `${showMoney(cart.view.card.fee / 100, true)} card`, ways.paypal && `${showMoney(cart.view.paypal.fee / 100, true, cart.view.paypal.code)} PayPal`].filter(Boolean).join(' · ')}</b></div>
                         )}
                         {!cart.discount && (codeOpen ? (
                           <form className="cart-code" onSubmit={apply}>
@@ -203,7 +208,7 @@ export default function CartDrawer() {
                       </section>
                     </div>
                     <footer className="cart-pay">
-                      <div className="cart-total"><span>{cart.fees.on ? 'Total before fee' : 'Total'}</span><strong>{money(cart.grand)}</strong></div>
+                      <div className="cart-total"><span>{cart.fees.on ? 'Total before fee' : 'Total'}</span><strong>{showMoney(cart.view.total / 100)}</strong></div>
                       {pointsLine}
                       {mustLogIn ? (
                         <Link className="btn buy-btn" to="/account/login?next=/shop" onClick={() => setOpen(false)}>
@@ -214,11 +219,12 @@ export default function CartDrawer() {
                       {/* each way to pay with what it comes to, the transaction fee for it included */}
                       {ways.card && (
                         <button type="button" className={`btn buy-btn ${busy === 'card' ? 'is-busy' : ''}`} onClick={() => pay('card')} aria-busy={busy === 'card'} disabled={cart.shipping.none}>
-                          <span>{busy === 'card' ? 'Opening secure checkout' : `Pay ${money(cart.grand + (cart.fees.on ? cart.fees.card : 0), true)} by card`}</span>
+                          <span>{busy === 'card' ? 'Opening secure checkout' : `Pay ${showMoney(cart.view.card.total / 100, true)} by card`}</span>
                           <span className="buy-btn-icon" aria-hidden="true">{busy === 'card' ? <i className="buy-spin" /> : '→'}</span>
                         </button>
                       )}
-                      {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => { if (!cart.shipping.none) pay('paypal') }} label={`Pay ${money(cart.grand + (cart.fees.on ? cart.fees.paypal : 0), true)} with`} />}
+                      {ways.paypal && <PaypalButton busy={busy === 'paypal'} onClick={() => { if (!cart.shipping.none) pay('paypal') }} label={`Pay ${showMoney(cart.view.paypal.total / 100, true, cart.view.paypal.code)} with`} />}
+                      {ways.paypal && cart.view.paypal.code !== cart.view.code && <p className="cart-small is-center">PayPal does not take {cart.view.code} here: a PayPal payment is in {cart.view.paypal.code}.</p>}
                       </>}
                       <AnimatePresence>
                         {note && (

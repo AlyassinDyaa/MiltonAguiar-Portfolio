@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       title: `A message from ${name}`,
       lines: [`From ${name} (${email})`, ...paras],
     }
-  const sent = await sendMail({ ...mail, to, fromLabel: email, replyTo: `${name.replace(/[<>"]/g, '')} <${email}>`, after: `Sent from the ${commission ? 'Commissions' : 'Contact'} page. Reply to this email to answer ${name} directly.` })
+  const sent = await sendMail({ ...mail, to, fromLabel: name, replyTo: `${name.replace(/[<>"]/g, '')} <${email}>`, after: `Sent from the ${commission ? 'Commissions' : 'Contact'} page. Reply to this email to answer ${name} directly.` })
   if (!sent) return say(502, { fallback: true, message: 'The message could not be sent just now.' })
   for (const k of keys) { try { await noteSent(k) } catch { /* not counted this time */ } }
   return say(200, { ok: true })

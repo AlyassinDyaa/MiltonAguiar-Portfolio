@@ -30,7 +30,7 @@
       "name": "USA and Canada",
       "countries": "US, CA",
       "first": 10,
-      "extra": 3
+      "extra": 0
     },
     {
       "name": "Rest of the world",
@@ -43,7 +43,7 @@
   "intro": "Prints and original art, straight from the drawing board. Open any piece to buy it.",
   "tagPlace": "corner",
   "fees": {
-    "on": false,
+    "on": true,
     "cardPercent": 1.5,
     "cardFixed": 0.25,
     "paypalPercent": 3.49,

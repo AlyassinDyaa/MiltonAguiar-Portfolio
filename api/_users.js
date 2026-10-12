@@ -266,9 +266,15 @@ export const emailsToArtist = (kind) => {
     return emails[kind] !== false
   } catch { return true }
 }
+/* Where the emails for the artist go (a new order, a contact message, a commission request):
+   CONTACT_TO if set; else, when the site sends through a Gmail account, that Gmail inbox itself.
+   The contact address in the admin (contact@miltonaguiar.com) forwards to that same Gmail, and
+   Gmail keeps a message it sent itself only in Sent, never in the Inbox, so sending there would
+   never be seen. Otherwise the contact address, else the address the site sends from. */
 export const artistInbox = () => {
   const m = String(process.env.MAIL_FROM || '').match(/<([^>]+)>/)
-  return process.env.CONTACT_TO || brandInfo().email || (m && m[1]) || process.env.SMTP_USER || String(process.env.MAIL_FROM || '').trim()
+  const gmail = /(^|\.)gmail\.com$/i.test(String(process.env.SMTP_HOST || '').trim()) && process.env.SMTP_USER
+  return process.env.CONTACT_TO || (gmail ? String(process.env.SMTP_USER).trim() : '') || brandInfo().email || (m && m[1]) || process.env.SMTP_USER || String(process.env.MAIL_FROM || '').trim()
 }
 const smtpReady = () => Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 export const mailReady = () => smtpReady() || Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM)

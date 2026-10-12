@@ -1,7 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { dbReady } from './_db.js'
-import { EMAIL, clean, clientIp, fromThisSite, mailReady, noteTry, sendMail, tooMany } from './_users.js'
+import { EMAIL, artistInbox, clean, clientIp, fromThisSite, mailReady, noteTry, sendMail, tooMany } from './_users.js'
 
 /* The Contact and Commission forms, sent straight to the artist's inbox: the visitor presses Send
    and that is it, no mail app. The email comes from the site's own address (the SMTP_* or Resend
@@ -12,12 +10,10 @@ import { EMAIL, clean, clientIp, fromThisSite, mailReady, noteTry, sendMail, too
    Both also carry `website` (a field people never see: a bot fills it in) and `opened` (when the
    form was shown: a person takes more than a few seconds).
 
-   Where it goes: CONTACT_TO if set, otherwise the contact email in the admin (Site → Name, colour
-   and contact), otherwise the address the site sends from. With no way to send email it answers
+   Where it goes: the artist's inbox (api/_users.js, artistInbox: CONTACT_TO if set, else the Gmail
+   the site sends from, else the contact email in the admin). With no way to send email it answers
    503 and the page offers Instagram or the email address instead. No copy goes to the visitor, so
    nobody can use the form to send emails to other people. */
-const read = (path) => { try { return JSON.parse(readFileSync(join(process.cwd(), path), 'utf8')) } catch { return {} } }
-const senderAddress = () => { const m = String(process.env.MAIL_FROM || '').match(/<([^>]+)>/); return (m && m[1]) || process.env.SMTP_USER || String(process.env.MAIL_FROM || '').trim() }
 
 // without the database, a count kept by this function while it stays warm
 const recent = new Map()
@@ -55,8 +51,7 @@ export default async function handler(req, res) {
   if (!EMAIL.test(email)) return say(400, { message: 'That email address does not look right.', field: 'email' })
   if (message.length < 2) return say(400, { message: commission ? 'Tell me the idea.' : 'Write a message.', field: commission ? 'idea' : 'message' })
 
-  const brand = read('content/site/brand.json')
-  const to = process.env.CONTACT_TO || brand.email || senderAddress()
+  const to = artistInbox() // the artist's own inbox (see api/_users.js: not the forwarding address, which Gmail would keep in Sent only)
   if (!mailReady() || !to) return say(503, { fallback: true, message: 'Messages cannot be sent from the site right now.' })
   if (await limited(clientIp(req))) return say(429, { message: 'A few messages have been sent from here already. Try again in an hour, or write on Instagram.' })
 

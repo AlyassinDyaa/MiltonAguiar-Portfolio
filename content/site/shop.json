@@ -5,7 +5,7 @@
     {
       "name": "Portugal",
       "countries": "PT",
-      "first": 5,
+      "first": 7.19,
       "extra": 1
     },
     {
@@ -29,7 +29,7 @@
     {
       "name": "USA and Canada",
       "countries": "US, CA",
-      "first": 10,
+      "first": 13.75,
       "extra": 0
     },
     {
@@ -71,6 +71,11 @@
   ],
   "label": "The shop",
   "thanksText": "Your order is in. A receipt is on its way to your email.",
+  "emails": {
+    "orders": true,
+    "commissions": true,
+    "replies": true
+  },
   "title": "Take one home",
   "types": [
     {

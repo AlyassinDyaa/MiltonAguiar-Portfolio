@@ -2952,3 +2952,10 @@ form.lined .acc-phone-number input { padding-right: 0; }
   .cart-extras-row .srow-track { padding: 0 14px 2px; }
   .cart-extras li { width: 210px; }
 }
+
+/* the cart's Pay in / Ship to boxes: the choice made in bright, upright words on a dark box (not
+   the filters' red "set" look, which washed the words out), a red edge and arrow */
+.cart-shipto .dd-button, .cart-shipto.is-set .dd-button { background: var(--panel); color: var(--fg); font-style: normal; letter-spacing: 0.04em; box-shadow: inset 0 0 0 2px var(--line-strong), inset 5px 0 0 var(--accent); }
+.cart-shipto .dd-value { color: var(--fg); font-weight: 800; }
+.cart-shipto .dd-button svg { color: var(--accent); }
+.cart-shipto .dd-button:hover, .cart-shipto .dd-button:focus-visible, .cart-shipto.is-open .dd-button { box-shadow: inset 0 0 0 2px var(--accent), inset 5px 0 0 var(--accent); }

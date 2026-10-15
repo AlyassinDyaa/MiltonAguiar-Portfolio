@@ -10,7 +10,6 @@ import { useAccount } from '../hooks/useAccount'
 import { checkout, payLine } from '../data/checkout'
 import { Elsewhere, Lock, PaypalButton } from './Buy'
 import Dropdown from './Dropdown'
-import ScrollRow from './ScrollRow'
 
 const EASE = [0.16, 1, 0.3, 1]
 const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
@@ -56,6 +55,22 @@ export default function CartDrawer() {
   const [step, setStep] = useState('cart')
   useEffect(() => { if (open) setStep('cart') }, [open])
   useEffect(() => { if (!lines.length) setStep('cart') }, [lines.length])
+  // the little extras (step 2): the stickers & more for sale, the kinds ticked "In the cart's little
+  // extras" first; with none, the cart goes straight to checkout and has two steps
+  const offered = (p) => extrasKinds.has(String(p.type || '').trim())
+  const extras = shows('shop', 'extras') ? merchForSale.filter((p) => canBuy(p)).sort((a, b) => Number(offered(b)) - Number(offered(a))).slice(0, 12) : []
+  const steps = ['cart', ...(extras.length ? ['extras'] : []), 'pay']
+  const stepNo = steps.indexOf(step) + 1
+  const STEP_NAME = { cart: 'Your cart', extras: shop.extrasTitle || 'Little extras', pay: 'Checkout' }
+  const next = () => setStep(steps[Math.min(steps.length - 1, stepNo)])
+  const back = () => setStep(steps[Math.max(0, stepNo - 2)])
+  // the small total at the foot of the first two steps, and the points it earns
+  const smallTotal = (
+    <div className="cart-mini">
+      <div className="cart-mini-total"><span>Total</span><strong>{showMoney((cart.view.items - cart.view.off) / 100, true)}</strong></div>
+      {pointsLine}
+    </div>
+  )
 
   useEffect(() => {
     if (!open) return
@@ -84,8 +99,8 @@ export default function CartDrawer() {
           <motion.aside className="cart-panel" role="dialog" aria-modal="true" aria-label="Your cart" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.45, ease: EASE }} onClick={(e) => e.stopPropagation()}>
             <header className="cart-head">
               <div>
-                <div className="cart-kicker">{lines.length ? (step === 'pay' ? 'Step 2 of 2 · Checkout' : 'Step 1 of 2 · Your cart') : 'Your cart'}</div>
-                <h2 className="cart-title">{!cart.count ? 'Empty for now' : step === 'pay' ? 'Checkout' : things(cart.count)}</h2>
+                <div className="cart-kicker">{lines.length ? `Step ${stepNo} of ${steps.length} · ${STEP_NAME[step]}` : 'Your cart'}</div>
+                <h2 className="cart-title">{!cart.count ? 'Empty for now' : step === 'pay' ? 'Checkout' : step === 'extras' ? 'Add a little extra?' : things(cart.count)}</h2>
                 {/* emptying it: under the count, out of the way of the pieces */}
                 {lines.length > 0 && step === 'cart' && <button type="button" className="cart-clear is-head" onClick={cart.clear}>Empty the cart</button>}
               </div>
@@ -133,44 +148,47 @@ export default function CartDrawer() {
 
 
                     </div>
-                    <footer className="cart-pay">
-                      <div className="cart-total"><span>Subtotal</span><strong>{showMoney((cart.view.items - cart.view.off) / 100)}</strong></div>
-                      {pointsLine}
-                      <button type="button" className="btn buy-btn" onClick={() => setStep('pay')}>
+                    <footer className="cart-pay is-small">
+                      {smallTotal}
+                      <button type="button" className="btn buy-btn" onClick={next}>
+                        <span>{steps[1] === 'extras' ? `Next: ${(shop.extrasTitle || 'little extras').toLowerCase()}` : shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
+                        <span className="buy-btn-icon" aria-hidden="true">→</span>
+                      </button>
+                    </footer>
+                  </>
+                ) : step === 'extras' ? (
+                  <>
+                    {/* step 2, the little extras: the stickers & more as a grid, one tap each (their first option) */}
+                    <div className="cart-body" data-lenis-prevent>
+                      <button type="button" className="cart-back" onClick={back}>← Back to your cart</button>
+                      <ul className="cart-xgrid">
+                        {extras.map((p) => {
+                          const opt = sizesOf(p)[0]?.name || ''
+                          const have = lines.filter((l) => l.slug === p.slug).reduce((n, l) => n + l.qty, 0)
+                          return (
+                            <li key={p.slug} className={have ? 'is-in' : ''}>
+                              <span className="cart-xgrid-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
+                              <b className="cart-xgrid-name">{p.title}</b>
+                              <span className="cart-xgrid-price">{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</span>
+                              <button type="button" className="cart-xgrid-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>{have ? `✓ ${have} in cart · add` : '+ Add'}</button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                    <footer className="cart-pay is-small">
+                      {smallTotal}
+                      <button type="button" className="btn buy-btn" onClick={next}>
                         <span>{shop.shipping !== false ? 'Next: shipping & payment' : 'Next: payment'}</span>
                         <span className="buy-btn-icon" aria-hidden="true">→</span>
                       </button>
-                      <p className="cart-small is-center">{shop.shipping !== false ? 'Shipping and the way to pay come next.' : 'The way to pay comes next.'}</p>
                     </footer>
                   </>
                 ) : (
                   <>
-                    {/* step 2, checkout: back to edit the cart (its pieces are not listed again), where it goes and what that costs, the totals, and the ways to pay */}
+                    {/* the last step, checkout: back a step, the currency and where it goes, the order's sums, and the ways to pay */}
                     <div className="cart-body" data-lenis-prevent>
-                      <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to edit your cart</button>
-                      {/* little extras, at the top of checkout: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option); a row that swipes, with arrows */}
-                      {(() => {
-                        if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
-                        const extras = merchForSale.filter((p) => extrasKinds.has(String(p.type || '').trim()) && canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8) // only the kinds ticked "In the cart's little extras"
-                        if (!extras.length) return null
-                        return (
-                          <div className="cart-extras is-checkout">
-                            <h3>{shop.extrasTitle}</h3>
-                            <ScrollRow as="ul" className="cart-extras-row" label={shop.extrasTitle}>
-                              {extras.map((p) => {
-                                const opt = sizesOf(p)[0]?.name || ''
-                                return (
-                                  <li key={p.slug}>
-                                    <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
-                                    <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
-                                    <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
-                                  </li>
-                                )
-                              })}
-                            </ScrollRow>
-                          </div>
-                        )
-                      })()}
+                      <button type="button" className="cart-back" onClick={back}>{steps[stepNo - 2] === 'extras' ? '← Back to the little extras' : '← Back to edit your cart'}</button>
                       {/* the currency it is paid in: the shop's own or the buyer's (kept in this browser; Account → Details keeps it on the account) */}
                       <Dropdown className="cart-shipto" label="Pay in" value={cart.view.code} onChange={chooseCurrency}
                         options={[...new Set([String(shop.currency || 'eur').toUpperCase(), ...CURRENCIES])].map((c) => ({ value: c, label: `${c} · ${CURRENCY_NAMES[c] || c}` }))} />

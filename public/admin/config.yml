@@ -751,7 +751,7 @@ collections:
             fields:
               - { name: name, label: Name, widget: string }
               - { name: note, label: What the buyer gets, widget: string, required: false, hint: 'For example "Vinyl, waterproof, about 7 cm".' }
-              - { name: extras, label: "In the cart's little extras", widget: boolean, default: false, required: false, hint: 'On: items of this kind are offered in the cart, one tap each, when it holds a piece of art.' }
+              - { name: extras, label: "In the cart's little extras", widget: boolean, default: false, required: false, hint: 'On: items of this kind come first in the cart''s little extras (its second step), one tap each.' }
               - { name: hidden, label: Hide, widget: boolean, default: false, required: false }
 
       - name: account

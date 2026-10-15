@@ -5,37 +5,37 @@
     {
       "name": "Portugal",
       "countries": "PT",
-      "first": 7.19,
+      "first": 7.55,
       "extra": 1
     },
     {
       "name": "Spain",
       "countries": "ES",
-      "first": 8,
+      "first": 7.55,
       "extra": 1.5
     },
     {
       "name": "Europe",
       "countries": "FR, DE, IT, NL, BE, IE, LU, AT, DK, SE, FI, PL, CZ, SK, SI, HR, HU, RO, BG, GR, CY, MT, EE, LV, LT, CH, NO",
-      "first": 12,
+      "first": 7.55,
       "extra": 2
     },
     {
       "name": "United Kingdom",
       "countries": "GB",
-      "first": 14,
+      "first": 7.55,
       "extra": 2
     },
     {
       "name": "USA and Canada",
       "countries": "US, CA",
-      "first": 13.75,
+      "first": 10.1,
       "extra": 0
     },
     {
       "name": "Rest of the world",
       "countries": "*",
-      "first": 22,
+      "first": 9.3,
       "extra": 3
     }
   ],

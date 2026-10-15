@@ -6,25 +6,25 @@
       "name": "Portugal",
       "countries": "PT",
       "first": 7.55,
-      "extra": 1
+      "extra": ""
     },
     {
       "name": "Spain",
       "countries": "ES",
       "first": 7.55,
-      "extra": 1.5
+      "extra": ""
     },
     {
       "name": "Europe",
       "countries": "FR, DE, IT, NL, BE, IE, LU, AT, DK, SE, FI, PL, CZ, SK, SI, HR, HU, RO, BG, GR, CY, MT, EE, LV, LT, CH, NO",
       "first": 7.55,
-      "extra": 2
+      "extra": ""
     },
     {
       "name": "United Kingdom",
       "countries": "GB",
       "first": 7.55,
-      "extra": 2
+      "extra": ""
     },
     {
       "name": "USA and Canada",
@@ -36,7 +36,7 @@
       "name": "Rest of the world",
       "countries": "*",
       "first": 9.3,
-      "extra": 3
+      "extra": ""
     }
   ],
   "emptyTitle": "The shop opens soon.",

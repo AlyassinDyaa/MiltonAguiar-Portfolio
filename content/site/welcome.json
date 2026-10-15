@@ -1,10 +1,10 @@
 {
   "often": "visit",
   "sale": true,
-  "text": "Welcome to my website!\n\nWe're opening the shop with a 20% DISCOUNT on everything!\nPlease enjoy, and thank you!",
+  "text": "Welcome to my website!\n\nWe're opening the shop with a 20% DISCOUNT on everything until NOVEMBER 16!\nPlease enjoy, and thank you!",
   "code": "",
-  "url": "",
-  "button": "",
+  "url": "/shop",
+  "button": "See Shop",
   "title": "OPENING SALES!",
   "codeText": "",
   "event": "",

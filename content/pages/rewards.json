@@ -95,6 +95,15 @@
         "hidden": false,
         "name": "A free print!",
         "text": "Any print of your choice."
+      },
+      {
+        "cost": 1000,
+        "kind": "gift",
+        "percent": 10,
+        "days": 60,
+        "hidden": false,
+        "name": "2 free prints!",
+        "text": "Any print of your choice."
       }
     ]
   }

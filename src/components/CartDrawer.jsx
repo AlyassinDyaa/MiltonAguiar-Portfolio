@@ -133,29 +133,6 @@ export default function CartDrawer() {
 
 
                     </div>
-                    {/* little extras, kept at the foot of the cart above the subtotal: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option); a row that swipes, with arrows */}
-                    {(() => {
-                      if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
-                      const extras = merchForSale.filter((p) => extrasKinds.has(String(p.type || '').trim()) && canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8) // only the kinds ticked "In the cart's little extras"
-                      if (!extras.length) return null
-                      return (
-                        <div className="cart-extras">
-                          <h3>{shop.extrasTitle}</h3>
-                          <ScrollRow as="ul" className="cart-extras-row" label={shop.extrasTitle}>
-                            {extras.map((p) => {
-                              const opt = sizesOf(p)[0]?.name || ''
-                              return (
-                                <li key={p.slug}>
-                                  <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
-                                  <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
-                                  <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
-                                </li>
-                              )
-                            })}
-                          </ScrollRow>
-                        </div>
-                      )
-                    })()}
                     <footer className="cart-pay">
                       <div className="cart-total"><span>Subtotal</span><strong>{showMoney((cart.view.items - cart.view.off) / 100)}</strong></div>
                       {pointsLine}
@@ -171,6 +148,29 @@ export default function CartDrawer() {
                     {/* step 2, checkout: back to edit the cart (its pieces are not listed again), where it goes and what that costs, the totals, and the ways to pay */}
                     <div className="cart-body" data-lenis-prevent>
                       <button type="button" className="cart-back" onClick={() => setStep('cart')}>← Back to edit your cart</button>
+                      {/* little extras, at the top of checkout: with a piece of art in the cart, the stickers & more not in it yet, one tap each (their first option); a row that swipes, with arrows */}
+                      {(() => {
+                        if (!shows('shop', 'extras') || !lines.some((l) => l.piece.shelf !== 'merch')) return null
+                        const extras = merchForSale.filter((p) => extrasKinds.has(String(p.type || '').trim()) && canBuy(p) && !lines.some((l) => l.slug === p.slug)).slice(0, 8) // only the kinds ticked "In the cart's little extras"
+                        if (!extras.length) return null
+                        return (
+                          <div className="cart-extras is-checkout">
+                            <h3>{shop.extrasTitle}</h3>
+                            <ScrollRow as="ul" className="cart-extras-row" label={shop.extrasTitle}>
+                              {extras.map((p) => {
+                                const opt = sizesOf(p)[0]?.name || ''
+                                return (
+                                  <li key={p.slug}>
+                                    <span className="cart-extra-pic">{p.src && <img src={asset(p.src)} alt="" loading="lazy" />}</span>
+                                    <span className="cart-extra-words"><b>{p.title}</b><small>{[opt, money(nowPrice(p, opt), true)].filter(Boolean).join(' · ')}</small></span>
+                                    <button type="button" className="cart-extra-add" onClick={() => cart.add(p.slug, false, opt)} aria-label={`Add ${p.title}${opt ? `, ${opt}` : ''}`}>+</button>
+                                  </li>
+                                )
+                              })}
+                            </ScrollRow>
+                          </div>
+                        )
+                      })()}
                       {/* the currency it is paid in: the shop's own or the buyer's (kept in this browser; Account → Details keeps it on the account) */}
                       <Dropdown className="cart-shipto" label="Pay in" value={cart.view.code} onChange={chooseCurrency}
                         options={[...new Set([String(shop.currency || 'eur').toUpperCase(), ...CURRENCIES])].map((c) => ({ value: c, label: `${c} · ${CURRENCY_NAMES[c] || c}` }))} />

@@ -293,7 +293,7 @@ const adminAction = async (req, d, users, action, body) => {
       const due = await users.find({ $or: [{ pointsCheckedAt: { $exists: false } }, { pointsCheckedAt: { $lt: Date.now() - 5 * 60000 } }] }).limit(100).toArray()
       for (const u of due) { try { await catchUpPoints(d, u) } catch (e) { console.error('points not caught up:', e.message) } }
     }
-    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, marketing: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1, card: 1, points: 1, claims: 1, pointsLog: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
+    const all = await users.find({}, { projection: { email: 1, name: 1, memberNo: 1, verified: 1, marketing: 1, createdAt: 1, gifts: 1, newGifts: 1, avatar: 1, card: 1, points: 1, claims: 1, pointsLog: 1, keep: 1 } }).sort({ memberNo: 1 }).limit(2000).toArray()
     const members = all.map(memberOf)
     // a piece taken off the site since: the picture its order kept
     const lost = all.filter((u, n) => !members[n].picture && /^[a-z0-9-]{1,80}$/.test(String(u.avatar || '')))

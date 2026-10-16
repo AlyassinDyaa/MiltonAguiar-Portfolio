@@ -2991,3 +2991,9 @@ form.lined .acc-phone-number input { padding-right: 0; }
   .cart-pay .pp-btn { min-height: 42px; }
   .cart-pay .cart-total strong { font-size: 1.35rem; }
 }
+
+/* ---------- the overview's currency question: the picker under the words, the button beside ---------- */
+.acc-cur-ask .acc-currency { margin: 12px 0 0; }
+.acc-cur-ask .acc-currency span { font-size: 0.72rem; }
+.acc-cur-ask .acc-currency select { width: 100%; max-width: 280px; height: 42px; }
+.acc-cur-ask .acc-news-icon { font-size: 1.3rem; font-weight: 800; }

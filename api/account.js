@@ -8,7 +8,7 @@ import { accountsMode } from './_buyer.js'
 import { countedMatch } from './_commissions.js'
 import { adminOk } from './_session.js'
 import { mailingAction, unsubscribe } from './_mailings.js'
-import { adjustPoints, catchUpPoints, claimSent, fieldPoints, newsPoints, pointsRules, pointsView, redeemPoints, signupPoints } from './_points.js'
+import { adjustPoints, catchUpPoints, claimSent, currencyPoints, fieldPoints, newsPoints, pointsRules, pointsView, redeemPoints, signupPoints } from './_points.js'
 import { randomBytes } from 'node:crypto'
 import { EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword, makeToken, mergeCarts, newId, noteTry, passwordProblem, peekToken, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken, countTry, dropTry, needsRehash } from './_users.js'
 
@@ -272,6 +272,8 @@ const pictureOf = (avatar) => {
   const piece = readJson(`content/work/${avatar}.json`)
   return piece && piece.src ? { src: piece.src, face: String(piece.face || '') } : null
 }
+// a currency as the account keeps it: one of src/data/currency.js, '' for the shop's own
+const currencyOf = (v) => (CURRENCIES.includes(String(v || '').toUpperCase()) ? String(v).toUpperCase() : '')
 const memberOf = (u) => ({
   email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
   keep: u.keep === true, // kept for good: cannot be deleted
@@ -455,7 +457,9 @@ export default async function handler(req, res) {
       if (await tooMany(`signup:${ip}`, 10, 60)) return say(res, 429, { message: 'Too many new accounts from here. Try again in an hour.' })
       await noteTry(`signup:${ip}`)
       if (await users.findOne({ email })) return say(res, 409, { message: 'There is already an account with that email. Log in, or reset the password.', field: 'email' })
-      const user = { _id: newId('u'), memberNo: 0, email, name, phone, password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date() }
+      const user = { _id: newId('u'), memberNo: 0, email, name, phone, password: await hashPassword(body.password), verified: false, marketing: Boolean(body.marketing), cart: cleanCart(body.cart), createdAt: new Date(),
+        // the currency picked on the form (the points for picking it come below, once)
+        ...(typeof body.currency === 'string' ? { currency: currencyOf(body.currency), currencyChosen: new Date() } : {}) }
       // the next member number; should someone else sign up in the same instant and take it, the one after
       for (let tries = 0; ; tries++) {
         user.memberNo = await nextMemberNo(d)
@@ -467,6 +471,7 @@ export default async function handler(req, res) {
       }
       await startSession(req, res, user._id)
       try { await fieldPoints(d, user) } catch (e) { console.error('detail points:', e.message) }
+      if (user.currencyChosen) { try { await currencyPoints(d, user) } catch (e) { console.error('currency points:', e.message) } }
       const mailed = await sendVerify(req, user)
       return say(res, 200, { user: publicUser((await users.findOne({ _id: user._id })) || user), mailed })
     }
@@ -685,12 +690,23 @@ export default async function handler(req, res) {
       return say(res, 200, { user: publicUser(await users.findOne({ _id: user._id })) })
     }
 
+    // the currency picked (the overview asks an account that has not picked one yet): the first
+    // pick ever earns the currency points, a change after that earns none
+    if (action === 'currency') {
+      await users.updateOne({ _id: user._id }, { $set: { currency: currencyOf(body.currency), ...(user.currencyChosen ? {} : { currencyChosen: new Date() }) } })
+      try { await currencyPoints(d, user) } catch (e) { console.error('currency points:', e.message) }
+      return say(res, 200, { user: publicUser(await users.findOne({ _id: user._id })) })
+    }
+
     if (action === 'profile') {
       const phone = phoneOf(body.phone)
       if (phone === null) return say(res, 400, { message: 'That phone number does not look right: the country, then the number, digits only.', field: 'phone' })
       const set = { name: clean(body.name, 80), phone, marketing: Boolean(body.marketing) }
       // the currency they see prices and pay in (src/data/currency.js); '' for the shop's own
-      if (body.currency !== undefined) set.currency = CURRENCIES.includes(String(body.currency).toUpperCase()) ? String(body.currency).toUpperCase() : ''
+      if (body.currency !== undefined) set.currency = currencyOf(body.currency)
+      // a currency picked in Details counts as picking it (the points, once ever)
+      const picked = body.currency !== undefined && body.currencyPicked === true
+      if (picked && !user.currencyChosen) set.currencyChosen = new Date()
       if (body.card !== undefined) {
         const card = clean(body.card, 80)
         if (!(await cardAllowed(d, user, card))) return say(res, 400, { message: 'That card design is not one you have earned yet.', field: 'card' })
@@ -704,6 +720,7 @@ export default async function handler(req, res) {
       await users.updateOne({ _id: user._id }, { $set: set })
       if (set.marketing !== Boolean(user.marketing)) { try { await newsPoints(d, user, set.marketing) } catch (e) { console.error('news points:', e.message) } }
       try { await fieldPoints(d, { ...user, ...set }) } catch (e) { console.error('detail points:', e.message) }
+      if (picked) { try { await currencyPoints(d, user) } catch (e) { console.error('currency points:', e.message) } }
       return say(res, 200, { user: publicUser(await users.findOne({ _id: user._id })) })
     }
 

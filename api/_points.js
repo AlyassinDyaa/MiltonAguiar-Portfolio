@@ -35,7 +35,7 @@ export const pointsRules = () => {
   return {
     on: p.on !== false,
     perUnit: Number.isFinite(Number(p.perUnit)) && Number(p.perUnit) >= 0 ? Number(p.perUnit) : 1,
-    signup: whole(p.signup, 50), news: whole(p.news, 25), field: whole(p.field, 10),
+    signup: whole(p.signup, 50), news: whole(p.news, 25), field: whole(p.field, 10), currency: whole(p.currency, 10),
     name: String(p.name || 'points').trim() || 'points',
     intro: String(p.intro || ''),
     rewards,
@@ -125,6 +125,14 @@ export const fieldPoints = async (d, user) => {
     if (claim.modifiedCount) await addPoints(d, user._id, rules.field * FIELD_WEIGHT[k], 'detail', FIELD_WORDS[k])
   }
 }
+/* The currency points: given once ever, the first time the account picks the currency it sees
+   prices and pays in (on signing up, or later); picking another after that earns nothing more. */
+export const currencyPoints = async (d, user) => {
+  const rules = pointsRules()
+  if (!rules.on || !rules.currency || !user || user.pointsCurrency) return
+  const claim = await d.collection('users').updateOne({ _id: user._id, pointsCurrency: { $exists: false } }, { $set: { pointsCurrency: true } })
+  if (claim.modifiedCount) await addPoints(d, user._id, rules.currency, 'currency')
+}
 /* The news points: given once ever on saying yes (an account with a confirmed email), taken back
    on saying no, and not given a second time. */
 export const newsPoints = async (d, user, on) => {
@@ -176,7 +184,7 @@ export const pointsView = (user) => {
   const rules = pointsRules()
   const balance = Math.max(0, Math.round(Number(user.points) || 0))
   return {
-    on: rules.on, name: rules.name, intro: rules.intro, perUnit: rules.perUnit, signup: rules.signup, news: rules.news, field: rules.field,
+    on: rules.on, name: rules.name, intro: rules.intro, perUnit: rules.perUnit, signup: rules.signup, news: rules.news, field: rules.field, currency: rules.currency,
     fields: ['name', 'phone'].filter((k) => !(user.pointsFields && user.pointsFields[k])), // the details still to fill in for points
     balance,
     earned: Math.max(balance, Math.round(Number(user.pointsEarned) || 0)), // everything earned, ever (spent or not)

@@ -717,7 +717,7 @@ window.IASales = (() => {
   /* A member's points in their window: the balance, the rewards they spent points on (a gift to
      send is marked as sent here; a code is shown), the last changes, and points added or taken by
      hand with a note they see. */
-  const WHY = { order: 'order', commission: 'commission', signup: 'email confirmed', detail: 'detail added', news: 'said yes to news', 'news-off': 'unsubscribed', refund: 'refunded', redeem: 'spent on', admin: 'from you' }
+  const WHY = { order: 'order', commission: 'commission', signup: 'email confirmed', detail: 'detail added', news: 'said yes to news', 'news-off': 'unsubscribed', currency: 'picked a currency', refund: 'refunded', redeem: 'spent on', admin: 'from you' }
   const pointsAct = async (m, mem, body) => {
     m.busy = true; m.ptsSaid = ''; draw()
     const r = await mApi(body)

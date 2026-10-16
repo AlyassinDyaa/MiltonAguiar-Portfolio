@@ -162,7 +162,7 @@ function assemble(content) {
     })
   // points (Rewards → Points): the rules the account page can say before the balance arrives
   const pt = rw.points || {}
-  accountPage.points = { on: pt.on !== false, name: String(pt.name || 'points').trim() || 'points', signup: Math.max(0, Math.round(Number(pt.signup ?? 50) || 0)), news: Math.max(0, Math.round(Number(pt.news ?? 25) || 0)), field: Math.max(0, Math.round(Number(pt.field ?? 10) || 0)), perUnit: Number.isFinite(Number(pt.perUnit)) && Number(pt.perUnit) >= 0 ? Number(pt.perUnit) : 1 }
+  accountPage.points = { on: pt.on !== false, name: String(pt.name || 'points').trim() || 'points', signup: Math.max(0, Math.round(Number(pt.signup ?? 50) || 0)), news: Math.max(0, Math.round(Number(pt.news ?? 25) || 0)), field: Math.max(0, Math.round(Number(pt.field ?? 10) || 0)), currency: Math.max(0, Math.round(Number(pt.currency ?? 10) || 0)), perUnit: Number.isFinite(Number(pt.perUnit)) && Number(pt.perUnit) >= 0 ? Number(pt.perUnit) : 1 }
   // the pictures given on confirming the email (the confirmation page and email show these)
   accountPage.verifiedIcons = accountPage.rewards.filter((r) => r.kind === 'picture' && r.earnedBy === 'verify')
   pages = {

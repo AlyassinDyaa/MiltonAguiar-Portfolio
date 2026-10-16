@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Page from '../components/Page'
-import { CURRENCIES, CURRENCY_NAMES } from '../data/currency'
+import { CURRENCIES, CURRENCY_NAMES, guessCurrency } from '../data/currency'
+import { keptCurrency } from '../components/CurrencySync'
 import { accountPage, asset, brand, canBuy, everything, shop, faceLook, fullPrice, money, nowPrice, onSale, soldOut, topSize } from '../data/site'
 import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
@@ -312,17 +313,34 @@ function Login() {
 }
 
 /* ---------- make an account ---------- */
+/* The currency prices are shown and paid in: the shop's own ('' as kept) or one of src/data/currency.js. */
+const baseCurrency = () => String(shop.currency || 'eur').toUpperCase()
+const firstCurrency = (user) => (user && user.currency) || keptCurrency() || guessCurrency() || ''
+function CurrencyPick({ value, onChange, label = 'Prices and payment in', note = 'Prices are converted at the day\'s European Central Bank rate, and you pay in this currency.' }) {
+  const base = baseCurrency()
+  return (
+    <label className="acc-currency">
+      <span>{label}</span>
+      <select value={value || base} onChange={(e) => onChange(e.target.value === base ? '' : e.target.value)}>
+        {[...new Set([base, ...CURRENCIES])].map((c) => <option key={c} value={c}>{c} · {CURRENCY_NAMES[c] || c}</option>)}
+      </select>
+      {note && <small>{note}</small>}
+    </label>
+  )
+}
+const currencyPts = () => (accountPage.points.on && accountPage.points.currency > 0 ? accountPage.points.currency : 0)
+
 function Signup() {
   const { user, call } = useAccount()
   const cart = useCart()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = safeNext(params.get('next'))
-  const f = useForm({ name: '', phone: '', email: '', password: '', again: '', marketing: false })
+  const f = useForm({ name: '', phone: '', email: '', password: '', again: '', marketing: false, currency: firstCurrency(null) })
   const made = useRef(false) // just made here: the account page greets them
   if (user) return <Navigate to={made.current && next === '/account' ? '/account?welcome=1' : next} replace />
   return (
-    <Shell title="Make an account" label="Your account" lead="Keep your cart, follow your orders, and buy faster next time." cardName={f.values.name} cardPoints={accountPage.points.on ? accountPage.points.field * ['name', 'phone', 'email', 'password', 'again'].filter((k) => String(f.values[k] || '').trim()).length : null}>
+    <Shell title="Make an account" label="Your account" lead="Keep your cart, follow your orders, and buy faster next time." cardName={f.values.name} cardPoints={accountPage.points.on ? accountPage.points.field * ['name', 'phone', 'email', 'password', 'again'].filter((k) => String(f.values[k] || '').trim()).length + currencyPts() : null}>
       <form className="acc-card lined" onSubmit={(e) => f.run(e, async () => { const { again, ...values } = f.values; mustMatch(values.password, again); made.current = true; await call('signup', { ...values, cart: cart.stored }); navigate(next === '/account' ? '/account?welcome=1' : next, { replace: true }) })} noValidate>
         {/* the points each detail earns are not written here: the card beside the form counts them as they are filled in */}
         <Field label="Your name" autoComplete="name" value={f.values.name} onChange={f.set('name')} required={false} maxLength={80} />
@@ -330,6 +348,8 @@ function Signup() {
         <Field label="Email" type="email" autoComplete="email" value={f.values.email} onChange={f.set('email')} error={errorFor(f.problem, 'email')} />
         <Field label="Password" type="password" autoComplete="new-password" value={f.values.password} onChange={f.set('password')} error={errorFor(f.problem, 'password')} hint="At least 8 characters." />
         <PasswordAgain form={f} />
+        {/* the currency prices show and are paid in (picking it earns the currency points, once) */}
+        <CurrencyPick value={f.values.currency} onChange={f.set('currency')} note="Prices are converted at the day's European Central Bank rate, and you pay in this currency. You can change it any time." />
         <label className="acc-check">
           <input type="checkbox" checked={f.values.marketing} onChange={(e) => f.set('marketing')(e.target.checked)} />
           <span>Email me about new pieces, prints and conventions. (Now and then; never shared.)</span>
@@ -978,7 +998,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
   useEffect(() => { onPreview(trying ? { avatar: f.values.avatar, card: f.values.card } : null) }, [trying, f.values.avatar, f.values.card]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => onPreview(null), []) // eslint-disable-line react-hooks/exhaustive-deps
   const undo = () => { f.set('avatar')(user.avatar || ''); f.set('card')(user.card || '') }
-  const submit = (e) => f.run(e, async () => { await call('profile', f.values); setSaved(true); setTimeout(() => setSaved(false), 2500) })
+  const submit = (e) => f.run(e, async () => { await call('profile', { ...f.values, currencyPicked: f.values.currency !== (user.currency || '') }); setSaved(true); setTimeout(() => setSaved(false), 2500) })
   // news off with the points for saying yes still on the account: a window says they go, for good, before anything changes
   const pts = accountPage.points || {}
   const newsPts = pts.on && pts.news > 0 && user.newsBonus === 'given' && user.marketing ? pts.news : 0
@@ -1202,6 +1222,44 @@ function Security() {
 /* the first thing a customer sees: hello, how things stand, their pieces, what is new */
 /* Asked on the overview of anyone who has not said yes to news: yes turns news emails on, no thanks
    stops the question (the switch stays under Details). It thanks them until they leave the page. */
+/* An account made before the currency could be picked on signing up: asked once, on the overview,
+   with the currency points for the first pick (changing it later, in Details, earns none). */
+function CurrencyAsk({ go }) {
+  const { user, call } = useAccount()
+  const [pick, setPick] = useState(() => firstCurrency(user))
+  const [state, setState] = useState('ask') // ask | busy | done
+  const [problem, setProblem] = useState('')
+  const pts = currencyPts()
+  const save = async () => {
+    setState('busy'); setProblem('')
+    try { await call('currency', { currency: pick }); setState('done') } catch (err) { setProblem(err.message); setState('ask') }
+  }
+  const shown = pick || baseCurrency()
+  return (
+    <section className={`acc-news acc-cur-ask ${state === 'done' ? 'is-done' : ''}`} aria-live="polite">
+      <span className="acc-news-icon" aria-hidden="true">{state === 'done' ? '✓' : '¤'}</span>
+      {state === 'done' ? (
+        <div>
+          <h2>Prices now in {shown}</h2>
+          <p>{pts ? `+${pts} ${accountPage.points.name} added. ` : ''}You can change it any time under <button type="button" className="acc-link" onClick={() => go('details')}>Details</button>.</p>
+        </div>
+      ) : (
+        <>
+          <div>
+            <h2>Pick your currency{pts ? ` · +${pts} ${accountPage.points.name}` : ''}</h2>
+            <p>See prices and pay in your own currency, at the day's European Central Bank rate.</p>
+            <CurrencyPick value={pick} onChange={setPick} label="Currency" note="" />
+            {problem && <p className="acc-news-problem" role="alert">{problem}</p>}
+          </div>
+          <div className="acc-news-do">
+            <button type="button" className="btn" disabled={state === 'busy'} onClick={save}>{state === 'busy' ? 'Saving…' : pts ? `Save (+${pts} ${accountPage.points.name})` : 'Save'}</button>
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
+
 function NewsAsk({ go }) {
   const { call } = useAccount()
   const [state, setState] = useState('ask') // ask | busy | yes | no
@@ -1239,6 +1297,7 @@ function NewsAsk({ go }) {
 function Overview({ orders, go, commissions = null, openCommissions = () => {} }) {
   const { user } = useAccount()
   const [askNews] = useState(() => !user.marketing && !user.newsAsked) // decided once, so the thanks can show
+  const [askCurrency] = useState(() => !user.currencyChosen) // the same
   const shopOrders = keptOrders(orders)
   const collected = piecesIn(orders)
   // the pieces they own, once each, newest first
@@ -1273,6 +1332,7 @@ function Overview({ orders, go, commissions = null, openCommissions = () => {} }
         </button>
       )}
 
+      {askCurrency && <CurrencyAsk go={go} />}
       {askNews && <NewsAsk go={go} />}
 
       {latest ? (
@@ -1682,7 +1742,7 @@ function PointsPanel({ points, onRedeem, busy, said, onRefresh = () => {} }) {
     news > 0 && newsBonus !== 'taken' && { key: 'news', pts: `+${news}`, text: 'say yes to news', done: newsBonus === 'given', wait: user && user.marketing && !user.verified ? 'Yes ✓ · the points come when your email is confirmed' : '', run: () => call('news', { on: true }), go: 'Yes, email me' },
   ].filter(Boolean)
   const [sent, setSent] = useState('')
-  const WHY = { order: 'Order', commission: 'Commission', signup: 'Email confirmed', detail: 'Detail added', news: 'Said yes to news', 'news-off': 'Unsubscribed from news', refund: 'Refunded', redeem: 'Spent on', admin: 'From Milton' }
+  const WHY = { order: 'Order', commission: 'Commission', signup: 'Email confirmed', detail: 'Detail added', news: 'Said yes to news', 'news-off': 'Unsubscribed from news', currency: 'Picked a currency', refund: 'Refunded', redeem: 'Spent on', admin: 'From Milton' }
   const day = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const [more, setMore] = useState(false)
   return (

@@ -10,6 +10,14 @@
    transaction fee, each turned into the currency too. */
 
 export const CURRENCIES = ['EUR', 'USD', 'GBP', 'BRL', 'CAD', 'AUD']
+/* A first guess at a visitor's currency, from the region of the browser's languages (en-US -> USD,
+   pt-BR -> BRL...); '' (the shop's own) when none of them points to one. */
+const REGION_CURRENCY = { US: 'USD', GB: 'GBP', UK: 'GBP', BR: 'BRL', CA: 'CAD', AU: 'AUD' }
+export const guessCurrency = () => {
+  const langs = typeof navigator !== 'undefined' ? [...(navigator.languages || []), navigator.language] : []
+  for (const l of langs) { const region = String(l || '').split('-')[1]; if (region && REGION_CURRENCY[region.toUpperCase()]) return REGION_CURRENCY[region.toUpperCase()] }
+  return ''
+}
 export const CURRENCY_NAMES = { EUR: 'Euro', USD: 'US dollar', GBP: 'British pound', BRL: 'Brazilian real', CAD: 'Canadian dollar', AUD: 'Australian dollar' }
 /* PayPal takes these; the Brazilian real only for a Brazilian seller's account, so a PayPal payment
    asked for in it is made in the shop's own currency instead. */

@@ -885,6 +885,7 @@ collections:
               - { name: signup, label: Confirming the email, widget: number, value_type: int, min: 0, default: 50, required: false, hint: 'Once.' }
               - { name: field, label: Each detail filled in, widget: number, value_type: int, min: 0, default: 10, required: false, hint: 'Name, phone, email; the password counts twice.' }
               - { name: news, label: Saying yes to news, widget: number, value_type: int, min: 0, default: 25, required: false, hint: 'Once ever; taken back on unsubscribing.' }
+              - { name: currency, label: Picking a currency, widget: number, value_type: int, min: 0, default: 10, required: false, hint: 'Once ever: on signing up, or the first time an account picks one. Changing it later earns nothing.' }
               - { name: name, label: What they are called, widget: string, default: points, required: false, hint: 'For example "points" or "stars".' }
               - { name: intro, label: A line about them, widget: string, required: false, hint: 'Shown over the rewards road in the account, for example "Every order earns points. Spend them on prints and discounts."' }
               - name: rewards

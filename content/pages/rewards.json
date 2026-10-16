@@ -27,6 +27,14 @@
       "name": "Golden Eagle",
       "picture": "/uploads/golden-eagle-showcase.webp",
       "face": "72,44,400"
+    },
+    {
+      "earnedBy": "pieces",
+      "count": 7,
+      "hidden": false,
+      "picture": "/uploads/lady-static-2-showcase.webp",
+      "face": "51,12,336",
+      "name": "Lady Static"
     }
   ],
   "cards": [

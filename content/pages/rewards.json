@@ -19,6 +19,14 @@
       "earnedBy": "pieces",
       "count": 5,
       "hidden": false
+    },
+    {
+      "earnedBy": "pieces",
+      "count": 5,
+      "hidden": false,
+      "name": "Golden Eagle",
+      "picture": "/uploads/golden-eagle-showcase.webp",
+      "face": "72,44,400"
     }
   ],
   "cards": [

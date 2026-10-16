@@ -1,7 +1,7 @@
 import { priceCart, takes, read } from './_cart.js'
 import { buyer } from './_buyer.js'
 import { db, dbReady } from './_db.js'
-import { boughtOf, codeUsed, numberOrder, piecesNow, readBought, recordOrder, shapeAddress, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
+import { boughtOf, checkCode, codeUsed, numberOrder, piecesNow, readBought, recordOrder, shapeAddress, takeFromCart, tellAdmin, tellBuyer, withPiece } from './_orders.js'
 import { siteUrl } from './_users.js'
 import { awardOrderPoints } from './_points.js'
 
@@ -60,6 +60,12 @@ const token = async () => {
   if (!r.ok || !said.access_token) throw Object.assign(new Error(`paypal token ${r.status}`), { status: r.status === 401 ? 401 : 502 })
   return said.access_token
 }
+const look = async (path) => {
+  const r = await fetch(`${api()}${path}`, { headers: { Authorization: `Bearer ${await token()}` } })
+  const said = await r.json().catch(() => ({}))
+  if (!r.ok) throw Object.assign(new Error(`paypal ${path} ${r.status}`), { status: r.status })
+  return said
+}
 const paypal = async (path, body) => {
   const r = await fetch(`${api()}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${await token()}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(body || {}) })
   const said = await r.json().catch(() => ({}))
@@ -78,13 +84,46 @@ export default async function handler(req, res) {
     const id = String(body.order || '')
     if (!/^[A-Z0-9]{8,32}$/.test(id)) return res.status(400).json({ message: 'That is not a PayPal order.' })
     try {
-      const done = await paypal(`/v2/checkout/orders/${id}/capture`)
-      if (done.status === 'COMPLETED') { try { await savePaid(id, done, siteUrl(req)) } catch (e) { console.error('paypal order not saved:', e.message) } }
-      // logged in: the Shop sends them on to their orders (it need not have checked yet)
       const { user } = await buyer(req)
-      return res.status(200).json({ ok: done.status === 'COMPLETED', status: done.status, account: Boolean(user) })
+      /* Checked before the payment is taken: the order is one this shop made and is still waiting,
+         PayPal still holds the sum it was made for, the address chosen on PayPal is in the country
+         the shipping was worked out for, and a discount code on it has not been used up meanwhile. */
+      const before = dbReady() ? await (await db()).collection('orders').findOne({ ref: `pp_${id}` }) : null
+      if (dbReady()) {
+        if (!before) return res.status(404).json({ message: 'That PayPal order was not made by this shop.' })
+        if (before.status === 'paid') return res.status(200).json({ ok: true, status: 'COMPLETED', account: Boolean(user) }) // a reload of the thank-you page
+        const seen = await look(`/v2/checkout/orders/${id}`)
+        const unit = (seen.purchase_units || [])[0] || {}
+        const sum = unit.amount || {}
+        if (sum.currency_code !== before.currency || sum.value !== money(Math.round(Number(before.amount) * 100))) return res.status(409).json({ message: 'That PayPal order does not match the cart. Nothing was charged: go back to the cart and pay again.' })
+        const went = String((((unit.shipping || {}).address) || {}).country_code || '').toUpperCase()
+        if (before.country && went && went !== before.country) return res.status(409).json({ message: `The address picked on PayPal is not in the country the shipping was worked out for. Nothing was charged: in the cart, pick the country it goes to (${went}), then pay again.` })
+        if (before.code) {
+          try {
+            const owner = before.userId ? await (await db()).collection('users').findOne({ _id: before.userId }) : null
+            const c = await checkCode(before.code, owner)
+            if (!c.ok) return res.status(409).json({ message: `${c.message} Nothing was charged: go back to the cart and pay again.` })
+          } catch (e) { console.error('paypal code not checked again:', e.message) }
+        }
+      }
+      const done = await paypal(`/v2/checkout/orders/${id}/capture`)
+      // paid only when PayPal says the money is taken, and it is the sum the order was made for
+      const capture = (((((done.purchase_units || [])[0] || {}).payments || {}).captures) || [])[0] || {}
+      const took = capture.amount || {}
+      const right = !before || (took.currency_code === before.currency && took.value === money(Math.round(Number(before.amount) * 100)))
+      const paid = done.status === 'COMPLETED' && capture.status === 'COMPLETED' && right
+      if (!right) console.error(`paypal ${id}: took ${took.value} ${took.currency_code}, the order was for ${before && before.amount} ${before && before.currency}`)
+      if (paid) { try { await savePaid(id, done, siteUrl(req)) } catch (e) { console.error('paypal order not saved:', e.message) } }
+      else if (capture.status === 'PENDING') {
+        // held by PayPal for a check: kept waiting, marked so it can be found in PayPal
+        try { await recordOrder({ ref: `pp_${id}`, captureId: capture.id || '', paypalHeld: true }) } catch { /* kept as it was */ }
+        return res.status(200).json({ ok: false, status: 'PENDING', message: 'PayPal is still checking that payment. You will get an email once it goes through.' })
+      }
+      // logged in: the Shop sends them on to their orders (it need not have checked yet)
+      return res.status(200).json({ ok: paid, status: done.status, account: Boolean(user), ...(paid ? {} : { message: 'PayPal did not finish that payment. Get in touch if you were charged.' }) })
     } catch (e) {
       if (e.issue === 'ORDER_ALREADY_CAPTURED') { const { user } = await buyer(req); return res.status(200).json({ ok: true, status: 'COMPLETED', account: Boolean(user) }) } // a reload of the thank-you page
+      if (e.status === 404) return res.status(404).json({ message: 'PayPal does not know that order.' })
       console.error('paypal capture:', e.message)
       return res.status(502).json({ message: e.issue === 'INSTRUMENT_DECLINED' ? 'PayPal declined that payment. Try another card or account.' : 'PayPal could not take the payment. Nothing was charged: try again in a moment.' })
     }
@@ -126,7 +165,7 @@ export default async function handler(req, res) {
     if (!go) throw new Error('paypal: no approval link')
     // kept as waiting until the buyer comes back and the payment is taken (each line with its piece kept on it)
     try {
-      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: (() => { const pieces = piecesNow(); return lines.map((l) => withPiece({ name: name(l), qty: l.qty, amount: (l.pay * l.qty) / 100 }, pieces)) })(), bought: boughtOf(lines), amount: total / 100, discount: pay.off / 100, shipping: pay.ship / 100, fee: pay.fee / 100, rate, eurPieces, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
+      await recordOrder({ ref: `pp_${made.id}`, provider: 'paypal', paypalId: made.id, userId: user ? user._id : null, email: user ? user.email : '', name: user ? user.name || '' : '', items: (() => { const pieces = piecesNow(); return lines.map((l) => withPiece({ name: name(l), qty: l.qty, amount: (l.pay * l.qty) / 100 }, pieces)) })(), bought: boughtOf(lines), amount: total / 100, discount: pay.off / 100, shipping: pay.ship / 100, country: cart.country || '', fee: pay.fee / 100, rate, eurPieces, discountCode: deal ? deal.code : '', ...(deal ? { code: deal.code, promoId: deal.promoId } : {}), currency, summary, status: 'pending', test: sandbox() })
     } catch (e) { console.error('paypal order not saved:', e.message) }
     return res.status(200).json({ url: go.href })
   } catch (e) {

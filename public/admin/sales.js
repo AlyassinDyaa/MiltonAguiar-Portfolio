@@ -90,7 +90,9 @@ window.IASales = (() => {
   }
   const badge = (kind, text) => el('span', { className: `sl-badge is-${kind}`, textContent: text })
   const csv = (rows, name) => {
-    const text = rows.map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n')
+    // a cell starting = + - @ (or a tab / return) is kept as text, so a spreadsheet never runs one as a formula
+    const cell = (v) => { const t = String(v ?? ''); return typeof v !== 'number' && /^[=+\-@\t\r]/.test(t) ? `'${t}` : t }
+    const text = rows.map((r) => r.map((v) => `"${cell(v).replace(/"/g, '""')}"`).join(',')).join('\r\n')
     const a = el('a', { href: URL.createObjectURL(new Blob([`﻿${text}`], { type: 'text/csv;charset=utf-8' })), download: name })
     document.body.append(a); a.click(); a.remove()
   }
@@ -260,7 +262,7 @@ window.IASales = (() => {
       text: [c.email, c.member ? `member ${memberNo(c.member.memberNo)}` : 'no account', many(theirs.length, 'order'), money(c.spent, c.currency), codes.length ? many(codes.length, 'discount code') : '', c.member && c.member.points ? `${c.member.points} points` : ''].filter(Boolean).join(' · '),
       more: `Their orders${codes.length ? ' and discount codes' : ''} are taken off the admin for good${codes.length ? '; the codes stop working' : ''}. Stripe keeps its own record of the payments.${c.member ? ' Their account on the site goes too: they can no longer log in, and their points, rewards and saved pieces go with it.' : ''}`,
       yes: c.member ? 'Delete customer and account' : 'Delete customer',
-      run: async () => { const problem = (await hideOrders(theirs)) || (await dropCodes(codes)) || (await dropMember(c.member)); if (!problem && back) state.modal = null; return problem },
+      run: async () => { if (c.member && c.member.keep) return 'This account is kept for good: it cannot be deleted.'; const problem = (await hideOrders(theirs)) || (await dropCodes(codes)) || (await dropMember(c.member)); if (!problem && back) state.modal = null; return problem },
     })
   }
   const confirmModal = (m) => {
@@ -441,7 +443,7 @@ window.IASales = (() => {
       el('div', { className: 'sl-modal-foot' }, [
         email ? button('Give them a discount', () => discountFor([c ? c.key : email.toLowerCase()], email, name), 'ia-btn ghost') : null,
         mem ? button('See their card', () => { state.modal = { kind: 'card', email, back: m }; draw() }, 'ia-btn ghost') : null,
-        c && (theirs.length || mem) ? button('Delete…', () => askCustomer(c, m), 'ia-btn ghost sl-danger-btn') : null,
+        c && (theirs.length || mem) && !(mem && mem.keep) ? button('Delete…', () => askCustomer(c, m), 'ia-btn ghost sl-danger-btn') : null,
         email ? copyBtn(email, 'email', 'ia-btn ghost') : null,
         theirs.length ? button('See their orders', () => { state.modal = null; location.hash = `#/sales/orders?customer=${encodeURIComponent(email || first.name)}`; draw() }, 'ia-btn ghost') : null,
         button('Close', () => { state.modal = null; draw() }, 'ia-btn'),
@@ -956,7 +958,7 @@ window.IASales = (() => {
             el('span', { className: `sl-c-total ${c.orders ? '' : 'is-zero'}` }, [el('strong', { textContent: c.orders ? money(c.spent, c.currency) : '—' })]),
           ], () => open(c), [
             iconBtn('info', 'Customer details', () => open(c)),
-            theirs || c.member ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
+            (theirs || c.member) && !(c.member && c.member.keep) ? iconBtn('trash', `Delete ${c.name || c.email}`, () => askCustomer(c)) : el('span', { className: 'sl-icon-gap' }),
           ])
         }),
       ]) : (state.loaded && !state.problem ? el('div', { className: 'sl-empty' }, [el('strong', { textContent: all.length ? 'Nobody matches' : 'No customers yet' }), el('p', { textContent: all.length ? 'Try another chip or search.' : 'Everyone who buys from the shop, or makes an account, shows up here.' })]) : null),

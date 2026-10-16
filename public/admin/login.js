@@ -84,6 +84,13 @@
   const begin = async () => {
     const backend = await fetch('backend.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null) // no such file off Vercel
     if (!(backend && backend.name)) {
+      // hosted on Netlify: its login is Netlify's own widget, fetched only then (never on Vercel or
+      // this computer, so the admin there runs no script from anywhere else); after an invited
+      // admin sets a password they are sent to the admin, not the home page
+      if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+        await new Promise((done) => { const s = document.createElement('script'); s.src = 'https://identity.netlify.com/v1/netlify-identity-widget.js'; s.onload = s.onerror = done; document.head.append(s) })
+        if (window.netlifyIdentity) window.netlifyIdentity.on('init', (user) => { if (!user) window.netlifyIdentity.on('login', () => { document.location.href = '/admin/' }) })
+      }
       window.CMS.init()
       // On this computer Decap's login is a single button with nothing to type: press it for the admin.
       if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {

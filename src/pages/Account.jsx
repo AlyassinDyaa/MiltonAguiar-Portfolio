@@ -1131,7 +1131,7 @@ function Details({ owned = [], progress = null, onPreview = () => {} }) {
 }
 
 function Security() {
-  const { call } = useAccount()
+  const { user, call } = useAccount()
   const pw = useForm({ current: '', password: '', again: '' })
   const [changed, setChanged] = useState(false)
   const del = useForm({ password: '', again: '' })
@@ -1177,8 +1177,8 @@ function Security() {
       </div>
       <div className="acc-card is-danger">
         <h3 className="acc-h3">Delete the account</h3>
-        <p className="acc-p">Your login, details and saved cart go for good. The shop keeps its record of past sales (as the law requires), no longer linked to you.</p>
-        {!deleting ? (
+        <p className="acc-p">{user && user.keep ? 'This account is kept for good, so it cannot be deleted.' : 'Your login, details and saved cart go for good. The shop keeps its record of past sales (as the law requires), no longer linked to you.'}</p>
+        {user && user.keep ? null : !deleting ? (
           <button type="button" className="btn ghost sm acc-danger" onClick={() => setDeleting(true)}>Delete my account</button>
         ) : (
           <form className="lined" onSubmit={askFirst(del, () => { need(del.values.password, 'password', 'Type your password.'); mustMatch(del.values.password, del.values.again) }, setAskDelete)} noValidate>

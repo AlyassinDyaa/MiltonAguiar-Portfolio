@@ -6,6 +6,25 @@
   "redirects": [
     { "source": "/admin", "destination": "/admin/", "permanent": false }
   ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/uploads/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/api/gh/:path*", "destination": "/api/gh" },
     { "source": "/((?!api/|admin/).*)", "destination": "/index.html" }

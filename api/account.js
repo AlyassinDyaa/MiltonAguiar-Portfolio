@@ -10,10 +10,7 @@ import { adminOk } from './_session.js'
 import { mailingAction, unsubscribe } from './_mailings.js'
 import { adjustPoints, catchUpPoints, claimSent, fieldPoints, newsPoints, pointsRules, pointsView, redeemPoints, signupPoints } from './_points.js'
 import { randomBytes } from 'node:crypto'
-import {
-  EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword,
-  makeToken, mergeCarts, newId, noteTry, passwordProblem, peekToken, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken,
-} from './_users.js'
+import { EMAIL, checkPassword, clean, cleanCart, cleanSlugs, clientIp, currentUser, endSession, forgetCookie, forgetTries, fromThisSite, hashPassword, makeToken, mergeCarts, newId, noteTry, passwordProblem, peekToken, publicUser, sendMail, siteUrl, startSession, tidyEmail, tooMany, spendToken, countTry, dropTry, needsRehash } from './_users.js'
 
 /* Customer accounts. One function for all of it, chosen by `action`:
 
@@ -277,6 +274,7 @@ const pictureOf = (avatar) => {
 }
 const memberOf = (u) => ({
   email: u.email, name: u.name || '', memberNo: Number(u.memberNo) || null, verified: Boolean(u.verified), createdAt: u.createdAt,
+  keep: u.keep === true, // kept for good: cannot be deleted
   news: u.marketing === true, // said yes to news emails
   card: typeof u.card === 'string' ? u.card : '', // the card design on their collector card ('' is the site's own)
   points: Math.round(Number(u.points) || 0), // their balance (api/_points.js)
@@ -316,10 +314,11 @@ const adminAction = async (req, d, users, action, body) => {
   if (!user) return [404, { message: 'There is no account with that email.' }]
   // the account deleted: logins and links gone, the orders kept for the shop's records (as when they delete it themselves)
   if (action === 'adminDeleteMember') {
+    if (user.keep === true) return [403, { message: 'This account is kept for good: it cannot be deleted.' }] // the site's own (users.keep, set in the database)
     await d.collection('sessions').deleteMany({ userId: user._id })
     await d.collection('tokens').deleteMany({ userId: user._id })
     await d.collection('orders').updateMany({ userId: user._id }, { $set: { userId: null } })
-    await users.deleteOne({ _id: user._id })
+    await users.deleteOne({ _id: user._id, keep: { $ne: true } })
     return [200, { ok: true, deleted: true }]
   }
   // points by hand, and a claimed gift marked as sent (no reward of the lists involved)
@@ -474,14 +473,18 @@ export default async function handler(req, res) {
 
     if (action === 'login') {
       const email = tidyEmail(body.email)
-      if (await tooMany(`login:${email}`, 8, 15) || await tooMany(`login-ip:${ip}`, 30, 15)) return say(res, 429, { message: 'Too many tries. Wait 15 minutes, or reset the password.' })
+      // counted before the password is looked at (a burst of tries is each counted): 8 for this email
+      // from this connection, 40 for this email from anywhere (so a stranger cannot easily lock someone
+      // out), 30 from this connection
+      const tried = await countTry({ [`login:${email}:${ip}`]: 8, [`login:${email}`]: 40, [`login-ip:${ip}`]: 30 })
+      if (tried.blocked) return say(res, 429, { message: 'Too many tries. Wait 15 minutes, or reset the password.' })
       const user = EMAIL.test(email) ? await users.findOne({ email }) : null
       const good = await checkPassword(body.password, user && user.password)
-      if (!user || !good) {
-        await noteTry(`login:${email}`, `login-ip:${ip}`)
-        return say(res, 401, { message: 'That email and password do not match an account.' })
-      }
-      await forgetTries(`login:${email}`)
+      if (!user || !good) return say(res, 401, { message: 'That email and password do not match an account.' })
+      await dropTry(tried.ids)
+      await forgetTries(`login:${email}:${ip}`)
+      // a password saved at the older hashing cost is saved again at the new one, now it is in hand
+      if (needsRehash(user.password)) { try { await users.updateOne({ _id: user._id }, { $set: { password: await hashPassword(body.password) } }) } catch (e) { console.error('password not re-hashed:', e.message) } }
       const cart = mergeCarts(user.cart, body.cart)
       // the visit before this one, so the account can show what is new since
       await users.updateOne({ _id: user._id }, { $set: { cart, lastLogin: new Date(), prevLogin: user.lastLogin || user.createdAt } })
@@ -496,10 +499,12 @@ export default async function handler(req, res) {
 
     if (action === 'forgot') {
       const email = tidyEmail(body.email)
-      const done = { sent: true } // the same answer whether or not there is an account, so the form cannot be used to find out
+      // the same answer, taking the same time, whether or not there is an account, so the form cannot be used to find out
+      const began = Date.now()
+      const done = async () => { await new Promise((r) => setTimeout(r, Math.max(0, 2500 - (Date.now() - began)))); return say(res, 200, { sent: true }) }
       if (!EMAIL.test(email)) return say(res, 400, { message: 'That email address does not look right.', field: 'email' })
-      if (await tooMany(`forgot:${email}`, 3, 60) || await tooMany(`forgot-ip:${ip}`, 10, 60)) return say(res, 200, done)
-      await noteTry(`forgot:${email}`, `forgot-ip:${ip}`)
+      // reset emails: 3 an hour to an address from this connection, 6 to it from anywhere, 10 from this connection
+      if ((await countTry({ [`forgot:${email}:${ip}`]: 3, [`forgot:${email}`]: 6, [`forgot-ip:${ip}`]: 10 }, 60)).blocked) return done()
       const user = await users.findOne({ email })
       if (user) {
         const token = await makeToken(user._id, 'reset', RESET_MINUTES)
@@ -513,7 +518,7 @@ export default async function handler(req, res) {
           button: { label: 'Choose a new password', url: `${siteUrl(req)}/account/reset?token=${token}` },
         })
       }
-      return say(res, 200, done)
+      return done()
     }
 
     if (action === 'reset') {
@@ -658,13 +663,16 @@ export default async function handler(req, res) {
     }
 
     if (action === 'password') {
-      if (await tooMany(`login:${user.email}`, 8, 15)) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
-      if (!(await checkPassword(body.current, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The current password is not right.', field: 'current' }) }
+      const tried = await countTry({ [`pw:${user._id}`]: 8 })
+      if (tried.blocked) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
+      if (!(await checkPassword(body.current, user.password))) return say(res, 400, { message: 'The current password is not right.', field: 'current' })
+      await dropTry(tried.ids)
       const weak = passwordProblem(body.password)
       if (weak) return say(res, 400, { message: weak, field: 'password' })
       if (await usedBefore(user, body.password)) return say(res, 400, { message: (await checkPassword(body.password, user.password)) ? 'That is your current password. Choose a new one.' : 'You have used that password before. Choose one you have not used.', field: 'password' })
       await users.updateOne({ _id: user._id }, { $set: await passwordSet(user, body.password) })
       await d.collection('sessions').deleteMany({ userId: user._id, hash: { $ne: user.session } })
+      await d.collection('tokens').deleteMany({ userId: user._id, kind: 'reset' }) // a reset link sent before no longer works
       await tellPasswordChanged(req, user, 'change')
       return say(res, 200, { user: publicUser(user), changed: true })
     }
@@ -724,8 +732,10 @@ export default async function handler(req, res) {
       // out of the customer's account, once they type their password, after a copy of each is emailed
       // to them (if it cannot be sent, nothing is taken out). The shop keeps the sales on record
       // (posting, refunds, tax) and the admin still sees them.
-      if (await tooMany(`login:${user.email}`, 8, 15)) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
-      if (!(await checkPassword(body.password, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The password is not right.', field: 'password' }) }
+      const tried = await countTry({ [`pw:${user._id}`]: 8 })
+      if (tried.blocked) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
+      if (!(await checkPassword(body.password, user.password))) return say(res, 400, { message: 'The password is not right.', field: 'password' })
+      await dropTry(tried.ids)
       const wanted = [...new Set((Array.isArray(body.numbers) ? body.numbers : [body.number]).map((n) => String(n || '').trim().toUpperCase().slice(0, 20)).filter(Boolean))].slice(0, 200)
       const match = user.verified ? { $or: [{ userId: user._id }, { email: user.email }] } : { userId: user._id }
       const list = await d.collection('orders').find({ ...match, status: { $in: ['paid', 'refunded'] }, customerRemoved: { $ne: true }, hidden: { $ne: true } }).limit(300).toArray()
@@ -768,14 +778,16 @@ export default async function handler(req, res) {
     }
 
     if (action === 'delete') {
+      if (user.keep === true) return say(res, 403, { message: 'This account is kept for good: it cannot be deleted.' }) // the site's own (users.keep, set in the database)
       // the password twice, the same both times, and right
       if (String(body.password || '') !== String(body.again ?? body.password ?? '')) return say(res, 400, { message: 'The two passwords are not the same.', field: 'again' })
-      if (await tooMany(`login:${user.email}`, 8, 15)) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
-      if (!(await checkPassword(body.password, user.password))) { await noteTry(`login:${user.email}`); return say(res, 400, { message: 'The password is not right.', field: 'password' }) }
+      const tried = await countTry({ [`pw:${user._id}`]: 8 })
+      if (tried.blocked) return say(res, 429, { message: 'Too many tries. Wait 15 minutes.' })
+      if (!(await checkPassword(body.password, user.password))) return say(res, 400, { message: 'The password is not right.', field: 'password' })
       await d.collection('sessions').deleteMany({ userId: user._id })
       await d.collection('tokens').deleteMany({ userId: user._id })
       await d.collection('orders').updateMany({ userId: user._id }, { $set: { userId: null } }) // the shop keeps its records of sales
-      await users.deleteOne({ _id: user._id })
+      await users.deleteOne({ _id: user._id, keep: { $ne: true } })
       forgetCookie(req, res)
       return say(res, 200, { user: null, deleted: true })
     }

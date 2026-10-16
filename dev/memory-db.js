@@ -46,7 +46,7 @@ function collection(name) {
   return {
     createIndex: async () => 'ok',
     findOne: async (filter) => clone(rows.find((r) => matches(r, filter)) || null),
-    insertOne: async (doc) => { const row = clone(doc); if (clash(row)) throw dupe(); rows.push(row); return { insertedId: row._id } },
+    insertOne: async (doc) => { const row = clone(doc); if (row._id === undefined) row._id = globalThis.crypto.randomUUID() /* as the real one gives every row an id */; if (clash(row)) throw dupe(); rows.push(row); return { insertedId: row._id } },
     updateOne: async (filter, update, opts = {}) => {
       let row = rows.find((r) => matches(r, filter))
       if (!row && !opts.upsert) return { matchedCount: 0, modifiedCount: 0 }
@@ -64,6 +64,7 @@ function collection(name) {
       apply(row, update, inserting)
       return clone(row)
     },
+    findOneAndDelete: async (filter) => { const i = rows.findIndex((r) => matches(r, filter)); return i >= 0 ? clone(rows.splice(i, 1)[0]) : null },
     deleteOne: async (filter) => { const i = rows.findIndex((r) => matches(r, filter)); if (i >= 0) rows.splice(i, 1); return { deletedCount: i >= 0 ? 1 : 0 } },
     deleteMany: async (filter) => { let n = 0; for (let i = rows.length - 1; i >= 0; i--) if (matches(rows[i], filter)) { rows.splice(i, 1); n++ } return { deletedCount: n } },
     countDocuments: async (filter) => rows.filter((r) => matches(r, filter)).length,

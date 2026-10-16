@@ -29,7 +29,7 @@ const MAX_PEOPLE = 50
 // a code that reads well and is hard to guess: MA-ANA-7K3Q
 const makeCode = (prefix, name) => {
   const tidy = (t, n) => String(t || '').toUpperCase().normalize('NFD').replace(/[^A-Z0-9]/g, '').slice(0, n)
-  const tail = [...randomBytes(4)].map((b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('')
+  const tail = [...randomBytes(8)].map((b) => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[b % 32]).join('') // 8 random characters: not guessable
   return [tidy(prefix, 12) || 'MA', tidy(name, 10), tail].filter(Boolean).join('-')
 }
 

@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+# keys and passwords never go in the repository (.env.example lists the names, with no values)
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

@@ -1,7 +1,9 @@
 import { configured, newPass, same } from './_session.js'
+import { dbReady } from './_db.js'
+import { clientIp, countTry, dropTry } from './_users.js'
 
 /* Admin login on Vercel: the passcode (ADMIN_PASSCODE in the Vercel project settings) is traded
-   here for a pass that is good for a week. The person logging in needs no GitHub account.
+   here for a pass that is good for a day. The person logging in needs no GitHub account.
 
    The admin's own login page (public/admin/login.js) posts the passcode as JSON and gets JSON
    back. A plain visit to this address still answers with a small page of its own, in the message
@@ -44,10 +46,23 @@ export default async function handler(req, res) {
   if (!configured()) return json ? res.status(500).json({ message: `The admin is not set up yet. ${notSetUp}` }) : res.status(500).send(shell(`<div class="dl-box"><h1 class="dl-name">Not set <b>up</b></h1><p class="dl-note">${notSetUp}</p></div>`))
   if (req.method !== 'POST') return json ? res.status(405).json({ message: 'Send the passcode with POST.' }) : res.status(200).send(form(false))
   const typed = (req.body && typeof req.body === 'object' ? req.body.passcode : new URLSearchParams(String(req.body || '')).get('passcode')) || ''
+  // guessing is held back: each try is counted before it is judged (a burst is each counted), 5
+  // from one connection in 15 minutes and 50 from anywhere in an hour; a right passcode takes its try back
+  let tried = null
+  if (dbReady()) {
+    try {
+      const ip = clientIp(req)
+      const near = await countTry({ [`admin:${ip}`]: 5 }, 15)
+      const far = await countTry({ 'admin:all': 50 }, 60)
+      tried = [...near.ids, ...far.ids]
+      if (near.blocked || far.blocked) return json ? res.status(429).json({ message: 'Too many tries. Wait 15 minutes.' }) : res.status(429).send(form(true))
+    } catch (e) { console.error('admin tries not counted:', e.message) }
+  }
   if (!same(typed, process.env.ADMIN_PASSCODE)) {
     await new Promise((r) => setTimeout(r, 800)) // slows down guessing
     return json ? res.status(401).json({ message: 'That passcode is not right.' }) : res.status(401).send(form(true))
   }
+  if (tried) { try { await dropTry(tried) } catch { /* counted, harmless */ } }
   const pass = newPass()
   return json ? res.status(200).json({ token: pass }) : res.status(200).send(done(pass))
 }

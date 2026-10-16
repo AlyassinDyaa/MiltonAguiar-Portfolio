@@ -52,7 +52,7 @@ export const addPoints = async (d, userId, delta, why, ref = '') => {
 
 // an order's points to an account, once (the order remembers who had them)
 const awardOrder = async (d, ref, userId, rules) => {
-  const got = await d.collection('orders').findOneAndUpdate({ ref, status: 'paid', pointsGiven: { $exists: false } }, { $set: { pointsGiven: true, pointsTo: userId } }, { returnDocument: 'after' })
+  const got = await d.collection('orders').findOneAndUpdate({ ref, status: 'paid', test: { $ne: true }, pointsGiven: { $exists: false } }, { $set: { pointsGiven: true, pointsTo: userId } }, { returnDocument: 'after' })
   const o = got && (got.value !== undefined ? got.value : got)
   if (!o) return 0
   // points for what was paid for the pieces: not the shipping, nor a transaction fee
@@ -62,7 +62,8 @@ const awardOrder = async (d, ref, userId, rules) => {
   if (n > 0) { await addPoints(d, userId, n, 'order', o.orderNo || ref); await d.collection('orders').updateOne({ ref }, { $set: { points: n } }) }
   return n
 }
-// a paid shop order: points for what was paid, once, for the account it was placed in
+// a paid shop order: points for what was paid, once, for the account it was placed in (a test
+// payment, with the payment services' test keys, earns none)
 export const awardOrderPoints = async (ref) => {
   if (!dbReady()) return 0
   const rules = pointsRules()

@@ -17,7 +17,10 @@ import { db, dbReady } from './_db.js'
      address a request claims to come from, so nobody can send out a link to another site. */
 export { dbReady }
 const scrypt = promisify(scryptCallback)
-const KEY = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }
+// password hashing: scrypt at OWASP's cost (s2); passwords saved at the older, lighter cost (s1) are
+// still read, and are hashed again at the new cost the next time their owner logs in
+const KEY = { N: 131072, r: 8, p: 1, maxmem: 256 * 1024 * 1024 }
+const KEY_OLD = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 }
 const SESSION_DAYS = 30
 const COOKIE = 'ma_session'
 
@@ -38,16 +41,20 @@ export const passwordProblem = (pw) => {
 export const hashPassword = async (pw) => {
   const salt = randomBytes(16)
   const key = await scrypt(String(pw).normalize('NFKC'), salt, 64, KEY)
-  return `s1$${salt.toString('base64')}$${key.toString('base64')}`
+  return `s2$${salt.toString('base64')}$${key.toString('base64')}`
 }
 // the same work is done when there is no account, so the answer's timing gives nothing away
 export const checkPassword = async (pw, stored) => {
   const [tag, salt, key] = String(stored || '').split('$')
-  const real = tag === 's1' && salt && key
-  const got = await scrypt(String(pw || '').normalize('NFKC'), real ? Buffer.from(salt, 'base64') : Buffer.alloc(16), 64, KEY)
+  const real = (tag === 's1' || tag === 's2') && salt && key
+  // a password longer than any allowed is cut before the work (no one can make the server hash a huge one)
+  const got = await scrypt(String(pw || '').slice(0, 200).normalize('NFKC'), real ? Buffer.from(salt, 'base64') : Buffer.alloc(16), 64, tag === 's1' ? KEY_OLD : KEY)
   const want = real ? Buffer.from(key, 'base64') : Buffer.alloc(64)
   return Boolean(real) && want.length === got.length && timingSafeEqual(got, want)
 }
+
+// saved at the older, lighter cost: hash it again (at login, when the password is in hand)
+export const needsRehash = (stored) => String(stored || '').startsWith('s1$')
 
 // ---------- the request
 export const readCookies = (req) => Object.fromEntries(String(req.headers.cookie || '').split(/;\s*/).filter((c) => c.includes('=')).map((c) => {
@@ -109,15 +116,25 @@ export const peekToken = async (raw, kind) => {
 export const spendToken = async (raw, kind) => {
   if (!raw || String(raw).length > 100) return null
   const d = await db()
-  const token = await d.collection('tokens').findOne({ hash: sha(raw), kind })
+  const got = await d.collection('tokens').findOneAndDelete({ hash: sha(raw), kind }) // taken and gone in one step: a link works once
+  const token = got && (got.value !== undefined ? got.value : got)
   if (!token) return null
-  await d.collection('tokens').deleteOne({ hash: token.hash })
   return new Date(token.expiresAt) < new Date() ? null : token
 }
 
 // ---------- too many tries
 export const tooMany = async (key, limit, minutes) => (await (await db()).collection('attempts').countDocuments({ key, at: { $gt: new Date(Date.now() - minutes * 60000) } })) >= limit
-export const noteTry = async (...keys) => { const d = await db(); for (const key of keys) await d.collection('attempts').insertOne({ key, at: new Date() }) }
+export const noteTry = async (...keys) => { const d = await db(); const ids = []; for (const key of keys) ids.push((await d.collection('attempts').insertOne({ key, at: new Date() })).insertedId); return ids }
+export const dropTry = async (ids) => { if (Array.isArray(ids) && ids.length) await (await db()).collection('attempts').deleteMany({ _id: { $in: ids } }) }
+/* A try counted first, then judged: with `limit` tries already in the window this one is refused.
+   Requests sent all at once are each counted before any is judged, so a burst cannot slip past.
+   Answers { blocked, ids } (ids: to take the try back when it went well). */
+export const countTry = async (limits, minutes = 15) => {
+  const keys = Object.keys(limits)
+  const ids = await noteTry(...keys)
+  for (const k of keys) if (await tooMany(k, limits[k] + 1, minutes)) return { blocked: true, ids }
+  return { blocked: false, ids }
+}
 export const forgetTries = async (key) => (await db()).collection('attempts').deleteMany({ key })
 
 // the site's name, tagline and links, from Site → Name, colour and contact in the admin
@@ -351,6 +368,7 @@ export const publicUser = (u) => (u ? {
   // discount codes the admin gave them (Sales → Discounts)
   giftCodes: Array.isArray(u.giftCodes) ? u.giftCodes.filter((g) => g && g.id).map((g) => ({ id: g.id, code: g.code, percent: g.percent, until: g.until || null, label: g.label || '', at: g.at || null, ...(g.usedAt ? { usedAt: g.usedAt } : {}) })) : [],
   memberNo: Number(u.memberNo) || null, // the order they signed up in: the first customer is 1
+  keep: u.keep === true, // kept for good (set in the database): the account cannot be deleted
   points: Math.max(0, Math.round(Number(u.points) || 0)), // their points (api/_points.js)
   pointsEarned: Math.max(Math.round(Number(u.pointsEarned) || 0), Math.round(Number(u.points) || 0)), // everything earned, ever
   saved: Array.isArray(u.saved) ? u.saved : [],

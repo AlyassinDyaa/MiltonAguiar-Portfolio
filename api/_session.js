@@ -2,9 +2,9 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 /* Shared by the two admin functions (a leading underscore keeps Vercel from serving this file).
    The admin logs in with a passcode; in return the browser gets a signed pass that is good for
-   a week. The pass is signed with a key made from the passcode and the GitHub token, so changing
+   a day (so one that fell into other hands is soon useless). The pass is signed with a key made from the passcode and the GitHub token, so changing
    either one in the Vercel settings logs everybody out. */
-const DAYS = 7
+const DAYS = 1
 const key = () => createHash('sha256').update(`${process.env.ADMIN_PASSCODE}|${process.env.GITHUB_TOKEN}`).digest()
 const mark = (text) => createHmac('sha256', key()).update(text).digest('hex')
 
@@ -29,7 +29,8 @@ export const goodPass = (pass) => {
 export const adminOk = (req) => {
   const pass = String((req && req.headers && req.headers.authorization) || '').replace(/^(token|bearer)\s+/i, '')
   if (pass && configured() && goodPass(pass)) return true
-  return !process.env.VERCEL && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(String((req && req.headers && req.headers.host) || ''))
+  // (never where the site is live: only with no host settings at all, while developing)
+  return !process.env.VERCEL && process.env.NODE_ENV !== 'production' && !process.env.NETLIFY && /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(String((req && req.headers && req.headers.host) || ''))
 }
 
 // the one repository the admin may touch: the one this site was deployed from

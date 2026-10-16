@@ -435,6 +435,10 @@ const customerAction = async (req, user, action, body) => {
     try {
       const done = await paypal(`/v2/checkout/orders/${order}/capture`)
       if (done.status !== 'COMPLETED') return [502, { message: 'PayPal did not finish the payment. Nothing was charged: try again.' }]
+      // paid only when the money is taken, and it is the sum the quote was opened for
+      const took = (((((done.purchase_units || [])[0] || {}).payments || {}).captures) || [])[0] || {}
+      if (took.status !== 'COMPLETED') return [200, { ok: false, message: 'PayPal is still checking that payment. The artist hears once it goes through.' }]
+      if (found.pending.amount != null && Math.round(Number(took.amount && took.amount.value) * 100) !== Math.round(Number(found.pending.amount) * 100)) { console.error(`commission ${id}: PayPal took ${took.amount && took.amount.value}, the quote was ${found.pending.amount}`); return [409, { message: 'That payment does not match the quote. Get in touch.' }] }
       const after = (await paidByPaypal(id, order, done, site, found.pending)) || (await c.findOne({ _id: id }))
       return [200, { ok: true, commission: forCustomer(after, true) }]
     } catch (e) {

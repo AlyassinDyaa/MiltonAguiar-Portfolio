@@ -67,7 +67,15 @@
     "IE",
     "GB",
     "US",
-    "CA"
+    "CA",
+    "MD",
+    "PE",
+    "PR",
+    "SE",
+    "CH",
+    "PH",
+    "AU",
+    "AT"
   ],
   "label": "The shop",
   "thanksText": "Your order is in. A receipt is on its way to your email.",

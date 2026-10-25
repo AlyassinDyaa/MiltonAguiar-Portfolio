@@ -1,5 +1,5 @@
 {
-  "shopOnly": false,
+  "shopOnly": true,
   "src": "/uploads/absolute-batman.webp",
   "universe": "DC",
   "hidden": false,

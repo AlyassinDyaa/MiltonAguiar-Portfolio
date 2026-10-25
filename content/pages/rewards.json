@@ -76,6 +76,15 @@
       "cardArt": "/uploads/spawnuary-2-week-1.webp",
       "cardCrop": "20,29,129",
       "cardBackCrop": "47,32,400"
+    },
+    {
+      "cardLook": "ink",
+      "earnedBy": "verify",
+      "count": 3,
+      "hidden": false,
+      "name": "Absolute Batman",
+      "cardArt": "/uploads/absolute-batman.webp",
+      "cardCrop": "50,15,100"
     }
   ],
   "discounts": [
@@ -95,14 +104,7 @@
     }
   ],
   "points": {
-    "on": true,
     "perUnit": 5,
-    "signup": 50,
-    "field": 10,
-    "news": 25,
-    "currency": 10,
-    "name": "points",
-    "intro": "Every order earns points. Spend them on prints and discounts.",
     "rewards": [
       {
         "cost": 500,
@@ -122,6 +124,13 @@
         "name": "2 free prints!",
         "text": "Any print of your choice."
       }
-    ]
+    ],
+    "name": "points",
+    "intro": "Every order earns points. Spend them on prints and discounts.",
+    "currency": 10,
+    "news": 25,
+    "signup": 50,
+    "field": 10,
+    "on": true
   }
 }

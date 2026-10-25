@@ -79,8 +79,8 @@
     },
     {
       "cardLook": "ink",
-      "earnedBy": "verify",
-      "count": 3,
+      "earnedBy": "commissions",
+      "count": 1,
       "hidden": false,
       "name": "Absolute Batman",
       "cardArt": "/uploads/absolute-batman.webp",

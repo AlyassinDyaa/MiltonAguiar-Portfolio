@@ -849,7 +849,10 @@ form.lined .field.pick.is-open .bar, form.lined .pick-button:focus-visible ~ .ba
 .pc-open { display: block; width: 100%; }
 .pc-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .pc-frame { --mat: 0px; --mat-b: var(--mat); position: relative; display: block; aspect-ratio: 4 / 5; padding: var(--mat) var(--mat) var(--mat-b); overflow: hidden; background: var(--panel-2); box-shadow: 0 22px 40px -22px rgba(0, 0, 0, 0.85); transition: transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out); }
-.pc-frame > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+/* the art pinned to the space inside the edge, the same as the second picture (.pc-alt): a height
+   of 100% is not read the same in every browser (Safari let it run into the bottom edge, showing
+   under the second picture) */
+.pc-frame > img { position: absolute; inset: 0; display: block; box-sizing: border-box; width: 100%; height: 100%; padding: var(--mat) var(--mat) var(--mat-b); object-fit: cover; object-position: 50% 20%; }
 .pc-frame .poster { height: 100%; aspect-ratio: auto; }
 .pc:hover .pc-frame, .pc:focus-within .pc-frame { transform: translateY(-6px); box-shadow: 0 34px 50px -24px rgba(0, 0, 0, 0.9); }
 /* a printed poster: the art on white paper, a little sheen */

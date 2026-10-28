@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset, brand, commissions, nav, shop, shows, social } from '../data/site'
 import { useCart } from '../hooks/useCart'
 import { useAccount } from '../hooks/useAccount'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import CartIcon from './CartIcon'
 import Wordmark from './Wordmark'
 import ThemeSwitch from './ThemeSwitch'
@@ -22,6 +23,16 @@ export default function Nav() {
     on(); window.addEventListener('scroll', on, { passive: true })
     return () => window.removeEventListener('scroll', on)
   }, [])
+  // the open menu keeps the keyboard (its links, and the top bar with the × that closes it); Escape closes it
+  const bar = useRef(null)
+  const menu = useRef(null)
+  useFocusTrap(open, [bar, menu])
+  useEffect(() => {
+    if (!open) return undefined
+    const key = (e) => { if (e.key === 'Escape') setOpen(false) }
+    addEventListener('keydown', key)
+    return () => removeEventListener('keydown', key)
+  }, [open])
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     window.__lenis?.[open ? 'stop' : 'start']?.()
@@ -30,7 +41,7 @@ export default function Nav() {
 
   return (
     <>
-      <header className={`nav ${scrolled ? 'scrolled' : ''} ${open ? 'is-open' : ''}`}>
+      <header ref={bar} className={`nav ${scrolled ? 'scrolled' : ''} ${open ? 'is-open' : ''}`}>
         <div className="container nav-bar">
           <Link to="/" className="brand" aria-label={`${brand.name} home`} onClick={() => setOpen(false)}>
             {brand.logo && <img className="brand-logo" src={asset(brand.logo)} alt="" width="44" height="44" />}
@@ -52,7 +63,7 @@ export default function Nav() {
               {cart.count > 0 && <span key={cart.count} className="nav-cart-count">{cart.count}</span>}
             </button>
           )}
-          <button className={`burger ${open ? 'open' : ''}`} aria-expanded={open} aria-label="Menu" onClick={() => setOpen((o) => !o)}>
+          <button className={`burger ${open ? 'open' : ''}`} aria-expanded={open} aria-controls="site-menu" aria-label={open ? 'Close the menu' : 'Menu'} onClick={() => setOpen((o) => !o)}>
             <span /><span />
           </button>
         </div>
@@ -60,7 +71,7 @@ export default function Nav() {
 
       <AnimatePresence>
         {open && (
-          <motion.div className="menu" initial={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} animate={{ clipPath: 'circle(150% at calc(100% - 44px) 37px)' }} exit={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}>
+          <motion.div ref={menu} id="site-menu" className="menu" initial={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} animate={{ clipPath: 'circle(150% at calc(100% - 44px) 37px)' }} exit={{ clipPath: 'circle(0% at calc(100% - 44px) 37px)' }} transition={{ duration: 0.6, ease: [0.76, 0, 0.24, 1] }}>
             <div className="menu-scroll" data-lenis-prevent>
               <div className="container menu-inner">
                 <ul className="menu-links">

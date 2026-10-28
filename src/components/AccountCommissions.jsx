@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAccount } from '../hooks/useAccount'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { money, shows } from '../data/site'
 import { Lock, PaypalButton } from './Buy'
 
@@ -102,6 +103,7 @@ function RemoveCommissions({ items = [], onClose, onRemoved }) {
   const { user } = useAccount()
   const open = items.length > 0
   const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   const pwId = useId()
   const [password, setPassword] = useState('')
   const [shown, setShown] = useState(false)
@@ -247,6 +249,7 @@ function CommissionList({ list, open, reload }) {
 /* "Confirm you've received it?": a small window, asked once before it is complete. */
 function ReceivedWindow({ open, busy, onYes, onClose }) {
   const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   useEffect(() => {
     if (!open) return undefined
     const before = document.activeElement

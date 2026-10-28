@@ -9,6 +9,7 @@ import Poster from '../components/Poster'
 import Wordmark from '../components/Wordmark'
 import PhoneField from '../components/PhoneField'
 import { useAccount } from '../hooks/useAccount'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useCart } from '../hooks/useCart'
 import { useMedia } from '../hooks/useMedia'
 import AccountCommissions, { useCommissionList } from '../components/AccountCommissions'
@@ -532,6 +533,8 @@ function Unsubscribe() {
 function Confirm({ open, title, text, yes, onYes, onClose, no = 'Stay logged in', busyText = 'Logging out…', danger = false, icon = 'out' }) {
   const [busy, setBusy] = useState(false)
   const yesBtn = useRef(null)
+  const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   useEffect(() => {
     if (!open) return
     const before = document.activeElement
@@ -545,7 +548,7 @@ function Confirm({ open, title, text, yes, onYes, onClose, no = 'Stay logged in'
     <AnimatePresence>
       {open && (
         <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose() }}>
-          <motion.div className={`acc-modal-box ${danger ? 'is-danger' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby="acc-modal-title" aria-describedby="acc-modal-text" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
+          <motion.div ref={box} className={`acc-modal-box ${danger ? 'is-danger' : ''}`} role="alertdialog" aria-modal="true" aria-labelledby="acc-modal-title" aria-describedby="acc-modal-text" initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.3, ease: EASE }}>
             <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close" disabled={busy}>×</button>
             <span className="acc-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={icon === 'mail' ? 'M3 6h18v12H3z M3 7l9 6 9-6' : icon === 'key' ? 'M15 7a4 4 0 1 1-4 4 M11 11l-7 7 M7 15l2 2 M5 17l2 2' : icon === 'bin' ? 'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6' : 'M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4 M10 16l-4-4 4-4 M6 12h10'} /></svg></span>
             <h2 id="acc-modal-title">{title}</h2>
@@ -568,6 +571,8 @@ function Confirm({ open, title, text, yes, onYes, onClose, no = 'Stay logged in'
 function GiftPopup({ gifts, onSee, onClose }) {
   const open = gifts.length > 0
   const seeBtn = useRef(null)
+  const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   useEffect(() => {
     if (!open) return
     const before = document.activeElement
@@ -581,7 +586,7 @@ function GiftPopup({ gifts, onSee, onClose }) {
     <AnimatePresence>
       {open && (
         <motion.div className="acc-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-          <motion.div className="acc-modal-box acct-gift-pop" role="dialog" aria-modal="true" aria-labelledby="acct-gift-title" initial={{ opacity: 0, y: 24, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.4, ease: EASE }}>
+          <motion.div ref={box} className="acc-modal-box acct-gift-pop" role="dialog" aria-modal="true" aria-labelledby="acct-gift-title" initial={{ opacity: 0, y: 24, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.4, ease: EASE }}>
             <button type="button" className="acc-modal-x" onClick={onClose} aria-label="Close">×</button>
             <span className="acct-gift-pop-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={TAB_ICONS.rewards} /></svg></span>
             <span className="label accent">From {brand.name}</span>
@@ -753,6 +758,7 @@ function RemoveOrder({ orders = [], onClose, onRemoved }) {
   const f = useForm({ password: '' })
   const open = orders.length > 0
   const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   useEffect(() => {
     if (!open) return
     const before = document.activeElement
@@ -801,6 +807,7 @@ function RemoveOrder({ orders = [], onClose, onRemoved }) {
 function DeleteGifts({ items = [], onClose, onYes }) {
   const open = items.length > 0
   const box = useRef(null)
+  useFocusTrap(open, box) // Tab stays in the window while it is open
   useEffect(() => {
     if (!open) return
     const before = document.activeElement

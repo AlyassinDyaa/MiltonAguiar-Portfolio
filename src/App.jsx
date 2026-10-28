@@ -11,6 +11,7 @@ import Footer from './components/Footer'
 import CartDrawer from './components/CartDrawer'
 import WelcomeCard from './components/WelcomeCard'
 import CurrencySync from './components/CurrencySync'
+import Announcer from './components/Announcer'
 import { CartProvider } from './hooks/useCart'
 import { AccountProvider, accountsWanted } from './hooks/useAccount'
 import Account from './pages/Account'
@@ -21,6 +22,7 @@ import Gallery from './pages/Gallery'
 import Commissions from './pages/Commissions'
 import About from './pages/About'
 import Contact from './pages/Contact'
+import Accessibility from './pages/Accessibility'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -42,7 +44,10 @@ export default function App() {
     <CartProvider>
       <CurrencySync onChange={(c) => setCur((was) => (was.code === c.code && was.rate === c.rate ? was : c))} />
       <Preloader onDone={() => setReady(true)} />
+      {/* the first thing a keyboard reaches: past the menu, straight to the page's own content */}
+      <a className="skip" href="#main" onClick={(e) => { e.preventDefault(); const m = document.getElementById('main'); if (m) { m.focus({ preventScroll: true }); m.scrollIntoView() } }}>Skip to content</a>
       <Nav />
+      <Announcer />
       {/* Between routes three panels rise across the screen, one after the other, and carry on
           up and out: ink, the brand colour, ink (not on arrival: the opening sheet has just done that job) */}
       <AnimatePresence>
@@ -66,6 +71,8 @@ export default function App() {
           {shows('pages', 'contact') && <Route path="/contact" element={<Contact />} />}
           {/* customer accounts, when the admin has them on (Shop → Settings and payments → Customer accounts) */}
           {accountsWanted() && <Route path="/account/*" element={<Account />} />}
+          {/* always there, whatever is hidden: the foot of every page links to it */}
+          <Route path="/accessibility" element={<Accessibility />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AnimatePresence>

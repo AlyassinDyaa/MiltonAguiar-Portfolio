@@ -6,6 +6,7 @@ import { useFinePointer } from '../hooks/useMedia'
 import Poster from './Poster'
 import QuoteLink from './QuoteLink'
 import Buy from './Buy'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 /* One piece, large and uncropped, with its details beside it. Browse with a sideways swipe, the arrow buttons or the arrow keys; a tap outside the
    picture, the × or Escape closes it. `sel` is the index of the open piece in `items`, or null. */
@@ -15,6 +16,7 @@ export default function Lightbox({ items, sel, setSel }) {
   const box = useRef(null)
   const mouse = useFinePointer()
   const open = sel != null && items[sel] != null
+  useFocusTrap(open, box) // the keyboard stays in the window while it is open, and goes back to the piece after
   const count = items.length
   const many = count > 1
   const piece = open ? items[sel] : null

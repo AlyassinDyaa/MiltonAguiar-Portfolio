@@ -74,6 +74,7 @@ export default function Footer() {
         </div>
         <div className="footer-fine">
           <span>© {year} {brand.artist || brand.name}. {footer.fine}</span>
+          <Link className="footer-a11y" to="/accessibility">Accessibility statement</Link>
           {brand.location && <span>{brand.location}</span>}
         </div>
       </div>

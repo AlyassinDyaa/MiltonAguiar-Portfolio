@@ -553,6 +553,22 @@ collections:
           - { name: title, label: Heading, widget: string }
           - { name: intro, label: Introduction, widget: text }
           - { name: topics, label: Choices in the "About" drop-down, widget: list, required: false, hint: 'What a visitor can say their message is about. Separate them with commas. With none, the drop-down is left out.' }
+      - name: accessibility
+        label: Accessibility statement
+        file: content/pages/accessibility.json
+        fields:
+          - { name: label, label: Small label, widget: string, required: false }
+          - { name: title, label: Heading, widget: string }
+          - { name: intro, label: Introduction, widget: text, required: false }
+          - { name: updated, label: Last checked, widget: datetime, format: 'YYYY-MM-DD', date_format: 'D MMM YYYY', time_format: false, picker_utc: true, required: false, hint: 'Shown at the foot of the page. Change it when the site is checked again.' }
+          - name: sections
+            label: Parts
+            label_singular: Part
+            widget: list
+            summary: '{{fields.heading}}'
+            fields:
+              - { name: heading, label: Heading, widget: string }
+              - { name: text, label: Text, widget: text, hint: 'A blank line starts a new paragraph. Lines that start with "- " become a list.' }
 
   # ------------------------------------------------------------------ 3. the whole site
   - name: site

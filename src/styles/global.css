@@ -13,7 +13,7 @@
   --panel-2: #27272c;         /* something set into a panel: a quiet button, a field */
   --fg: #f3f3f1;
   --fg-dim: rgba(243, 243, 241, 0.74);
-  --fg-mute: rgba(243, 243, 241, 0.5);
+  --fg-mute: rgba(243, 243, 241, 0.56); /* 4.5:1 or more on the panels (WCAG AA) */
   --line: rgba(243, 243, 241, 0.13);
   --line-strong: rgba(243, 243, 241, 0.3);
   --loud: #fff;               /* a loud panel: the page's opposite */
@@ -23,6 +23,10 @@
   --accent: oklch(0.56 0.22 var(--h));
   --accent-deep: oklch(0.34 0.14 var(--h));
   --on-accent: #fff;
+  /* the red for lettering (the red above is for fills, with white lettering on them): lighter at
+     night, so small red words read on black at 4.5:1 or more (WCAG AA) */
+  --accent-text: oklch(0.68 0.2 var(--h));
+  --accent-text-loud: oklch(0.5 0.2 var(--h)); /* red lettering on a loud panel (white at night) */
   --shade: var(--accent-deep); /* the drop shadow of the name */
   --open: #2fbf6b;
   --nav-bg: rgba(11, 11, 12, 0.9);
@@ -49,13 +53,15 @@
   --panel-2: #e7e6e0;
   --fg: #101012;
   --fg-dim: rgba(16, 16, 18, 0.76);
-  --fg-mute: rgba(16, 16, 18, 0.54);
+  --fg-mute: rgba(16, 16, 18, 0.64); /* 4.5:1 or more on the board and on white (WCAG AA) */
   --line: rgba(16, 16, 18, 0.14);
   --line-strong: rgba(16, 16, 18, 0.34);
   --loud: #101012;
   --on-loud: #fff;
   --frame: #101012;
   --accent: oklch(0.54 0.21 var(--h));
+  --accent-text: oklch(0.5 0.2 var(--h)); /* on white board: a shade deeper than the fills */
+  --accent-text-loud: oklch(0.68 0.2 var(--h)); /* and on a loud panel (black by day) */
   --shade: #101012;
   --open: #1c9a52;
   --nav-bg: rgba(238, 237, 232, 0.93);
@@ -74,7 +80,7 @@ body {
   background: var(--page);
   color: var(--fg);
   font-family: var(--body);
-  font-size: 17px;
+  font-size: 1.0625rem; /* 17px at the browser's usual size, and larger when the visitor sets their browser's text larger */
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -150,7 +156,7 @@ body::after {
 /* The running head of a page: what it is, a rule, and its number. */
 .runner { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; font-family: var(--display); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; color: var(--fg-mute); }
 .runner i { flex: 1; min-width: 20px; height: 1px; background: var(--line-strong); }
-.runner b { font-weight: 700; color: var(--accent); }
+.runner b { font-weight: 700; color: var(--accent-text); }
 /* a small phone: the line gives up its room first, then the left words are cut short, so the page number stays on screen */
 .runner > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 374px) { .runner { gap: 10px; letter-spacing: 0.14em; } .runner i { min-width: 12px; } }
@@ -226,3 +232,10 @@ form { max-width: 620px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }
 }
+
+/* ---------- accessibility: the "Skip to content" link (shown only when the keyboard reaches it),
+   and the page's main content, focused by it or after moving to another page (no ring round the
+   whole page for that) ---------- */
+.skip { position: fixed; z-index: 10000; top: 10px; left: 10px; padding: 12px 18px 11px; font-family: var(--display); font-size: 1rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-accent); background: var(--accent); border: 2px solid var(--k); box-shadow: 3px 3px 0 var(--k); transform: translateY(calc(-100% - 20px)); transition: transform 0.2s; }
+.skip:focus { transform: none; outline: 2px solid var(--fg); outline-offset: 2px; }
+#main:focus { outline: 0; }

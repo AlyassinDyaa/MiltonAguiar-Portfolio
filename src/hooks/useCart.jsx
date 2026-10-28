@@ -3,6 +3,7 @@ import { canBuy, everything, priceOf, shop, signable, sizeOf, sizesOf, viewCurre
 import { useAccount } from './useAccount'
 import { SHIP_KEY, feeFor, postsTo, shipToGuess, shippingFor, shippingRules } from '../data/shipping'
 import { PAYPAL_CURRENCIES, inCurrency } from '../data/currency'
+import { announce } from '../data/announce'
 
 /* The cart. What a visitor has added is kept in their browser (so it survives a reload), as
    { slug, size, signed, qty } lines (size: the print size, for a piece sold in sizes). Every time it is read it is checked against the site's content:
@@ -69,13 +70,18 @@ export function CartProvider({ children }) {
     return { key: `${l.slug}:${size}:${signed ? 's' : 'u'}`, slug: l.slug, size, signed, qty: clamp(l.qty), piece, each, was, deal: row.deal }
   }).filter(Boolean), [raw])
 
-  const add = useCallback((slug, signed = false, size = '') => setRaw((r) => {
-    const i = r.findIndex((l) => same(l, slug, signed, size))
-    if (i < 0) return [...r, { slug, size: size || '', signed: Boolean(signed), qty: 1 }]
-    const next = [...r]; next[i] = { ...next[i], qty: clamp(next[i].qty + 1) }; return next
-  }), [])
-  const setQty = useCallback((slug, signed, qty, size) => setRaw((r) => r.map((l) => (same(l, slug, signed, size) ? { ...l, qty: clamp(qty) } : l))), [])
-  const remove = useCallback((slug, signed, size) => setRaw((r) => r.filter((l) => !same(l, slug, signed, size))), [])
+  // (each change said out loud for a screen reader too: data/announce.js)
+  const titleOf = (slug, size) => { const p = everything.find((x) => x.slug === slug); return p ? `${p.title}${size ? `, ${size}` : ''}` : 'The piece' }
+  const add = useCallback((slug, signed = false, size = '') => {
+    announce(`${titleOf(slug, size)} added to your cart.`)
+    setRaw((r) => {
+      const i = r.findIndex((l) => same(l, slug, signed, size))
+      if (i < 0) return [...r, { slug, size: size || '', signed: Boolean(signed), qty: 1 }]
+      const next = [...r]; next[i] = { ...next[i], qty: clamp(next[i].qty + 1) }; return next
+    })
+  }, [])
+  const setQty = useCallback((slug, signed, qty, size) => { announce(`${titleOf(slug, size)}: ${clamp(qty)} in your cart.`); setRaw((r) => r.map((l) => (same(l, slug, signed, size) ? { ...l, qty: clamp(qty) } : l))) }, [])
+  const remove = useCallback((slug, signed, size) => { announce(`${titleOf(slug, size)} removed from your cart.`); setRaw((r) => r.filter((l) => !same(l, slug, signed, size))) }, [])
   const clear = useCallback(() => setRaw([]), [])
   const settle = useCallback(() => {
     if (paidFor.current === undefined) {

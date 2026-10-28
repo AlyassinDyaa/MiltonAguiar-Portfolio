@@ -21,6 +21,8 @@ const byOrder = (a, b) => (a.order ?? 99) - (b.order ?? 99)
 const live = (list) => list.filter((x) => !x.hidden) // entries ticked "Hide from the site"
 
 export let brand, hero, marquee, home, commissions, about, contact, social, footer
+/* The accessibility statement (its own page, linked from the foot of every page). */
+export let accessibility
 /* The words on a customer's account page, and the free profile pictures (Shop → Customer accounts). */
 export let accountPage
 /* "Get a quote": the wording, and where the price tags and quote buttons take people (the artist's Instagram, unless the admin names somewhere else). */
@@ -144,6 +146,8 @@ function assemble(content) {
   if (!about.story.length && about.paragraphs?.length) about.story = about.paragraphs.map((text) => ({ text }))
   about.story = about.story.filter((s) => s && s.text)
   contact = { label: 'Say hello', title: 'Get in touch', topics: [], ...given(page('contact')) }
+  accessibility = { label: 'Accessibility statement', title: 'Accessibility', intro: '', updated: '', ...given(page('accessibility')) }
+  accessibility.sections = (Array.isArray(accessibility.sections) ? accessibility.sections : []).filter((s) => s && (s.heading || s.text))
   accountPage = { noteTitle: 'A note from the artist', note: '', signature: '', collectionTitle: 'Your collection', savedTitle: 'Saved for later', cardLabel: 'Collector', rewardText: 'Confirm your email and unlock a profile picture only confirmed members can use.', ...given(page('account')) }
   accountPage.icons = (Array.isArray(accountPage.icons) ? accountPage.icons : []).filter((i) => i && typeof i.picture === 'string' && i.picture).map((i) => ({ picture: i.picture, name: i.name || '', face: parseFace(i.face) }))
   // rewards (Shop → Rewards): profile pictures, membership card designs and discounts a customer

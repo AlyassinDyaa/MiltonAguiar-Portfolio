@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { asset } from '../data/site'
 import { useFinePointer, useMedia, useReducedMotion } from '../hooks/useMedia'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const ZOOM = 2.2 // how far in a double click (or double tap) takes a page
 const TAP = 280 // ms: a second tap within this is a double tap
@@ -106,6 +107,7 @@ function Reader({ comic, onClose }) {
   const [panning, setPanning] = useState(false)
   const [stripOpen, setStripOpen] = useState(null) // the visitor's own choice; until then, shown when there is room
   const box = useRef(null)
+  useFocusTrap(true, box) // (mounted only while open) Tab stays in the reader
   const stage = useRef(null)
   const strip = useRef(null)
   const drag = useRef(null)

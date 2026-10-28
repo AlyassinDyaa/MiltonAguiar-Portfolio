@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { asset, brand, events, salesNow, shop, shows, welcome } from '../data/site'
 import { saleLine } from '../data/sales'
 import { useCart } from '../hooks/useCart'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const EASE = [0.16, 1, 0.3, 1]
 const KEY = 'ma.welcome' // what the visitor last closed, and when
@@ -27,6 +28,7 @@ export default function WelcomeCard({ ready }) {
   const loc = useLocation()
   const [open, setOpen] = useState(false)
   const box = useRef(null)
+  useFocusTrap(open, box) // Tab goes round the card's own buttons while it is open
   const cart = useCart()
   const [codeSaid, setCodeSaid] = useState('') // what happened to the code: in the cart, copied, or why not
   const [codeBusy, setCodeBusy] = useState(false)

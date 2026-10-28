@@ -1,0 +1,28 @@
+{
+  "label": "Accessibility statement",
+  "title": "Accessibility",
+  "intro": "This site should be easy to use for everyone: with a mouse, a keyboard, a screen reader, zoom or larger text.",
+  "updated": "2026-10-28",
+  "sections": [
+    {
+      "heading": "What we aim for",
+      "text": "We aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at level AA, the standard that accessibility laws, including the European Accessibility Act, point to."
+    },
+    {
+      "heading": "What you can do on this site",
+      "text": "- Use every page, menu, window and form with a keyboard alone. \"Skip to content\" is the first thing the Tab key reaches.\n- See where you are: whatever you can press shows a clear outline when the keyboard reaches it.\n- Zoom in up to 400%, or set your browser's text larger: the pages rearrange to fit, with no sideways scrolling.\n- Choose a light or a dark look with the sun and moon button at the top. Text in both is checked for contrast.\n- Turn off movement: with \"reduce motion\" set on your device, the site's animations and moving banner stop.\n- Use a screen reader: pictures have descriptions, buttons and fields say what they are, and mistakes in a form are read out."
+    },
+    {
+      "heading": "How it was checked",
+      "text": "Every page was checked in light and dark with the axe accessibility checker, then by keyboard, at 320 pixels wide (the same as 400% zoom) and with text at 200%."
+    },
+    {
+      "heading": "What is not there yet",
+      "text": "- The pages of the comics in the comic reader are pictures, with the words drawn into the art. There is no text version of them yet.\n- The descriptions of the artwork are short, usually the title of the piece.\n- Payments are made on Stripe's and PayPal's own pages, which those companies look after."
+    },
+    {
+      "heading": "Tell us about a problem",
+      "text": "If something on the site is hard to use, or you need anything in another format, get in touch. Every message is read, and we aim to reply within five working days."
+    }
+  ]
+}

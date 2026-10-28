@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -10,6 +10,7 @@ import { useAccount } from '../hooks/useAccount'
 import { checkout, payLine } from '../data/checkout'
 import { Elsewhere, Lock, PaypalButton } from './Buy'
 import Dropdown from './Dropdown'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 const EASE = [0.16, 1, 0.3, 1]
 const things = (n) => `${n} ${n === 1 ? 'piece' : 'pieces'}`
@@ -72,6 +73,8 @@ export default function CartDrawer() {
     </div>
   )
 
+  const panel = useRef(null)
+  useFocusTrap(open, panel) // the keyboard stays in the cart while it is open, and goes back to the cart button after
   useEffect(() => {
     if (!open) return
     const key = (e) => { if (e.key === 'Escape') setOpen(false) }
@@ -96,7 +99,7 @@ export default function CartDrawer() {
     <AnimatePresence>
       {open && (
         <motion.div className="cart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} onClick={() => setOpen(false)} data-lenis-prevent>
-          <motion.aside className="cart-panel" role="dialog" aria-modal="true" aria-label="Your cart" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.45, ease: EASE }} onClick={(e) => e.stopPropagation()}>
+          <motion.aside ref={panel} className="cart-panel" role="dialog" aria-modal="true" aria-label="Your cart" initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ duration: 0.45, ease: EASE }} onClick={(e) => e.stopPropagation()}>
             <header className="cart-head">
               <div>
                 <div className="cart-kicker">{lines.length ? `Step ${stepNo} of ${steps.length} · ${STEP_NAME[step]}` : 'Your cart'}</div>
@@ -133,9 +136,9 @@ export default function CartDrawer() {
                               {l.deal && <span className="cart-sale">{l.deal.name || 'Sale'} −{l.deal.percent}%</span>}
                               <div className="cart-row">
                                 <div className="cart-qty" role="group" aria-label={`How many of ${l.piece.title}`}>
-                                  <button type="button" onClick={() => (l.qty > 1 ? cart.setQty(l.slug, l.signed, l.qty - 1, l.size) : cart.remove(l.slug, l.signed, l.size))} aria-label="One fewer">−</button>
+                                  <button type="button" onClick={() => (l.qty > 1 ? cart.setQty(l.slug, l.signed, l.qty - 1, l.size) : cart.remove(l.slug, l.signed, l.size))} aria-label={`One fewer ${l.piece.title}`}>−</button>
                                   <span aria-live="polite">{l.qty}</span>
-                                  <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label="One more">+</button>
+                                  <button type="button" onClick={() => cart.setQty(l.slug, l.signed, l.qty + 1, l.size)} disabled={l.qty >= cart.max} aria-label={`One more ${l.piece.title}`}>+</button>
                                 </div>
                                 <span className="cart-price">{l.was > l.each && <s>{money(l.was * l.qty, true)}</s>}{showMoney((cart.view.units[li] * l.qty) / 100, true)}</span>
                               </div>

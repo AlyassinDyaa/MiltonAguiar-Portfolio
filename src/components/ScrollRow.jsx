@@ -35,7 +35,7 @@ export default function ScrollRow({ children, label, as: Track = 'div', classNam
   const scrolls = !(edge.start && edge.end)
   return (
     <div className={`srow ${scrolls ? 'can-scroll' : ''} ${edge.start ? 'at-start' : ''} ${edge.end ? 'at-end' : ''} ${className}`}>
-      <Track ref={track} className="srow-track" onScroll={look} aria-label={label} tabIndex={scrolls ? 0 : undefined}
+      <Track ref={track} className="srow-track" onScroll={look} role={Track === 'div' && label ? 'region' : undefined} aria-label={label} tabIndex={scrolls ? 0 : undefined}
         onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === 'ArrowRight') { e.preventDefault(); by(1) } if (e.key === 'ArrowLeft') { e.preventDefault(); by(-1) } }}>
         {children}
       </Track>

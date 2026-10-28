@@ -24,7 +24,7 @@
 .preloader-name b { position: relative; padding-right: 0.07em; font-weight: 900; color: transparent; -webkit-text-stroke: 2px var(--line-strong); animation: preloader-sketch 0.45s cubic-bezier(0.65, 0, 0.35, 1) both, preloader-ink 0.45s ease-in-out 0.4s both; }
 .preloader-name b + b { animation-delay: 0.08s, 0.48s; }
 .preloader-name b::after { content: attr(data-text); position: absolute; inset: 0; padding-right: inherit; color: var(--fg); -webkit-text-stroke: 2px var(--fg); clip-path: polygon(-14% 0, -14% 0, -28% 100%, -28% 100%); animation: preloader-paint 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.62s both; }
-.preloader-name b.is-accent::after { color: var(--accent-text); -webkit-text-stroke-color: var(--accent); animation-delay: 0.74s; }
+.preloader-name b.is-accent::after { color: var(--accent); -webkit-text-stroke-color: var(--accent); animation-delay: 0.74s; }
 @keyframes preloader-sketch { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes preloader-ink { from { -webkit-text-stroke-color: var(--line-strong); } to { -webkit-text-stroke-color: var(--fg); } }
 @keyframes preloader-paint { to { clip-path: polygon(-14% 0, 114% 0, 100% 100%, 0 100%); } }
@@ -41,7 +41,8 @@
 
 /* ---------- the name ---------- */
 .wordmark { display: inline-block; font-family: var(--display); font-size: 1.7rem; font-weight: 900; font-style: italic; line-height: 1; letter-spacing: 0.005em; text-transform: uppercase; white-space: pre; }
-.wordmark b { font-weight: 900; color: var(--accent-text); }
+/* the name keeps the logo's own red: large lettering, which only needs 3:1 (WCAG AA), and passes */
+.wordmark b { font-weight: 900; color: var(--accent); }
 .wordmark.lg { font-size: clamp(2.6rem, 5vw, 4rem); }
 
 /* ---------- nav ---------- */
@@ -204,7 +205,7 @@ button.hp:hover .pg-no, button.hp:focus-visible .pg-no { background: var(--accen
 .hero-line { display: block; overflow: hidden; margin: 0 -0.14em 0 -0.06em; padding: 0.07em 0.14em 0.03em 0.06em; }
 .hero-line > span { display: block; -webkit-text-stroke: 0.05em var(--panel); paint-order: stroke fill; }
 /* the second word is set the way a comic's logo is: colour, and a hard shadow */
-.hero-line.is-accent > span { color: var(--accent-text); -webkit-text-stroke: 0.03em var(--frame); text-shadow: 0.05em 0.05em 0 var(--shade); }
+.hero-line.is-accent > span { color: var(--accent); -webkit-text-stroke: 0.03em var(--frame); text-shadow: 0.05em 0.05em 0 var(--shade); }
 .hero-tag { margin: clamp(12px, 1.6vw, 22px) 0 8px; font-family: var(--display); font-size: clamp(1.2rem, 1.8vw, 1.7rem); font-weight: 800; font-style: italic; letter-spacing: 0.03em; line-height: 1.05; text-transform: uppercase; }
 .hero .lead { max-width: 34ch; font-size: clamp(1.02rem, 1.3vw, 1.2rem); }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: clamp(16px, 2vw, 28px); }
@@ -1709,7 +1710,7 @@ form.acc-modal-box { max-width: none; }
 /* the membership card designs: the card picks a look (a reward), or keeps the site's red */
 .acc-card3d.is-ink { background: linear-gradient(140deg, #26262b, #0b0b0c 70%); border-color: var(--accent); }
 .acc-card3d.is-ink .acc-card3d-dots { background-image: radial-gradient(circle, oklch(0.56 0.22 var(--h) / 0.45) 0 2.2px, transparent 2.8px); }
-.acc-card3d.is-ink .acc-card3d-brand .wordmark b { color: var(--accent-text); }
+.acc-card3d.is-ink .acc-card3d-brand .wordmark b { color: var(--accent); }
 .acc-card3d.is-ink .acc-card3d-kind { background: var(--accent); }
 .acc-card3d.is-ink .acc-card3d-mark { -webkit-text-stroke-color: oklch(0.56 0.22 var(--h) / 0.35); }
 .acc-card3d.is-gold, .acc-card3d.is-chrome { color: #0b0b0c; }
@@ -1718,7 +1719,7 @@ form.acc-modal-box { max-width: none; }
 .acc-card3d.is-gold .acc-card3d-name, .acc-card3d.is-chrome .acc-card3d-name { text-shadow: 0.05em 0.05em 0 rgba(255, 255, 255, 0.55); }
 .acc-card3d.is-gold .acc-card3d-brand .wordmark, .acc-card3d.is-chrome .acc-card3d-brand .wordmark { color: #0b0b0c; text-shadow: none; }
 .acc-card3d.is-gold .acc-card3d-brand .wordmark b { color: #8a1a12; }
-.acc-card3d.is-chrome .acc-card3d-brand .wordmark b { color: var(--accent-text); }
+.acc-card3d.is-chrome .acc-card3d-brand .wordmark b { color: var(--accent); }
 .acc-card3d.is-gold .acc-card3d-foot small, .acc-card3d.is-chrome .acc-card3d-foot small { color: rgba(11, 11, 12, 0.6); }
 .acc-card3d.is-gold .acc-card3d-mark, .acc-card3d.is-chrome .acc-card3d-mark { -webkit-text-stroke-color: rgba(11, 11, 12, 0.14); }
 .acc-card3d.is-gold .acc-card3d-dots, .acc-card3d.is-chrome .acc-card3d-dots { background-image: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0 2.2px, transparent 2.8px); }
